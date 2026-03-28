@@ -1,0 +1,8 @@
+{
+  "build_command": null,
+  "start_command": null,
+  "dockerfile": {
+    "path": "Dockerfile",
+    "target": "production"
+  }
+}
