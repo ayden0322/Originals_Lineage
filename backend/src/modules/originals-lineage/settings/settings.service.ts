@@ -84,7 +84,7 @@ export class SettingsService {
       });
       return { success, message: success ? '連線成功' : '連線失敗' };
     } catch (error) {
-      return { success: false, message: error.message || '連線失敗' };
+      return { success: false, message: (error as Error).message || '連線失敗' };
     }
   }
 
@@ -120,7 +120,7 @@ export class SettingsService {
       return {
         success: false,
         columns: [],
-        message: error.message || '讀取欄位失敗',
+        message: (error as Error).message || '讀取欄位失敗',
       };
     }
   }

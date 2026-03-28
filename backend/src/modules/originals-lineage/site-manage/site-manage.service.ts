@@ -205,15 +205,16 @@ export class SiteManageService {
     }));
 
     // Fetch featured articles
-    let featuredArticles = [];
-    const articleIds = settings.featuredArticleIds || [];
+    let featuredArticles: unknown[] = [];
+    const siteSettings = settings as { featuredArticleIds?: string[] };
+    const articleIds: string[] = siteSettings.featuredArticleIds || [];
     if (articleIds.length > 0) {
-      const promises = articleIds.map((id) =>
+      const promises = articleIds.map((id: string) =>
         this.contentService.findArticleById(id).catch(() => null),
       );
       const results = await Promise.all(promises);
       featuredArticles = results.filter(
-        (a) => a && a.status === 'published',
+        (a): a is NonNullable<typeof a> => a !== null && (a as { status: string }).status === 'published',
       );
     }
 

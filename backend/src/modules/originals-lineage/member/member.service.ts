@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   UnauthorizedException,
   NotFoundException,
@@ -162,7 +163,7 @@ export class MemberService {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }
 
-    const tokens = await this.generatePlayerTokens(user.id, user.email);
+    const tokens = await this.generatePlayerTokens(user.id, user.email ?? '');
 
     // Store refresh token hash
     const refreshHash = await bcrypt.hash(tokens.refreshToken, 10);

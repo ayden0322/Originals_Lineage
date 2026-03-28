@@ -52,7 +52,7 @@ export class StorageService implements OnModuleInit {
       );
       this.logger.log(`Bucket "${this.bucket}" ready with public read policy`);
     } catch (error) {
-      this.logger.warn(`MinIO init failed: ${error.message}`);
+      this.logger.warn(`MinIO init failed: ${(error as Error).message}`);
     }
   }
 

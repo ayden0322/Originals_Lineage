@@ -58,7 +58,7 @@ export class GameDbService implements OnModuleInit {
           `Game DB connected: ${gameDbConfig.connectionName || gameDbConfig.host}`,
         );
       } catch (err) {
-        this.logger.warn(`Game DB init failed: ${err.message}`);
+        this.logger.warn(`Game DB init failed: ${(err as Error).message}`);
       }
     } else {
       this.logger.log('No game DB settings configured, skipping');
@@ -90,7 +90,7 @@ export class GameDbService implements OnModuleInit {
         await oldDs.destroy();
       } catch (err) {
         this.logger.warn(
-          `Error destroying old DataSource: ${err.message}`,
+          `Error destroying old DataSource: ${(err as Error).message}`,
         );
       }
     }

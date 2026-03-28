@@ -117,7 +117,7 @@ export class ContentService {
   async findPublishedArticles(page = 1, limit = 20, category?: string) {
     const where: FindOptionsWhere<Article> = { status: 'published' };
     if (category) {
-      where.category = category as Article['category'];
+      where.category = category as string;
     }
 
     const [items, total] = await this.articleRepo.findAndCount({
