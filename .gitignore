@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+postgres_data/
+redis_data/
+
+# Coverage
+coverage/
+
+# Misc
+*.tsbuildinfo
+
+# Claude Code
+.claude/
+
+# Memory (local only)
+memory/
+MEMORY.md
+
+# Local notes
+暫存資料.md
+指令紀錄.txt

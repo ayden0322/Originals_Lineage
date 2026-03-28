@@ -1,0 +1,534 @@
+// ═══════════════════════════════════════════════════════════════
+// API Response wrapper
+// ═══════════════════════════════════════════════════════════════
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Auth
+// ═══════════════════════════════════════════════════════════════
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  displayName: string;
+  backendLevel: 'platform' | 'module';
+  isActive: boolean;
+  permissions: string[];
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Account (Admin)
+// ═══════════════════════════════════════════════════════════════
+
+export interface Account {
+  id: string;
+  email: string;
+  displayName: string;
+  backendLevel: 'platform' | 'module';
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAccountDto {
+  email: string;
+  password: string;
+  displayName: string;
+  backendLevel: 'platform' | 'module';
+}
+
+export interface UpdateAccountDto {
+  displayName?: string;
+  isActive?: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Permission
+// ═══════════════════════════════════════════════════════════════
+
+export interface Permission {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  backendLevel: 'platform' | 'module';
+  moduleCode: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Module Config
+// ═══════════════════════════════════════════════════════════════
+
+export interface ModuleConfig {
+  id: string;
+  moduleCode: string;
+  moduleName: string;
+  isActive: boolean;
+  paymentEnabled: boolean;
+  lineBotEnabled: boolean;
+  configJson: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// System Log
+// ═══════════════════════════════════════════════════════════════
+
+export interface SystemLog {
+  id: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  details: Record<string, unknown>;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Member (Originals Lineage)
+// ═══════════════════════════════════════════════════════════════
+
+export interface MemberBinding {
+  id: string;
+  websiteAccountId: string;
+  gameAccountName: string;
+  gameCharacterId: string | null;
+  bindingStatus: 'pending' | 'verified' | 'unbound';
+  boundAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  websiteUser?: WebsiteUser;
+}
+
+export interface WebsiteUser {
+  id: string;
+  email: string | null;
+  gameAccountName: string;
+  displayName: string | null;
+  phone: string | null;
+  lineId: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  secondPasswordPlain?: string | null;
+}
+
+export interface PlayerProfile {
+  id: string;
+  gameAccountName: string;
+  email: string | null;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface CheckGameAccountResult {
+  exists: boolean;
+  message: string;
+}
+
+export interface ChangePasswordDto {
+  secondPassword: string;
+  newPassword: string;
+}
+
+export interface ChangeSecondPasswordDto {
+  password: string;
+  currentSecondPassword: string;
+  newSecondPassword: string;
+}
+
+export interface SecondPasswordLog {
+  id: string;
+  actorId: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Content (Article & Announcement)
+// ═══════════════════════════════════════════════════════════════
+
+export interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  category: string;
+  summary: string | null;
+  coverImageUrl: string | null;
+  authorId: string | null;
+  status: 'draft' | 'published' | 'archived';
+  isPinned: boolean;
+  publishedAt: string | null;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateArticleDto {
+  title: string;
+  content?: string;
+  category?: string;
+  summary?: string;
+  slug?: string;
+  coverImageUrl?: string;
+  status?: 'draft' | 'published' | 'archived';
+  isPinned?: boolean;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: 'maintenance' | 'event' | 'notice' | 'urgent';
+  priority: number;
+  isActive: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  authorId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAnnouncementDto {
+  title: string;
+  content: string;
+  type: 'maintenance' | 'event' | 'notice' | 'urgent';
+  priority?: number;
+  isActive?: boolean;
+  startTime?: string;
+  endTime?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Reservation
+// ═══════════════════════════════════════════════════════════════
+
+export interface Reservation {
+  id: string;
+  email: string;
+  displayName: string;
+  phone: string | null;
+  lineId: string | null;
+  referralCode: string | null;
+  status: 'registered' | 'confirmed' | 'converted';
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReservationStats {
+  total: number;
+  registered: number;
+  confirmed: number;
+  converted: number;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Shop (Product & Order)
+// ═══════════════════════════════════════════════════════════════
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  diamondAmount: number;
+  category: 'diamond_pack' | 'special_bundle' | 'event_pack';
+  imageUrl: string | null;
+  stock: number;
+  maxPerUser: number;
+  isActive: boolean;
+  sortOrder: number;
+  startTime: string | null;
+  endTime: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductDto {
+  name: string;
+  description: string;
+  price: number;
+  diamondAmount: number;
+  category: 'diamond_pack' | 'special_bundle' | 'event_pack';
+  imageUrl?: string;
+  stock?: number;
+  maxPerUser?: number;
+  isActive?: boolean;
+  sortOrder?: number;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  memberBindingId: string;
+  totalAmount: string;
+  status: 'pending' | 'paid' | 'failed' | 'cancelled';
+  paymentTransactionId: string | null;
+  deliveryStatus: 'pending' | 'delivered' | 'failed';
+  deliveryDetails: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  items: OrderItem[];
+}
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: string;
+  diamondAmount: number;
+  createdAt: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Payment
+// ═══════════════════════════════════════════════════════════════
+
+export interface PaymentTransaction {
+  id: string;
+  moduleCode: string;
+  orderId: string;
+  providerName: string;
+  providerTransactionId: string;
+  amount: string;
+  currency: string;
+  status: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentMethod: string | null;
+  callbackData: Record<string, unknown> | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentResult {
+  transactionId: string;
+  status: string;
+  paymentUrl?: string;
+  formAction?: string;
+  formData?: Record<string, string>;
+}
+
+export interface PaymentGateway {
+  id: string;
+  moduleCode: string;
+  providerCode: string;
+  displayName: string;
+  credentials: Record<string, unknown>;
+  supportedMethods: string[];
+  isActive: boolean;
+  isSandbox: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGatewayDto {
+  moduleCode: string;
+  providerCode: string;
+  displayName: string;
+  credentials: Record<string, unknown>;
+  supportedMethods?: string[];
+  isActive?: boolean;
+  isSandbox?: boolean;
+  priority?: number;
+}
+
+export interface UpdateGatewayDto {
+  displayName?: string;
+  credentials?: Record<string, unknown>;
+  supportedMethods?: string[];
+  isActive?: boolean;
+  isSandbox?: boolean;
+  priority?: number;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Settings
+// ═══════════════════════════════════════════════════════════════
+
+export interface ModuleSettings {
+  moduleCode: string;
+  moduleName: string;
+  isActive: boolean;
+  paymentEnabled: boolean;
+  lineBotEnabled: boolean;
+  payment: Record<string, unknown>;
+  lineBot: Record<string, unknown>;
+  gameDb: Record<string, unknown>;
+  gameDbConnected: boolean;
+  gameTableMapping: GameTableMappingDto | null;
+}
+
+export interface PaymentSettingsDto {
+  providerName?: string;
+  merchantId?: string;
+  hashKey?: string;
+  hashIv?: string;
+  sandboxMode?: boolean;
+}
+
+export interface LineBotSettingsDto {
+  channelId?: string;
+  channelSecret?: string;
+  channelAccessToken?: string;
+}
+
+export interface GameDbSettingsDto {
+  connectionName: string;
+  host: string;
+  port?: number;
+  database: string;
+  username: string;
+  password: string;
+}
+
+export interface GameDbTestResult {
+  success: boolean;
+  message: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Game Table Mapping
+// ═══════════════════════════════════════════════════════════════
+
+export type PasswordEncryption = 'plaintext' | 'md5' | 'sha1' | 'sha256' | 'bcrypt';
+
+export interface GameTableMappingDto {
+  tableName: string;
+  columns: {
+    username: string;
+    password: string;
+    email?: string | null;
+    status?: string | null;
+  };
+  passwordEncryption: PasswordEncryption;
+  hasEmailColumn: boolean;
+  hasStatusColumn: boolean;
+}
+
+export interface FetchColumnsResult {
+  success: boolean;
+  columns: string[];
+  message?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Site Management
+// ═══════════════════════════════════════════════════════════════
+
+export interface ArticleCategory {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SiteSettings {
+  siteName: string;
+  logoUrl: string | null;
+  footerText: string;
+  heroEnabled: boolean;
+  newsDisplayCount: number;
+  featuredArticleIds: string[];
+  // Nav style
+  navActiveColor?: string;
+  navInactiveColor?: string;
+  navActiveFontSize?: number;
+  navInactiveFontSize?: number;
+  navActiveFontWeight?: string;
+  navInactiveFontWeight?: string;
+  navLetterSpacing?: number;
+  navFontFamily?: string;
+  // News page settings
+  newsLayout?: 'magazine' | 'timeline' | 'masonry';
+  newsPageTitle?: string;
+  newsPageSubtitle?: string;
+  newsBannerUrl?: string;
+  newsPerPage?: number;
+  newsDefaultSort?: 'newest' | 'popular' | 'pinned';
+  newsShowCover?: boolean;
+  newsShowViewCount?: boolean;
+  newsShowSearch?: boolean;
+  // Changelog page
+  changelogBannerUrl?: string;
+  changelogCategorySlug?: string;
+  changelogPageTitle?: string;
+  // Support page
+  lineOfficialUrl?: string;
+  // Download
+  gameDownloadUrl?: string;
+}
+
+export interface SiteSection {
+  id: string;
+  name: string;
+  slug: string;
+  displayName: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  slides?: CarouselSlide[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CarouselSlide {
+  id: string;
+  sectionId: string | null;
+  mediaType: 'image' | 'video';
+  imageUrl: string | null;
+  videoUrl: string | null;
+  autoPlaySeconds: number;
+  linkEnabled: boolean;
+  linkUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicSiteConfig {
+  settings: SiteSettings;
+  heroSlides: CarouselSlide[];
+  sections: (SiteSection & { slides: CarouselSlide[] })[];
+  featuredArticles: Article[];
+}

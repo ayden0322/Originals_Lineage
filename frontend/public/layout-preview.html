@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>新聞佈局預覽</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
+
+.tab-bar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; justify-content: center; gap: 0;
+  background: #111; border-bottom: 1px solid #222;
+  padding: 0;
+}
+.tab-btn {
+  padding: 16px 32px; cursor: pointer;
+  background: none; border: none; color: #888;
+  font-size: 15px; letter-spacing: 1px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn:hover { color: #c4a24e; }
+.tab-btn.active { color: #c4a24e; border-bottom-color: #c4a24e; }
+
+.layout-section { display: none; padding: 40px; max-width: 1200px; margin: 0 auto; }
+.layout-section.active { display: block; }
+
+.layout-label {
+  text-align: center; margin-bottom: 32px;
+  font-size: 28px; color: #c4a24e; letter-spacing: 3px;
+  font-family: Georgia, serif;
+}
+.layout-desc {
+  text-align: center; margin-bottom: 40px;
+  color: #888; font-size: 14px; line-height: 1.8;
+}
+
+/* ═══ Layout 1: Magazine ═══ */
+.mag-hero {
+  position: relative; border-radius: 12px; overflow: hidden;
+  height: 420px; margin-bottom: 24px; cursor: pointer;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+.mag-hero-img {
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: 0.7;
+}
+.mag-hero-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 40px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+}
+.mag-hero-cat {
+  display: inline-block; background: #c4a24e; color: #000;
+  padding: 4px 12px; border-radius: 3px; font-size: 11px;
+  letter-spacing: 1px; margin-bottom: 12px; font-weight: 600;
+}
+.mag-hero-title {
+  font-size: 32px; font-weight: 600; color: #fff;
+  margin-bottom: 8px; line-height: 1.3;
+}
+.mag-hero-meta { color: #999; font-size: 13px; }
+
+.mag-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.mag-card {
+  background: #141414; border-radius: 8px; overflow: hidden;
+  cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.mag-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.mag-card-img {
+  width: 100%; height: 180px; object-fit: cover;
+  background: linear-gradient(135deg, #1a1a2e, #0f3460);
+}
+.mag-card-body { padding: 16px; }
+.mag-card-cat {
+  font-size: 11px; color: #c4a24e; letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.mag-card-title {
+  font-size: 15px; font-weight: 500; color: #eee;
+  margin-bottom: 8px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.mag-card-meta { font-size: 12px; color: #666; }
+
+/* Category tabs */
+.cat-tabs {
+  display: flex; gap: 8px; margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+.cat-tab {
+  padding: 8px 20px; border-radius: 20px;
+  background: #1a1a1a; border: 1px solid #333;
+  color: #aaa; font-size: 13px; cursor: pointer;
+  transition: all 0.2s;
+}
+.cat-tab:hover, .cat-tab.active {
+  background: rgba(196,162,78,0.15);
+  border-color: #c4a24e; color: #c4a24e;
+}
+
+/* ═══ Layout 2: Timeline ═══ */
+.timeline {
+  position: relative; padding-left: 60px;
+}
+.timeline::before {
+  content: ''; position: absolute; left: 28px; top: 0; bottom: 0;
+  width: 2px; background: linear-gradient(to bottom, #c4a24e, #333, #c4a24e);
+}
+.tl-item {
+  position: relative; margin-bottom: 32px;
+  padding: 24px; background: #141414;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer; transition: all 0.2s;
+}
+.tl-item:hover {
+  border-color: rgba(196,162,78,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.tl-dot {
+  position: absolute; left: -40px; top: 28px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #c4a24e; border: 2px solid #0a0a0a;
+}
+.tl-date {
+  position: absolute; left: -120px; top: 24px;
+  color: #666; font-size: 13px; text-align: right;
+  width: 70px;
+}
+.tl-content { display: flex; gap: 20px; align-items: flex-start; }
+.tl-img {
+  width: 160px; height: 100px; border-radius: 6px;
+  object-fit: cover; flex-shrink: 0;
+  background: linear-gradient(135deg, #1a1a2e, #0f3460);
+}
+.tl-text { flex: 1; }
+.tl-cat {
+  font-size: 11px; color: #c4a24e; letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.tl-title {
+  font-size: 18px; font-weight: 500; color: #eee;
+  margin-bottom: 8px; line-height: 1.4;
+}
+.tl-excerpt {
+  font-size: 13px; color: #888; line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.tl-meta { font-size: 12px; color: #555; margin-top: 8px; }
+
+/* Month separator */
+.tl-month {
+  position: relative; margin-bottom: 24px;
+  padding: 8px 0;
+}
+.tl-month-label {
+  position: absolute; left: -52px;
+  background: #c4a24e; color: #000;
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* ═══ Layout 3: Masonry / Waterfall ═══ */
+.masonry {
+  columns: 3; column-gap: 20px;
+}
+.ms-card {
+  break-inside: avoid; margin-bottom: 20px;
+  background: #141414; border-radius: 8px; overflow: hidden;
+  cursor: pointer; transition: transform 0.2s;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.ms-card:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.ms-card-img {
+  width: 100%; object-fit: cover;
+  background: linear-gradient(135deg, #1a1a2e, #0f3460);
+}
+.ms-card-body { padding: 16px; }
+.ms-card-cat {
+  font-size: 11px; color: #c4a24e; letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.ms-card-title {
+  font-size: 15px; font-weight: 500; color: #eee;
+  margin-bottom: 8px; line-height: 1.4;
+}
+.ms-card-excerpt {
+  font-size: 13px; color: #888; line-height: 1.6;
+  margin-bottom: 8px;
+}
+.ms-card-meta { font-size: 12px; color: #555; }
+
+/* Banner shared */
+.page-banner {
+  height: 240px; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 40px;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
+  border-radius: 12px; position: relative; overflow: hidden;
+}
+.page-banner::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(196,162,78,0.08), transparent 70%);
+}
+.page-banner h1 {
+  font-size: 36px; letter-spacing: 4px; color: #fff;
+  font-family: Georgia, serif; font-weight: 300;
+  position: relative; z-index: 1;
+}
+.page-banner p {
+  color: #888; font-size: 14px; margin-top: 8px;
+  position: relative; z-index: 1; text-align: center;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex; gap: 12px; margin-bottom: 24px;
+}
+.search-input {
+  flex: 1; padding: 10px 16px; background: #1a1a1a;
+  border: 1px solid #333; border-radius: 8px;
+  color: #eee; font-size: 14px; outline: none;
+}
+.search-input:focus { border-color: #c4a24e; }
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showLayout(0)">方案 A：雜誌式</button>
+  <button class="tab-btn" onclick="showLayout(1)">方案 B：時間軸式</button>
+  <button class="tab-btn" onclick="showLayout(2)">方案 C：瀑布流網格</button>
+</div>
+
+<!-- ═══════════ Layout A: Magazine ═══════════ -->
+<div class="layout-section active" id="layout-0">
+  <div class="layout-label">雜誌式佈局</div>
+  <div class="layout-desc">
+    首篇置頂文章以大圖呈現，下方為三欄網格卡片。<br>
+    適合有高質量封面圖的遊戲新聞，視覺衝擊力強。
+  </div>
+
+  <div class="page-banner">
+    <div>
+      <h1>最新消息</h1>
+      <p>探索始祖天堂的最新動態</p>
+    </div>
+  </div>
+
+  <div class="cat-tabs">
+    <div class="cat-tab active">全部</div>
+    <div class="cat-tab">新聞</div>
+    <div class="cat-tab">更新</div>
+    <div class="cat-tab">活動</div>
+    <div class="cat-tab">攻略</div>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" placeholder="搜尋文章...">
+  </div>
+
+  <!-- Hero article -->
+  <div class="mag-hero">
+    <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);"></div>
+    <div class="mag-hero-overlay">
+      <div class="mag-hero-cat">活動</div>
+      <div class="mag-hero-title">始祖天堂 2026 春季改版「黎明之戰」即將到來</div>
+      <div class="mag-hero-meta">2026-03-20 · 1,234 次瀏覽 · 置頂</div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="mag-grid">
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">更新</div>
+        <div class="mag-card-title">v3.2.1 版本更新公告：新增騎士覺醒系統</div>
+        <div class="mag-card-meta">2026-03-18 · 856 次瀏覽</div>
+      </div>
+    </div>
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">攻略</div>
+        <div class="mag-card-title">新手必看！龍之谷副本完全攻略指南</div>
+        <div class="mag-card-meta">2026-03-15 · 2,103 次瀏覽</div>
+      </div>
+    </div>
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">新聞</div>
+        <div class="mag-card-title">始祖天堂榮獲 2026 年最佳 MMORPG 提名</div>
+        <div class="mag-card-meta">2026-03-12 · 678 次瀏覽</div>
+      </div>
+    </div>
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">活動</div>
+        <div class="mag-card-title">「暗黑祭典」限時活動開跑：稀有坐騎等你拿</div>
+        <div class="mag-card-meta">2026-03-10 · 1,567 次瀏覽</div>
+      </div>
+    </div>
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">更新</div>
+        <div class="mag-card-title">平衡性調整：法師與弓箭手技能數值修正</div>
+        <div class="mag-card-meta">2026-03-08 · 934 次瀏覽</div>
+      </div>
+    </div>
+    <div class="mag-card">
+      <div class="mag-card-img"></div>
+      <div class="mag-card-body">
+        <div class="mag-card-cat">新聞</div>
+        <div class="mag-card-title">跨服戰場第三季即將開放：獎勵內容搶先看</div>
+        <div class="mag-card-meta">2026-03-05 · 445 次瀏覽</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Layout B: Timeline ═══════════ -->
+<div class="layout-section" id="layout-1">
+  <div class="layout-label">時間軸式佈局</div>
+  <div class="layout-desc">
+    左側時間軸線串聯文章，按月份分組。<br>
+    適合強調時間順序的遊戲更新日誌，有歷史感和故事線。
+  </div>
+
+  <div class="page-banner">
+    <div>
+      <h1>最新消息</h1>
+      <p>探索始祖天堂的最新動態</p>
+    </div>
+  </div>
+
+  <div class="cat-tabs">
+    <div class="cat-tab active">全部</div>
+    <div class="cat-tab">新聞</div>
+    <div class="cat-tab">更新</div>
+    <div class="cat-tab">活動</div>
+    <div class="cat-tab">攻略</div>
+  </div>
+
+  <div class="timeline" style="margin-left: 100px;">
+    <div class="tl-month">
+      <div class="tl-month-label">2026 / 03</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">03-20</div>
+      <div class="tl-content">
+        <div class="tl-img"></div>
+        <div class="tl-text">
+          <div class="tl-cat">活動</div>
+          <div class="tl-title">始祖天堂 2026 春季改版「黎明之戰」即將到來</div>
+          <div class="tl-excerpt">全新地圖、全新副本、全新裝備系統，讓你體驗前所未有的冒險旅程。春季改版將帶來超過 50 項全新內容...</div>
+          <div class="tl-meta">1,234 次瀏覽 · 置頂</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">03-18</div>
+      <div class="tl-content">
+        <div class="tl-img"></div>
+        <div class="tl-text">
+          <div class="tl-cat">更新</div>
+          <div class="tl-title">v3.2.1 版本更新公告：新增騎士覺醒系統</div>
+          <div class="tl-excerpt">騎士職業迎來全新覺醒系統，解鎖強大的覺醒技能樹，提升戰鬥體驗...</div>
+          <div class="tl-meta">856 次瀏覽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">03-15</div>
+      <div class="tl-content">
+        <div class="tl-img"></div>
+        <div class="tl-text">
+          <div class="tl-cat">攻略</div>
+          <div class="tl-title">新手必看！龍之谷副本完全攻略指南</div>
+          <div class="tl-excerpt">詳細解析龍之谷副本的每個 Boss 機制、推薦陣容配置以及裝備需求...</div>
+          <div class="tl-meta">2,103 次瀏覽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-month">
+      <div class="tl-month-label">2026 / 02</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">02-28</div>
+      <div class="tl-content">
+        <div class="tl-img"></div>
+        <div class="tl-text">
+          <div class="tl-cat">新聞</div>
+          <div class="tl-title">始祖天堂榮獲 2026 年最佳 MMORPG 提名</div>
+          <div class="tl-excerpt">在全球遊戲大獎中，始祖天堂獲得年度最佳 MMORPG 提名，感謝所有玩家的支持...</div>
+          <div class="tl-meta">678 次瀏覽</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-date">02-20</div>
+      <div class="tl-content">
+        <div class="tl-img"></div>
+        <div class="tl-text">
+          <div class="tl-cat">活動</div>
+          <div class="tl-title">「暗黑祭典」限時活動開跑：稀有坐騎等你拿</div>
+          <div class="tl-excerpt">限時兩週的暗黑祭典活動，完成每日任務即可獲得暗影飛馬坐騎...</div>
+          <div class="tl-meta">1,567 次瀏覽</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ Layout C: Masonry ═══════════ -->
+<div class="layout-section" id="layout-2">
+  <div class="layout-label">瀑布流網格佈局</div>
+  <div class="layout-desc">
+    Pinterest 風格的不規則卡片排列，封面圖高度不一。<br>
+    視覺豐富度高，適合圖片密集的內容，瀏覽體驗自然流暢。
+  </div>
+
+  <div class="page-banner">
+    <div>
+      <h1>最新消息</h1>
+      <p>探索始祖天堂的最新動態</p>
+    </div>
+  </div>
+
+  <div class="cat-tabs">
+    <div class="cat-tab active">全部</div>
+    <div class="cat-tab">新聞</div>
+    <div class="cat-tab">更新</div>
+    <div class="cat-tab">活動</div>
+    <div class="cat-tab">攻略</div>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" placeholder="搜尋文章...">
+  </div>
+
+  <div class="masonry">
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:260px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">活動</div>
+        <div class="ms-card-title">始祖天堂 2026 春季改版「黎明之戰」即將到來</div>
+        <div class="ms-card-excerpt">全新地圖、全新副本、全新裝備系統，讓你體驗前所未有的冒險旅程。</div>
+        <div class="ms-card-meta">2026-03-20 · 1,234 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:180px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">更新</div>
+        <div class="ms-card-title">v3.2.1 版本更新公告</div>
+        <div class="ms-card-meta">2026-03-18 · 856 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:220px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">攻略</div>
+        <div class="ms-card-title">新手必看！龍之谷副本完全攻略指南</div>
+        <div class="ms-card-excerpt">詳細解析龍之谷副本的每個 Boss 機制、推薦陣容配置以及裝備需求。這篇攻略涵蓋了從入門到進階的完整攻略。</div>
+        <div class="ms-card-meta">2026-03-15 · 2,103 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:160px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">新聞</div>
+        <div class="ms-card-title">始祖天堂榮獲 2026 年最佳 MMORPG 提名</div>
+        <div class="ms-card-meta">2026-03-12 · 678 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:280px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">活動</div>
+        <div class="ms-card-title">「暗黑祭典」限時活動開跑：稀有坐騎等你拿</div>
+        <div class="ms-card-excerpt">限時兩週的暗黑祭典活動，完成每日任務即可獲得暗影飛馬坐騎。活動期間還有機會獲得限定時裝。</div>
+        <div class="ms-card-meta">2026-03-10 · 1,567 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:200px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">更新</div>
+        <div class="ms-card-title">平衡性調整：法師與弓箭手技能數值修正</div>
+        <div class="ms-card-excerpt">本次更新對法師和弓箭手的部分技能進行了數值調整，提升了 PvP 的平衡性。</div>
+        <div class="ms-card-meta">2026-03-08 · 934 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:190px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">新聞</div>
+        <div class="ms-card-title">跨服戰場第三季即將開放</div>
+        <div class="ms-card-meta">2026-03-05 · 445 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:240px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">攻略</div>
+        <div class="ms-card-title">PvP 競技場排名攻略：從白銀到傳說</div>
+        <div class="ms-card-excerpt">分享從白銀段位一路爬到傳說段位的心得與技巧，包括陣容搭配和操作要領。</div>
+        <div class="ms-card-meta">2026-03-01 · 1,892 次瀏覽</div>
+      </div>
+    </div>
+    <div class="ms-card">
+      <div class="ms-card-img" style="height:170px;"></div>
+      <div class="ms-card-body">
+        <div class="ms-card-cat">活動</div>
+        <div class="ms-card-title">新春福袋活動回顧與獎勵統計</div>
+        <div class="ms-card-meta">2026-02-25 · 723 次瀏覽</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showLayout(idx) {
+  document.querySelectorAll('.layout-section').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.tab-btn').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+/* ─── Reset ──────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ─── CSS Variables (global, not module-scoped) ──────────── */
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-overlay: rgba(0, 0, 0, 0.55);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --accent-gold: #c4a24e;
+  --accent-gold-light: #d4b76a;
+  --accent-red: #8b0000;
+  --header-height: 44px;
+  --header-total-height: 89px; /* 44px * 2 + 1px divider */
+}

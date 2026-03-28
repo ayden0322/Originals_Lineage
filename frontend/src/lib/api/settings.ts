@@ -1,0 +1,46 @@
+import apiClient from './client';
+import type {
+  ApiResponse,
+  ModuleSettings,
+  PaymentSettingsDto,
+  LineBotSettingsDto,
+  GameDbSettingsDto,
+  GameDbTestResult,
+  GameTableMappingDto,
+  FetchColumnsResult,
+} from '../types';
+
+export async function getSettings(): Promise<ModuleSettings> {
+  const { data } = await apiClient.get<ApiResponse<ModuleSettings>>('/modules/originals/settings');
+  return data.data;
+}
+
+export async function updatePaymentSettings(dto: PaymentSettingsDto): Promise<ModuleSettings> {
+  const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/payment', dto);
+  return data.data;
+}
+
+export async function updateLineBotSettings(dto: LineBotSettingsDto): Promise<ModuleSettings> {
+  const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/line-bot', dto);
+  return data.data;
+}
+
+export async function updateGameDbSettings(dto: GameDbSettingsDto): Promise<ModuleSettings> {
+  const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/game-db', dto);
+  return data.data;
+}
+
+export async function testGameDbConnection(dto: Omit<GameDbSettingsDto, 'connectionName'>): Promise<GameDbTestResult> {
+  const { data } = await apiClient.post<ApiResponse<GameDbTestResult>>('/modules/originals/settings/game-db/test', dto);
+  return data.data;
+}
+
+export async function updateGameTableMapping(dto: GameTableMappingDto): Promise<ModuleSettings> {
+  const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/game-table-mapping', dto);
+  return data.data;
+}
+
+export async function fetchTableColumns(tableName: string): Promise<FetchColumnsResult> {
+  const { data } = await apiClient.post<ApiResponse<FetchColumnsResult>>('/modules/originals/settings/game-db/columns', { tableName });
+  return data.data;
+}
