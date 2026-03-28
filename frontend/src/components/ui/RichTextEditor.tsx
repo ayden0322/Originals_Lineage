@@ -52,8 +52,7 @@ export default function RichTextEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        // Enter = new paragraph, Shift+Enter = soft line break <br>
-        hardBreak: true,
+        // hardBreak 預設已啟用（Shift+Enter = <br>）
       }),
       Underline,
       TextStyle,
@@ -78,7 +77,7 @@ export default function RichTextEditor({
     }
     const currentHTML = editor.getHTML();
     if (value !== currentHTML) {
-      editor.commands.setContent(value || '', false);
+      editor.commands.setContent(value || '', { emitUpdate: false });
     }
   }, [value, editor]);
 
