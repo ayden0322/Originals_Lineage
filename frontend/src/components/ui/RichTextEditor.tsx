@@ -325,7 +325,7 @@ export default function RichTextEditor({
 
       {/* Editor content */}
       <div
-        style={{ padding: '12px 16px', minHeight }}
+        style={{ padding: '12px 16px', minHeight, position: 'relative' }}
         onClick={() => editor.chain().focus().run()}
       >
         <EditorContent

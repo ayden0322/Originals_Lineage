@@ -41,8 +41,8 @@ const menuItems = [
         key: 'carousel',
         label: '首頁輪播設定',
         children: [
+          { key: '/module/site-manage/carousel/sections', label: '區塊輪播設定' },
           { key: '/module/site-manage/carousel/nav-style', label: '輪播標題樣式' },
-          { key: '/module/site-manage/carousel/sections', label: '輪播設定' },
         ],
       },
       {
