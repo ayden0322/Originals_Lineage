@@ -18,7 +18,7 @@ import type { Account, Permission } from '@/lib/types';
 import { getAccount } from '@/lib/api/accounts';
 import {
   getAllPermissions,
-  getAccountPermissions,
+  getAccountPermissionCodes,
   assignPermissions,
   revokePermissions,
 } from '@/lib/api/permissions';
@@ -30,25 +30,25 @@ export default function AccountPermissionsPage() {
 
   const [account, setAccount] = useState<Account | null>(null);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
-  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [assignedCodes, setAssignedCodes] = useState<Set<string>>(new Set());
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [acct, perms, assigned] = await Promise.all([
+      const [acct, perms, codes] = await Promise.all([
         getAccount(accountId),
         getAllPermissions(),
-        getAccountPermissions(accountId),
+        getAccountPermissionCodes(accountId),
       ]);
       setAccount(acct);
       setAllPermissions(perms);
 
-      const ids = new Set(assigned.map((p) => p.id));
-      setAssignedIds(ids);
-      setSelectedIds(new Set(ids));
+      const codeSet = new Set(codes);
+      setAssignedCodes(codeSet);
+      setSelectedCodes(new Set(codeSet));
     } catch {
       message.error('載入權限資料失敗');
     } finally {
@@ -60,24 +60,32 @@ export default function AccountPermissionsPage() {
     fetchData();
   }, [fetchData]);
 
+  // 根據帳號層級過濾可見的權限
+  const visiblePermissions = useMemo(() => {
+    if (!account) return allPermissions;
+    if (account.backendLevel === 'platform') return allPermissions;
+    // Module 帳號只顯示 module 級別權限
+    return allPermissions.filter((p) => p.backendLevel === 'module');
+  }, [allPermissions, account]);
+
   // Group permissions by category
   const grouped = useMemo(() => {
     const map = new Map<string, Permission[]>();
-    for (const perm of allPermissions) {
+    for (const perm of visiblePermissions) {
       const cat = perm.category || '其他';
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(perm);
     }
     return map;
-  }, [allPermissions]);
+  }, [visiblePermissions]);
 
-  const handleToggle = (permId: string, checked: boolean) => {
-    setSelectedIds((prev) => {
+  const handleToggle = (code: string, checked: boolean) => {
+    setSelectedCodes((prev) => {
       const next = new Set(prev);
       if (checked) {
-        next.add(permId);
+        next.add(code);
       } else {
-        next.delete(permId);
+        next.delete(code);
       }
       return next;
     });
@@ -86,9 +94,8 @@ export default function AccountPermissionsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Compute diff
-      const toAssign = Array.from(selectedIds).filter((id) => !assignedIds.has(id));
-      const toRevoke = Array.from(assignedIds).filter((id) => !selectedIds.has(id));
+      const toAssign = Array.from(selectedCodes).filter((c) => !assignedCodes.has(c));
+      const toRevoke = Array.from(assignedCodes).filter((c) => !selectedCodes.has(c));
 
       const tasks: Promise<void>[] = [];
       if (toAssign.length > 0) {
@@ -100,9 +107,7 @@ export default function AccountPermissionsPage() {
 
       await Promise.all(tasks);
       message.success('權限已更新');
-
-      // Refresh assigned state
-      setAssignedIds(new Set(selectedIds));
+      setAssignedCodes(new Set(selectedCodes));
     } catch {
       message.error('更新權限失敗');
     } finally {
@@ -111,13 +116,13 @@ export default function AccountPermissionsPage() {
   };
 
   const hasChanges = useMemo(() => {
-    if (selectedIds.size !== assignedIds.size) return true;
-    const arr = Array.from(selectedIds);
+    if (selectedCodes.size !== assignedCodes.size) return true;
+    const arr = Array.from(selectedCodes);
     for (let i = 0; i < arr.length; i++) {
-      if (!assignedIds.has(arr[i])) return true;
+      if (!assignedCodes.has(arr[i])) return true;
     }
     return false;
-  }, [selectedIds, assignedIds]);
+  }, [selectedCodes, assignedCodes]);
 
   return (
     <div>
@@ -131,7 +136,6 @@ export default function AccountPermissionsPage() {
       </Space>
 
       <Spin spinning={loading}>
-        {/* ── Account Info ───────────────────────────────── */}
         {account && (
           <Card style={{ marginBottom: 24 }}>
             <Descriptions title="帳號資訊" column={{ xs: 1, sm: 2, md: 3 }}>
@@ -160,7 +164,6 @@ export default function AccountPermissionsPage() {
           </Card>
         )}
 
-        {/* ── Permissions Matrix ─────────────────────────── */}
         <Card
           title="權限設定"
           extra={
@@ -190,23 +193,21 @@ export default function AccountPermissionsPage() {
               >
                 {perms.map((perm) => (
                   <Checkbox
-                    key={perm.id}
-                    checked={selectedIds.has(perm.id)}
-                    onChange={(e) => handleToggle(perm.id, e.target.checked)}
+                    key={perm.code}
+                    checked={selectedCodes.has(perm.code)}
+                    onChange={(e) => handleToggle(perm.code, e.target.checked)}
                   >
                     <span style={{ fontWeight: 500 }}>{perm.name}</span>
-                    {perm.description && (
-                      <span style={{ color: '#888', fontSize: 12, marginLeft: 4 }}>
-                        ({perm.description})
-                      </span>
-                    )}
+                    <span style={{ color: '#888', fontSize: 12, marginLeft: 4 }}>
+                      ({perm.code})
+                    </span>
                   </Checkbox>
                 ))}
               </div>
             </div>
           ))}
 
-          {allPermissions.length === 0 && !loading && (
+          {visiblePermissions.length === 0 && !loading && (
             <div style={{ textAlign: 'center', padding: 32, color: '#999' }}>
               目前沒有可設定的權限
             </div>

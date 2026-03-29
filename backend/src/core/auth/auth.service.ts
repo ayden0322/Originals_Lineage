@@ -23,15 +23,20 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, requiredLevel?: string) {
     const account = await this.accountService.findByEmail(dto.email);
     if (!account || !account.isActive) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('帳號或密碼錯誤');
+    }
+
+    // 驗證 backendLevel 是否符合要求
+    if (requiredLevel && account.backendLevel !== requiredLevel) {
+      throw new UnauthorizedException('此帳號無權限登入此後台');
     }
 
     const isValid = await bcrypt.compare(dto.password, account.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('帳號或密碼錯誤');
     }
 
     const permissions = await this.permissionService.findByAccount(account.id);
@@ -79,15 +84,16 @@ export class AuthService {
 
   async getProfile(userId: string) {
     const account = await this.accountService.findById(userId);
+    const permissions = await this.permissionService.findByAccount(account.id);
     const { passwordHash, refreshTokenHash, ...profile } = account;
-    return profile;
+    return { ...profile, permissions };
   }
 
   private async generateTokens(userId: string, email: string, backendLevel: string, permissions: string[] = []) {
     const payload: JwtPayload = {
       sub: userId,
       email,
-      type: 'platform-admin',
+      type: backendLevel === 'platform' ? 'platform-admin' : 'module-admin',
       backendLevel,
       permissions,
     };

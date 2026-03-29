@@ -6,15 +6,16 @@ export async function getAllPermissions(): Promise<Permission[]> {
   return data.data;
 }
 
-export async function getAccountPermissions(accountId: string): Promise<Permission[]> {
-  const { data } = await apiClient.get<ApiResponse<Permission[]>>(`/permissions/by-account/${accountId}`);
+/** 取得某帳號已被指派的權限 codes */
+export async function getAccountPermissionCodes(accountId: string): Promise<string[]> {
+  const { data } = await apiClient.get<ApiResponse<string[]>>(`/permissions/by-account/${accountId}`);
   return data.data;
 }
 
-export async function assignPermissions(accountId: string, permissionIds: string[]): Promise<void> {
-  await apiClient.post('/permissions/assign', { accountId, permissionIds });
+export async function assignPermissions(accountId: string, permissionCodes: string[]): Promise<void> {
+  await apiClient.post('/permissions/assign', { accountId, permissionCodes });
 }
 
-export async function revokePermissions(accountId: string, permissionIds: string[]): Promise<void> {
-  await apiClient.delete('/permissions/revoke', { data: { accountId, permissionIds } });
+export async function revokePermissions(accountId: string, permissionCodes: string[]): Promise<void> {
+  await apiClient.delete('/permissions/revoke', { data: { accountId, permissionCodes } });
 }

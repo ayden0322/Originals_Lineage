@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Layout, Menu, theme, Button, Space } from 'antd';
+import type { ItemType } from 'antd/es/menu/interface';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -18,23 +19,33 @@ import { useAuth } from '@/components/providers/AuthProvider';
 
 const { Header, Sider, Content } = Layout;
 
-const menuItems = [
+// 選單項目與所需權限的對應
+interface MenuItem {
+  key: string;
+  icon?: React.ReactNode;
+  label: string;
+  permission?: string; // 需要的權限碼（不設定 = 任何人可見）
+  children?: MenuItem[];
+}
+
+const allMenuItems: MenuItem[] = [
   { key: '/module/dashboard', icon: <DashboardOutlined />, label: '儀表板' },
-  { key: '/module/members', icon: <UserOutlined />, label: '會員管理' },
-  { key: '/module/reservations', icon: <CalendarOutlined />, label: '預約管理' },
+  { key: '/module/members', icon: <UserOutlined />, label: '會員管理', permission: 'module.originals.members.view' },
+  { key: '/module/reservations', icon: <CalendarOutlined />, label: '預約管理', permission: 'module.originals.reserve.view' },
   {
     key: 'shop',
     icon: <ShoppingOutlined />,
     label: '商城管理',
     children: [
-      { key: '/module/shop/products', label: '商品管理' },
-      { key: '/module/shop/orders', label: '訂單管理' },
+      { key: '/module/shop/products', label: '商品管理', permission: 'module.originals.shop.view' },
+      { key: '/module/shop/orders', label: '訂單管理', permission: 'module.originals.orders.view' },
     ],
   },
   {
     key: 'site-manage',
     icon: <GlobalOutlined />,
     label: '網站管理',
+    permission: 'module.originals.settings.manage',
     children: [
       { key: '/module/site-manage/settings', label: '網站設定' },
       {
@@ -60,13 +71,40 @@ const menuItems = [
     icon: <FileTextOutlined />,
     label: '內容管理',
     children: [
-      { key: '/module/content/categories', label: '分類管理' },
-      { key: '/module/content/articles', label: '文章管理' },
-      { key: '/module/content/announcements', label: '公告管理' },
+      { key: '/module/content/categories', label: '分類管理', permission: 'module.originals.content.view' },
+      { key: '/module/content/articles', label: '文章管理', permission: 'module.originals.content.view' },
+      { key: '/module/content/announcements', label: '公告管理', permission: 'module.originals.content.view' },
     ],
   },
-  { key: '/module/settings', icon: <SettingOutlined />, label: '模組設定' },
+  { key: '/module/settings', icon: <SettingOutlined />, label: '模組設定', permission: 'module.originals.settings.manage' },
 ];
+
+/** 根據權限過濾選單，子項目全部被過濾則父項目也隱藏 */
+function filterMenuByPermissions(items: MenuItem[], permissions: string[]): ItemType[] {
+  const result: ItemType[] = [];
+  for (const item of items) {
+    // 如果有設定權限且使用者沒有該權限，跳過
+    if (item.permission && !permissions.includes(item.permission)) continue;
+
+    if (item.children) {
+      const filteredChildren = filterMenuByPermissions(item.children, permissions);
+      if (filteredChildren.length === 0) continue;
+      result.push({
+        key: item.key,
+        icon: item.icon,
+        label: item.label,
+        children: filteredChildren,
+      } as ItemType);
+    } else {
+      result.push({
+        key: item.key,
+        icon: item.icon,
+        label: item.label,
+      } as ItemType);
+    }
+  }
+  return result;
+}
 
 export default function ModuleAdminLayout({
   children,
@@ -77,6 +115,11 @@ export default function ModuleAdminLayout({
   const pathname = usePathname();
   const { token } = theme.useToken();
   const { user, loading, logout } = useAuth();
+
+  const menuItems = useMemo(() => {
+    const permissions = user?.permissions ?? [];
+    return filterMenuByPermissions(allMenuItems, permissions);
+  }, [user?.permissions]);
 
   useEffect(() => {
     if (!loading && !user) {

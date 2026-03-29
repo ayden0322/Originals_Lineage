@@ -17,6 +17,7 @@ export class AccountService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedSuperAdmin();
+    await this.seedModuleAdmin();
   }
 
   private async seedSuperAdmin() {
@@ -33,6 +34,23 @@ export class AccountService implements OnModuleInit {
         }),
       );
       this.logger.log(`Seed superadmin created: ${email}`);
+    }
+  }
+
+  private async seedModuleAdmin() {
+    const email = 'originals@gmail.com';
+    const existing = await this.accountRepo.findOne({ where: { email } });
+    if (!existing) {
+      const passwordHash = await bcrypt.hash('originals123', 10);
+      await this.accountRepo.save(
+        this.accountRepo.create({
+          email,
+          passwordHash,
+          displayName: '始祖天堂管理員',
+          backendLevel: BackendLevel.MODULE,
+        }),
+      );
+      this.logger.log(`Seed module admin created: ${email}`);
     }
   }
 

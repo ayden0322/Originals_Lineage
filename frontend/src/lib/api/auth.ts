@@ -78,20 +78,20 @@ export async function changeSecondPassword(
   return data.data;
 }
 
-// Module admin auth
+// Module admin auth (統一使用 /auth 端點)
 export async function moduleAdminLogin(email: string, password: string): Promise<TokenPair> {
   const { data } = await apiClient.post<ApiResponse<TokenPair>>(
-    '/modules/originals/admin-auth/login',
+    '/auth/module-login',
     { email, password },
   );
   return data.data;
 }
 
 export async function getModuleAdminMe(): Promise<AuthUser> {
-  const { data } = await apiClient.get<ApiResponse<AuthUser>>('/modules/originals/admin-auth/me');
+  const { data } = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
   return data.data;
 }
 
 export async function moduleAdminLogout(): Promise<void> {
-  await apiClient.post('/modules/originals/admin-auth/logout');
+  await apiClient.post('/auth/logout');
 }

@@ -50,6 +50,7 @@ export class PermissionService implements OnModuleInit {
   async onModuleInit() {
     await this.seedPermissions();
     await this.seedSuperAdminPermissions();
+    await this.seedModuleAdminPermissions();
   }
 
   private async seedPermissions() {
@@ -92,6 +93,39 @@ export class PermissionService implements OnModuleInit {
     }
     if (added > 0) {
       this.logger.log(`Assigned ${added} permissions to superadmin`);
+    }
+  }
+
+  private async seedModuleAdminPermissions() {
+    const moduleAdmin = await this.accountRepo.findOne({
+      where: { email: 'originals@gmail.com', backendLevel: BackendLevel.MODULE },
+    });
+    if (!moduleAdmin) return;
+
+    // 取得所有 module 級別權限
+    const modulePermissions = await this.permissionRepo.find({
+      where: { backendLevel: 'module' },
+    });
+    const existingPerms = await this.accountPermRepo.find({
+      where: { accountId: moduleAdmin.id },
+    });
+    const existingIds = new Set(existingPerms.map((p) => p.permissionId));
+
+    let added = 0;
+    for (const perm of modulePermissions) {
+      if (!existingIds.has(perm.id)) {
+        await this.accountPermRepo.save(
+          this.accountPermRepo.create({
+            accountId: moduleAdmin.id,
+            permissionId: perm.id,
+            grantedBy: moduleAdmin.id,
+          }),
+        );
+        added++;
+      }
+    }
+    if (added > 0) {
+      this.logger.log(`Assigned ${added} module permissions to originals@gmail.com`);
     }
   }
 

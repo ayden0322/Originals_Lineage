@@ -19,7 +19,12 @@ export class AuthController {
 
   @Post('login')
   login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+    return this.authService.login(dto, 'platform');
+  }
+
+  @Post('module-login')
+  moduleLogin(@Body() dto: LoginDto) {
+    return this.authService.login(dto, 'module');
   }
 
   @ApiBearerAuth()

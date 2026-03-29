@@ -87,9 +87,8 @@ apiClient.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token');
 
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const refreshUrl = role === 'module-admin'
-          ? `${baseUrl}/modules/originals/admin-auth/refresh`
-          : `${baseUrl}/auth/refresh`;
+        // 統一使用 /auth/refresh 端點
+        const refreshUrl = `${baseUrl}/auth/refresh`;
 
         const { data } = await axios.post(
           refreshUrl,

@@ -46,12 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      let me: AuthUser;
-      if (role === 'module-admin') {
-        me = await authApi.getModuleAdminMe();
-      } else {
-        me = await authApi.getMe();
-      }
+      // 統一使用 /auth/me（後端已統一）
+      const me = await authApi.getMe();
       setUser(me);
     } catch {
       const role = detectAdminRole();
@@ -81,11 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     const role = detectAdminRole();
     try {
-      if (role === 'module-admin') {
-        await authApi.moduleAdminLogout();
-      } else {
-        await authApi.logout();
-      }
+      // 統一使用 /auth/logout
+      await authApi.logout();
     } catch {
       // ignore
     }
