@@ -17,7 +17,7 @@
 }
 
 .headerWrapperScrolled {
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--header-bg-color);
   backdrop-filter: blur(8px);
 }
 
@@ -309,7 +309,7 @@
 
 /* ─── Footer ────────────────────────────────────────────────── */
 .footer {
-  background: var(--bg-secondary);
+  background: var(--footer-bg-color);
   padding: 40px 32px;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -321,7 +321,7 @@
 }
 
 .footerText {
-  color: var(--text-muted);
+  color: var(--footer-text-color);
   font-size: 13px;
 }
 

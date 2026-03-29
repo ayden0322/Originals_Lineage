@@ -82,6 +82,52 @@ export class UpdateSiteSettingsDto {
   @IsString()
   navFontFamily?: string;
 
+  // ─── Color Theme Settings ────────────────────────────────────────
+  @ApiPropertyOptional({ example: '#c4a24e', description: '主題色' })
+  @IsOptional()
+  @IsString()
+  accentColor?: string;
+
+  @ApiPropertyOptional({ example: '#d4b76a', description: '主題色淺色' })
+  @IsOptional()
+  @IsString()
+  accentColorLight?: string;
+
+  @ApiPropertyOptional({ example: 'rgba(0,0,0,0.85)', description: '選單列背景色' })
+  @IsOptional()
+  @IsString()
+  headerBgColor?: string;
+
+  @ApiPropertyOptional({ example: '#0a0a0a', description: '頁面背景色' })
+  @IsOptional()
+  @IsString()
+  bgPrimary?: string;
+
+  @ApiPropertyOptional({ example: '#111111', description: '區塊背景色' })
+  @IsOptional()
+  @IsString()
+  bgSecondary?: string;
+
+  @ApiPropertyOptional({ example: '#ffffff', description: '主要文字顏色' })
+  @IsOptional()
+  @IsString()
+  textPrimary?: string;
+
+  @ApiPropertyOptional({ example: 'rgba(255,255,255,0.7)', description: '次要文字顏色' })
+  @IsOptional()
+  @IsString()
+  textSecondary?: string;
+
+  @ApiPropertyOptional({ example: '#111111', description: '底部背景色' })
+  @IsOptional()
+  @IsString()
+  footerBgColor?: string;
+
+  @ApiPropertyOptional({ example: 'rgba(255,255,255,0.4)', description: '底部文字顏色' })
+  @IsOptional()
+  @IsString()
+  footerTextColor?: string;
+
   // ─── News Page Settings ────────────────────────────────────────
   @ApiPropertyOptional({ example: 'magazine', description: '新聞頁佈局模式' })
   @IsOptional()

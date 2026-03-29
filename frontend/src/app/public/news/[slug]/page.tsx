@@ -127,9 +127,35 @@ export default function ArticleDetailPage() {
 
         {/* Article Content */}
         <div
+          className="article-content"
           style={{ fontSize: 16, lineHeight: 2, color: 'rgba(255,255,255,0.8)' }}
           dangerouslySetInnerHTML={{ __html: article.content }}
         />
+        <style jsx global>{`
+          .article-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin: 8px 0;
+          }
+          .article-content img[data-text-align="center"] {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+          }
+          .article-content img[data-text-align="right"] {
+            display: block;
+            margin-left: auto;
+            margin-right: 0;
+          }
+          .article-content p {
+            margin: 0.5em 0;
+          }
+          .article-content a {
+            color: var(--accent-gold, #c4a24e);
+            text-decoration: underline;
+          }
+        `}</style>
 
         {/* ═══ Prev / Next Navigation ═══ */}
         {(prevArticle || nextArticle) && (

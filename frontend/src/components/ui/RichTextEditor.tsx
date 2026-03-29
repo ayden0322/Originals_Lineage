@@ -8,7 +8,7 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Upload, Tooltip, Divider, Dropdown, message } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -27,6 +27,7 @@ import {
   RedoOutlined,
   DownOutlined,
   FontSizeOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
 
@@ -38,6 +39,67 @@ interface RichTextEditorProps {
   minHeight?: number;
 }
 
+// 簡易 HTML 格式化：加入縮排與換行
+function formatHTML(html: string): string {
+  const selfClosing = new Set(['img', 'br', 'hr', 'input', 'meta', 'link']);
+  let result = '';
+  let indent = 0;
+  const pad = () => '  '.repeat(indent);
+
+  // 將 HTML 拆成 tag 和文字片段
+  const tokens = html.replace(/>\s*</g, '>\n<').split('\n');
+
+  for (const raw of tokens) {
+    const token = raw.trim();
+    if (!token) continue;
+
+    // 結束標籤
+    if (token.startsWith('</')) {
+      indent = Math.max(0, indent - 1);
+      result += pad() + token + '\n';
+    }
+    // 自閉合標籤
+    else if (token.startsWith('<') && (token.endsWith('/>') || selfClosing.has((token.match(/^<(\w+)/)?.[1] || '').toLowerCase()))) {
+      result += pad() + token + '\n';
+    }
+    // 開始標籤（同行帶結束標籤，如 <p>text</p>）
+    else if (token.startsWith('<') && token.includes('</')) {
+      result += pad() + token + '\n';
+    }
+    // 開始標籤
+    else if (token.startsWith('<')) {
+      result += pad() + token + '\n';
+      indent++;
+    }
+    // 純文字
+    else {
+      result += pad() + token + '\n';
+    }
+  }
+
+  return result.trimEnd();
+}
+
+// 擴展 Image 節點，支援 textAlign 屬性
+const AlignableImage = ImageExt.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      textAlign: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-text-align') || element.style.textAlign || null,
+        renderHTML: (attributes) => {
+          if (!attributes.textAlign) return {};
+          return {
+            'data-text-align': attributes.textAlign,
+            style: `display: block; margin-left: ${attributes.textAlign === 'center' ? 'auto' : attributes.textAlign === 'right' ? 'auto' : '0'}; margin-right: ${attributes.textAlign === 'center' ? 'auto' : attributes.textAlign === 'left' ? 'auto' : '0'};`,
+          };
+        },
+      },
+    };
+  },
+});
+
 export default function RichTextEditor({
   value,
   onChange,
@@ -47,6 +109,8 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const isInternalChange = useRef(false);
   const savedSelection = useRef<{ from: number; to: number } | null>(null);
+  const [htmlMode, setHtmlMode] = useState(false);
+  const [htmlSource, setHtmlSource] = useState('');
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -57,8 +121,8 @@ export default function RichTextEditor({
       Underline,
       TextStyle,
       Color,
-      ImageExt.configure({ inline: false, allowBase64: false }),
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      AlignableImage.configure({ inline: false, allowBase64: false }),
+      TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
       Link.configure({ openOnClick: false }),
     ],
     content: value || '',
@@ -321,33 +385,64 @@ export default function RichTextEditor({
             disabled={!editor.can().redo()}
           />
         </Tooltip>
+
+        <Divider type="vertical" style={{ margin: '0 4px' }} />
+
+        {/* HTML 原始碼模式 */}
+        <Tooltip title={htmlMode ? '切換為視覺化編輯' : '切換為 HTML 原始碼'}>
+          <Button
+            type={htmlMode ? 'primary' : 'text'}
+            size="small"
+            icon={<CodeOutlined />}
+            onClick={() => {
+              if (!htmlMode) {
+                // 進入 HTML 模式：格式化後同步到編輯區
+                setHtmlSource(formatHTML(editor.getHTML()));
+              } else {
+                // 離開 HTML 模式：將 textarea 內容寫回編輯器
+                isInternalChange.current = true;
+                editor.commands.setContent(htmlSource, { emitUpdate: false });
+                onChange?.(htmlSource);
+              }
+              setHtmlMode(!htmlMode);
+            }}
+          />
+        </Tooltip>
       </div>
 
       {/* Editor content */}
-      <div
-        style={{ padding: '12px 16px', minHeight, position: 'relative' }}
-        onClick={() => editor.chain().focus().run()}
-      >
-        <EditorContent
-          editor={editor}
-          style={{
-            minHeight,
-          }}
+      {htmlMode ? (
+        <HtmlSourceEditor
+          value={htmlSource}
+          onChange={setHtmlSource}
+          minHeight={minHeight}
         />
-        {editor.isEmpty && (
-          <div
+      ) : (
+        <div
+          style={{ padding: '12px 16px', minHeight, position: 'relative' }}
+          onClick={() => editor.chain().focus().run()}
+        >
+          <EditorContent
+            editor={editor}
             style={{
-              position: 'absolute',
-              top: 12,
-              left: 16,
-              color: '#bfbfbf',
-              pointerEvents: 'none',
+              minHeight,
             }}
-          >
-            {placeholder}
-          </div>
-        )}
-      </div>
+          />
+          {editor.isEmpty && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 16,
+                color: '#bfbfbf',
+                pointerEvents: 'none',
+              }}
+            >
+              {placeholder}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Basic editor styles */}
       <style jsx global>{`
@@ -368,6 +463,16 @@ export default function RichTextEditor({
           border-radius: 4px;
           margin: 8px 0;
         }
+        .tiptap img[data-text-align="center"] {
+          display: block;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .tiptap img[data-text-align="right"] {
+          display: block;
+          margin-left: auto;
+          margin-right: 0;
+        }
         .tiptap a {
           color: #1677ff;
           text-decoration: underline;
@@ -383,6 +488,85 @@ export default function RichTextEditor({
           color: #666;
         }
       `}</style>
+    </div>
+  );
+}
+
+/** 帶行號的 HTML 原始碼編輯器 */
+function HtmlSourceEditor({
+  value,
+  onChange,
+  minHeight,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  minHeight: number;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const lineCount = useMemo(() => value.split('\n').length, [value]);
+
+  // 同步行號區域的捲動
+  const handleScroll = useCallback(() => {
+    if (textareaRef.current && gutterRef.current) {
+      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', borderRadius: '0 0 6px 6px', overflow: 'hidden' }}>
+      {/* 行號 */}
+      <div
+        ref={gutterRef}
+        style={{
+          minHeight,
+          maxHeight: 500,
+          overflow: 'hidden',
+          padding: '12px 0',
+          background: '#f0f0f0',
+          borderRight: '1px solid #d9d9d9',
+          userSelect: 'none',
+          textAlign: 'right',
+          fontFamily: 'monospace',
+          fontSize: 13,
+          lineHeight: '20px',
+          color: '#999',
+          flexShrink: 0,
+        }}
+      >
+        {Array.from({ length: lineCount }, (_, i) => (
+          <div key={i} style={{ padding: '0 8px 0 12px' }}>
+            {i + 1}
+          </div>
+        ))}
+      </div>
+      {/* 程式碼區 */}
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onScroll={handleScroll}
+        spellCheck={false}
+        style={{
+          flex: 1,
+          minHeight,
+          maxHeight: 500,
+          padding: '12px 16px',
+          fontFamily: 'monospace',
+          fontSize: 13,
+          lineHeight: '20px',
+          border: 'none',
+          outline: 'none',
+          resize: 'none',
+          background: '#fafafa',
+          color: '#333',
+          tabSize: 2,
+          whiteSpace: 'pre',
+          overflowX: 'auto',
+          overflowY: 'auto',
+        }}
+        placeholder="在此編輯 HTML 原始碼..."
+      />
     </div>
   );
 }

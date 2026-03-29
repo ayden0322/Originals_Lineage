@@ -23,6 +23,9 @@ body {
   --accent-gold: #c4a24e;
   --accent-gold-light: #d4b76a;
   --accent-red: #8b0000;
+  --header-bg-color: rgba(0, 0, 0, 0.85);
+  --footer-bg-color: var(--bg-secondary);
+  --footer-text-color: var(--text-muted);
   --header-height: 44px;
   --header-total-height: 89px; /* 44px * 2 + 1px divider */
 }

@@ -469,6 +469,16 @@ export interface SiteSettings {
   heroEnabled: boolean;
   newsDisplayCount: number;
   featuredArticleIds: string[];
+  // Color theme
+  accentColor?: string;
+  accentColorLight?: string;
+  headerBgColor?: string;
+  bgPrimary?: string;
+  bgSecondary?: string;
+  textPrimary?: string;
+  textSecondary?: string;
+  footerBgColor?: string;
+  footerTextColor?: string;
   // Nav style
   navActiveColor?: string;
   navInactiveColor?: string;
