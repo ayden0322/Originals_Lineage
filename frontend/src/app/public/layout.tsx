@@ -4,6 +4,7 @@ import { ConfigProvider, theme } from 'antd';
 import { SiteConfigProvider, useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import PublicHeader from '@/components/public/PublicHeader';
 import AnnouncementSystem from '@/components/public/AnnouncementSystem';
+import BgmPlayer from '@/components/public/BgmPlayer';
 import { useEffect } from 'react';
 import { extractGoogleFontNames, buildGoogleFontsUrl } from '@/lib/fonts';
 import './styles/public-globals.css';
@@ -100,6 +101,7 @@ export default function PublicLayout({
           <AnnouncementSystem />
           <PublicHeader />
           <main>{children}</main>
+          <BgmPlayer />
         </div>
       </ThemeInjector>
     </SiteConfigProvider>

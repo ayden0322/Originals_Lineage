@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Form, Input, InputNumber, Button, Switch, Select, Collapse, Tabs, message, Typography, Spin, Radio } from 'antd';
+import { Form, Input, InputNumber, Button, Switch, Select, Collapse, Tabs, Slider, Table, Upload, message, Typography, Spin, Radio, Tooltip, Space } from 'antd';
+import { UploadOutlined, DeleteOutlined, SoundOutlined, CustomerServiceOutlined } from '@ant-design/icons';
 import ImageUpload from '@/components/ui/ImageUpload';
 import ColorPickerInput from '@/components/ui/ColorPickerInput';
-import { getSiteSettings, updateSiteSettings } from '@/lib/api/site-manage';
+import { getSiteSettings, updateSiteSettings, uploadFile } from '@/lib/api/site-manage';
 import { getArticles } from '@/lib/api/content';
 import { SITE_FONT_OPTIONS } from '@/lib/fonts';
 import type { Article } from '@/lib/types';
@@ -300,6 +301,70 @@ function FontPreview({ form }: { form: ReturnType<typeof Form.useForm>[0] }) {
   );
 }
 
+/** 前台頁面路徑對照 */
+const PAGE_ROUTES = [
+  { path: '/public', label: '首頁' },
+  { path: '/public/news', label: '最新消息' },
+  { path: '/public/shop', label: '線上商城' },
+  { path: '/public/sponsor', label: '贊助專區' },
+  { path: '/public/events', label: '活動內容' },
+  { path: '/public/drops', label: '掉落查詢' },
+  { path: '/public/changelog', label: '更新歷程' },
+  { path: '/public/support', label: '聯繫客服' },
+];
+
+/** 音訊上傳元件 */
+function AudioUploadBtn({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  return (
+    <Space size="small">
+      {value && (
+        <>
+          <audio src={value} controls style={{ height: 32, maxWidth: 180 }} />
+          <Tooltip title="移除">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => onChange(null)}
+            />
+          </Tooltip>
+        </>
+      )}
+      <Upload
+        accept="audio/*"
+        showUploadList={false}
+        customRequest={async ({ file, onSuccess, onError }) => {
+          setUploading(true);
+          try {
+            const result = await uploadFile(file as File, 'bgm');
+            onChange(result.url);
+            onSuccess?.(null);
+            message.success('音樂上傳成功');
+          } catch (e) {
+            onError?.(e as Error);
+            message.error('上傳失敗');
+          } finally {
+            setUploading(false);
+          }
+        }}
+      >
+        <Button size="small" icon={<UploadOutlined />} loading={uploading}>
+          {value ? '更換' : '上傳音樂'}
+        </Button>
+      </Upload>
+    </Space>
+  );
+}
+
 export default function SettingsPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
@@ -307,6 +372,7 @@ export default function SettingsPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [activeSection, setActiveSection] = useState<ThemeSection | null>('accent');
+  const [pageBgm, setPageBgm] = useState<Record<string, string | null>>({});
 
   const fetchData = useCallback(async () => {
     try {
@@ -317,6 +383,7 @@ export default function SettingsPage() {
       const merged = { ...DEFAULT_COLORS, ...settings };
       form.setFieldsValue(merged);
       setLogoUrl(settings.logoUrl || '');
+      setPageBgm(settings.pageBgm || {});
       setArticles(articleData.items);
     } catch {
       message.error('載入設定失敗');
@@ -333,7 +400,7 @@ export default function SettingsPage() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      await updateSiteSettings({ ...values, logoUrl });
+      await updateSiteSettings({ ...values, logoUrl, pageBgm });
       message.success('設定已儲存');
     } catch {
       message.error('儲存失敗');
@@ -573,6 +640,77 @@ export default function SettingsPage() {
                   <div style={{ flex: '0 0 380px' }}>
                     <FontPreview form={form} />
                   </div>
+                </div>
+              ),
+            },
+            {
+              key: 'bgm',
+              label: '背景音樂',
+              children: (
+                <div style={{ maxWidth: 700 }}>
+                  <div style={{ marginBottom: 24, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                    設定各頁面的背景音樂，僅在桌面裝置播放。支援 mp3 / ogg / wav 格式。
+                  </div>
+
+                  {/* 全站預設 */}
+                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '16px 20px', marginBottom: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <CustomerServiceOutlined /> 全站預設音樂
+                    </div>
+                    <Form.Item name="defaultBgm" noStyle>
+                      <Input style={{ display: 'none' }} />
+                    </Form.Item>
+                    <AudioUploadBtn
+                      value={form.getFieldValue('defaultBgm')}
+                      onChange={(url) => form.setFieldValue('defaultBgm', url || undefined)}
+                    />
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
+                      當頁面未指定音樂時，會播放此預設音樂
+                    </div>
+                  </div>
+
+                  {/* 播放設定 */}
+                  <div style={{ display: 'flex', gap: 32, marginBottom: 24 }}>
+                    <Form.Item name="bgmVolume" label="預設音量" style={{ flex: 1, marginBottom: 0 }}>
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        tooltip={{ formatter: (v) => `${Math.round((v || 0) * 100)}%` }}
+                      />
+                    </Form.Item>
+                    <Form.Item name="bgmAutoPlay" label="自動播放" valuePropName="checked" style={{ marginBottom: 0 }}>
+                      <Switch />
+                    </Form.Item>
+                  </div>
+
+                  {/* 各頁面音樂 */}
+                  <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>各頁面音樂設定</div>
+                  <Table
+                    dataSource={PAGE_ROUTES}
+                    rowKey="path"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                      { title: '頁面', dataIndex: 'label', key: 'label', width: 120 },
+                      { title: '路徑', dataIndex: 'path', key: 'path', width: 160, render: (v: string) => <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{v}</span> },
+                      {
+                        title: '音樂',
+                        key: 'bgm',
+                        render: (_, record) => (
+                          <AudioUploadBtn
+                            value={pageBgm[record.path]}
+                            onChange={(url) => setPageBgm((prev) => ({ ...prev, [record.path]: url }))}
+                          />
+                        ),
+                      },
+                    ]}
+                    style={{ marginBottom: 20 }}
+                  />
+
+                  <Button type="primary" onClick={handleSave} loading={submitting}>
+                    儲存設定
+                  </Button>
                 </div>
               ),
             },

@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import {
   UploadOutlined, CopyOutlined, DeleteOutlined, PlayCircleOutlined,
-  FileImageOutlined, VideoCameraOutlined, EyeOutlined, InboxOutlined,
+  FileImageOutlined, VideoCameraOutlined, CustomerServiceOutlined, EyeOutlined, InboxOutlined,
 } from '@ant-design/icons';
 import { uploadFile, listMedia, deleteMedia } from '@/lib/api/site-manage';
 import type { MediaItem } from '@/lib/api/site-manage';
@@ -32,6 +32,11 @@ function isVideo(objectName: string): boolean {
   return /\.(mp4|webm|mov|avi|mkv)$/i.test(objectName);
 }
 
+/** 判斷是否為音訊 */
+function isAudio(objectName: string): boolean {
+  return /\.(mp3|ogg|wav|flac|aac|m4a)$/i.test(objectName);
+}
+
 /** 格式化檔案大小 */
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -46,12 +51,14 @@ const FOLDER_OPTIONS = [
   { value: 'products', label: '商品' },
   { value: 'site', label: '網站設定' },
   { value: 'articles', label: '文章' },
+  { value: 'bgm', label: '背景音樂' },
 ];
 
 const TYPE_OPTIONS = [
   { value: '', label: '全部類型' },
   { value: 'image', label: '圖片' },
   { value: 'video', label: '影片' },
+  { value: 'audio', label: '音訊' },
 ];
 
 export default function MediaLibraryPage() {
@@ -87,7 +94,11 @@ export default function MediaLibraryPage() {
 
   // 前端類型篩選
   const filteredItems = typeFilter
-    ? items.filter((item) => (typeFilter === 'video' ? isVideo(item.objectName) : !isVideo(item.objectName)))
+    ? items.filter((item) => {
+        if (typeFilter === 'video') return isVideo(item.objectName);
+        if (typeFilter === 'audio') return isAudio(item.objectName);
+        return !isVideo(item.objectName) && !isAudio(item.objectName); // image
+      })
     : items;
 
   const handleUpload = async (file: File) => {
@@ -119,9 +130,12 @@ export default function MediaLibraryPage() {
     message.success('已複製連結');
   };
 
+  const [previewIsAudio, setPreviewIsAudio] = useState(false);
+
   const handlePreview = (item: MediaItem) => {
     setPreviewUrl(item.url);
     setPreviewIsVideo(isVideo(item.objectName));
+    setPreviewIsAudio(isAudio(item.objectName));
   };
 
   return (
@@ -148,7 +162,7 @@ export default function MediaLibraryPage() {
       {canUpload && (
         <Card size="small" style={{ marginBottom: 20 }}>
           <Dragger
-            accept="image/*,video/*"
+            accept="image/*,video/*,audio/*"
             multiple
             showUploadList={false}
             customRequest={async ({ file, onSuccess, onError }) => {
@@ -166,7 +180,7 @@ export default function MediaLibraryPage() {
               <InboxOutlined style={{ fontSize: 36, color: '#1677ff' }} />
             </p>
             <p style={{ fontSize: 14 }}>
-              {uploading ? '上傳中...' : '點擊或拖曳檔案上傳（圖片 / 影片，最大 100MB）'}
+              {uploading ? '上傳中...' : '點擊或拖曳檔案上傳（圖片 / 影片 / 音訊，最大 100MB）'}
             </p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
               上傳至：{FOLDER_OPTIONS.find((f) => f.value === (folder || 'general'))?.label || folder || 'general'}
@@ -190,6 +204,10 @@ export default function MediaLibraryPage() {
         >
           {filteredItems.map((item) => {
             const video = isVideo(item.objectName);
+            const audio = isAudio(item.objectName);
+            const typeLabel = audio ? '音訊' : video ? '影片' : '圖片';
+            const typeIcon = audio ? <CustomerServiceOutlined /> : video ? <VideoCameraOutlined /> : <FileImageOutlined />;
+            const typeBg = audio ? 'rgba(250,140,22,0.85)' : video ? 'rgba(114,46,209,0.85)' : 'rgba(22,119,255,0.85)';
             return (
               <Card
                 key={item.objectName}
@@ -210,7 +228,9 @@ export default function MediaLibraryPage() {
                     }}
                     onClick={() => handlePreview(item)}
                   >
-                    {video ? (
+                    {audio ? (
+                      <CustomerServiceOutlined style={{ fontSize: 48, color: 'rgba(250,140,22,0.6)' }} />
+                    ) : video ? (
                       <>
                         <video
                           src={item.url}
@@ -240,7 +260,7 @@ export default function MediaLibraryPage() {
                         position: 'absolute',
                         top: 6,
                         left: 6,
-                        background: video ? 'rgba(114,46,209,0.85)' : 'rgba(22,119,255,0.85)',
+                        background: typeBg,
                         borderRadius: 4,
                         padding: '2px 6px',
                         fontSize: 10,
@@ -250,8 +270,8 @@ export default function MediaLibraryPage() {
                         gap: 3,
                       }}
                     >
-                      {video ? <VideoCameraOutlined /> : <FileImageOutlined />}
-                      {video ? '影片' : '圖片'}
+                      {typeIcon}
+                      {typeLabel}
                     </div>
                     {/* 資料夾標籤 */}
                     <div
@@ -351,7 +371,12 @@ export default function MediaLibraryPage() {
         destroyOnClose
       >
         {previewUrl && (
-          previewIsVideo ? (
+          previewIsAudio ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <CustomerServiceOutlined style={{ fontSize: 64, color: 'rgba(250,140,22,0.6)', marginBottom: 20 }} />
+              <audio src={previewUrl} controls autoPlay style={{ width: '100%' }} />
+            </div>
+          ) : previewIsVideo ? (
             <video
               src={previewUrl}
               controls

@@ -144,6 +144,26 @@ export class UpdateSiteSettingsDto {
   @IsString()
   footerTextColor?: string;
 
+  // ─── BGM Settings ────────────────────────────────────────────
+  @ApiPropertyOptional({ description: '全站預設背景音樂 URL' })
+  @IsOptional()
+  @IsString()
+  defaultBgm?: string;
+
+  @ApiPropertyOptional({ description: '各頁面背景音樂 (JSON: { path: url })' })
+  @IsOptional()
+  pageBgm?: Record<string, string | null>;
+
+  @ApiPropertyOptional({ example: 0.3, description: '預設音量 (0~1)' })
+  @IsOptional()
+  @IsNumber()
+  bgmVolume?: number;
+
+  @ApiPropertyOptional({ default: true, description: '是否自動播放' })
+  @IsOptional()
+  @IsBoolean()
+  bgmAutoPlay?: boolean;
+
   // ─── News Page Settings ────────────────────────────────────────
   @ApiPropertyOptional({ example: 'magazine', description: '新聞頁佈局模式' })
   @IsOptional()

@@ -483,6 +483,11 @@ export interface SiteSettings {
   textSecondary?: string;
   footerBgColor?: string;
   footerTextColor?: string;
+  // BGM
+  defaultBgm?: string;
+  pageBgm?: Record<string, string | null>;
+  bgmVolume?: number;
+  bgmAutoPlay?: boolean;
   // Nav style
   navActiveColor?: string;
   navInactiveColor?: string;
