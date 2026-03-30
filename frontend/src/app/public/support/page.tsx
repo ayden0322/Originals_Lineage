@@ -24,7 +24,7 @@ export default function SupportPage() {
             fontWeight: 300,
             letterSpacing: 4,
             color: '#fff',
-            fontFamily: "'Georgia', serif",
+            fontFamily: 'var(--font-heading)',
             margin: 0,
           }}
         >

@@ -103,34 +103,41 @@ export default function ReservationsPage() {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      width: 220,
     },
     {
       title: '暱稱',
       dataIndex: 'displayName',
       key: 'displayName',
+      width: 120,
     },
     {
       title: '手機',
       dataIndex: 'phone',
       key: 'phone',
+      width: 130,
       render: (val: string | null) => val || '-',
     },
     {
       title: 'LINE ID',
       dataIndex: 'lineId',
       key: 'lineId',
+      width: 120,
       render: (val: string | null) => val || '-',
     },
     {
       title: '推薦碼',
       dataIndex: 'referralCode',
       key: 'referralCode',
+      width: 100,
       render: (val: string | null) => val || '-',
     },
     {
       title: '狀態',
       dataIndex: 'status',
       key: 'status',
+      width: 90,
+      align: 'center',
       render: (status: string) => {
         const s = statusMap[status] || { label: status, color: 'default' };
         return <Tag color={s.color}>{s.label}</Tag>;
@@ -140,11 +147,13 @@ export default function ReservationsPage() {
       title: '時間',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 160,
       render: (val: string) => dayjs(val).format('YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'actions',
+      width: 120,
       render: (_, record) => {
         const items = [
           { key: 'registered', label: '已登記' },

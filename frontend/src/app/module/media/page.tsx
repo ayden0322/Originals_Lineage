@@ -40,12 +40,18 @@ function formatSize(bytes: number): string {
 }
 
 const FOLDER_OPTIONS = [
-  { value: '', label: '全部' },
+  { value: '', label: '全部資料夾' },
   { value: 'hero', label: '輪播素材' },
   { value: 'general', label: '一般' },
   { value: 'products', label: '商品' },
   { value: 'site', label: '網站設定' },
   { value: 'articles', label: '文章' },
+];
+
+const TYPE_OPTIONS = [
+  { value: '', label: '全部類型' },
+  { value: 'image', label: '圖片' },
+  { value: 'video', label: '影片' },
 ];
 
 export default function MediaLibraryPage() {
@@ -57,6 +63,7 @@ export default function MediaLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [folder, setFolder] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewIsVideo, setPreviewIsVideo] = useState(false);
 
@@ -77,6 +84,11 @@ export default function MediaLibraryPage() {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  // 前端類型篩選
+  const filteredItems = typeFilter
+    ? items.filter((item) => (typeFilter === 'video' ? isVideo(item.objectName) : !isVideo(item.objectName)))
+    : items;
 
   const handleUpload = async (file: File) => {
     const targetFolder = folder || 'general';
@@ -122,7 +134,12 @@ export default function MediaLibraryPage() {
             onChange={setFolder}
             options={FOLDER_OPTIONS}
             style={{ width: 140 }}
-            placeholder="篩選資料夾"
+          />
+          <Select
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={TYPE_OPTIONS}
+            style={{ width: 120 }}
           />
         </Space>
       </div>
@@ -161,8 +178,8 @@ export default function MediaLibraryPage() {
       {/* 檔案列表 */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
-      ) : items.length === 0 ? (
-        <Empty description="此資料夾尚無檔案" />
+      ) : filteredItems.length === 0 ? (
+        <Empty description="此篩選條件下尚無檔案" />
       ) : (
         <div
           style={{
@@ -171,7 +188,7 @@ export default function MediaLibraryPage() {
             gap: 16,
           }}
         >
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const video = isVideo(item.objectName);
             return (
               <Card

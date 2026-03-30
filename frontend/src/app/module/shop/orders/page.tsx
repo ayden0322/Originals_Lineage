@@ -116,11 +116,13 @@ export default function OrdersPage() {
       title: '訂單編號',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
+      width: 200,
     },
     {
       title: '金額',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
+      width: 120,
       align: 'right',
       render: (val: string) => `NT$ ${Number(val).toLocaleString()}`,
     },
@@ -128,6 +130,8 @@ export default function OrdersPage() {
       title: '訂單狀態',
       dataIndex: 'status',
       key: 'status',
+      width: 100,
+      align: 'center',
       render: (status: string) => {
         const s = orderStatusMap[status] || { label: status, color: 'default' };
         return <Tag color={s.color}>{s.label}</Tag>;
@@ -137,6 +141,8 @@ export default function OrdersPage() {
       title: '發貨狀態',
       dataIndex: 'deliveryStatus',
       key: 'deliveryStatus',
+      width: 100,
+      align: 'center',
       render: (status: string) => {
         const s = deliveryStatusMap[status] || { label: status, color: 'default' };
         return <Tag color={s.color}>{s.label}</Tag>;
@@ -146,11 +152,13 @@ export default function OrdersPage() {
       title: '建立時間',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 160,
       render: (val: string) => dayjs(val).format('YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'actions',
+      width: 160,
       render: (_, record) => (
         <Space>
           <Button

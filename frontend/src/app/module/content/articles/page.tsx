@@ -155,12 +155,13 @@ export default function ArticlesPage() {
       title: '標題',
       dataIndex: 'title',
       key: 'title',
-      ellipsis: true,
+      width: 280,
     },
     {
       title: '分類',
       dataIndex: 'category',
       key: 'category',
+      width: 80,
       render: (slug: string) => {
         const cat = categories.find((c) => c.slug === slug);
         return cat ? cat.name : slug;
@@ -170,6 +171,8 @@ export default function ArticlesPage() {
       title: '狀態',
       dataIndex: 'status',
       key: 'status',
+      width: 80,
+      align: 'center',
       render: (status: string) => {
         const s = statusMap[status] || { label: status, color: 'default' };
         return <Tag color={s.color}>{s.label}</Tag>;
@@ -179,23 +182,28 @@ export default function ArticlesPage() {
       title: '置頂',
       dataIndex: 'isPinned',
       key: 'isPinned',
+      width: 70,
+      align: 'center',
       render: (val: boolean) => (val ? <Tag color="blue">置頂</Tag> : '-'),
     },
     {
       title: '瀏覽數',
       dataIndex: 'viewCount',
       key: 'viewCount',
+      width: 80,
       align: 'right',
     },
     {
       title: '發佈時間',
       dataIndex: 'publishedAt',
       key: 'publishedAt',
+      width: 160,
       render: (val: string | null) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-'),
     },
     {
       title: '操作',
       key: 'actions',
+      width: 140,
       render: (_, record) => (
         <Space>
           <Button

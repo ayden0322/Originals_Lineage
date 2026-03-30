@@ -45,6 +45,27 @@ export default function PublicHeader() {
   };
 
   const downloadUrl = config?.settings.gameDownloadUrl;
+  const logoSize = config?.settings.logoSize || 'medium';
+  const logoHeightMap: Record<string, number> = { small: 28, medium: 36, large: 48 };
+  const logoHeight = logoHeightMap[logoSize] || 36;
+
+  // 上層列高度 = logo 高度 + 上下 padding
+  const topRowPaddingV = logoSize === 'large' ? 12 : logoSize === 'small' ? 6 : 8;
+  const topRowHeight = logoHeight + topRowPaddingV * 2;
+  // 下層導覽列固定 44px
+  const navRowHeight = 44;
+  const totalHeaderHeight = topRowHeight + 1 + navRowHeight; // +1 = divider
+
+  // 同步 CSS 變數，讓所有頁面 paddingTop 自動調整
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--header-top-height', `${topRowHeight}px`);
+    root.style.setProperty('--header-total-height', `${totalHeaderHeight}px`);
+    return () => {
+      root.style.removeProperty('--header-top-height');
+      root.style.removeProperty('--header-total-height');
+    };
+  }, [topRowHeight, totalHeaderHeight]);
 
   const topLinks = [
     { label: '更新歷程', path: '/public/changelog', external: false },
@@ -70,7 +91,7 @@ export default function PublicHeader() {
       className={`${styles.headerWrapper} ${showSolidBg ? styles.headerWrapperScrolled : ''}`}
     >
       {/* ─── Top bar: logo + utility links + user ─── */}
-      <div className={styles.headerTop}>
+      <div className={styles.headerTop} style={{ height: topRowHeight, padding: `${topRowPaddingV}px 32px` }}>
         <div className={styles.headerTopInner}>
           {/* Logo */}
           <div
@@ -81,7 +102,7 @@ export default function PublicHeader() {
               <img
                 src={config.settings.logoUrl}
                 alt={config.settings.siteName || ''}
-                className={styles.logo}
+                style={{ height: logoHeight, cursor: 'pointer' }}
               />
             ) : (
               <span className={styles.logoText}>

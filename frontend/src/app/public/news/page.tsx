@@ -102,7 +102,7 @@ export default function NewsListPage() {
         }}
       >
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 50%, rgba(196,162,78,0.06), transparent 70%)' }} />
-        <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: 4, color: '#fff', fontFamily: 'Georgia, serif', position: 'relative', zIndex: 1 }}>
+        <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: 4, color: '#fff', fontFamily: 'var(--font-heading)', position: 'relative', zIndex: 1 }}>
           {pageTitle}
         </h1>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 8, position: 'relative', zIndex: 1 }}>

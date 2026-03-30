@@ -128,12 +128,14 @@ export default function AnnouncementsPage() {
       title: '標題',
       dataIndex: 'title',
       key: 'title',
-      ellipsis: true,
+      width: 240,
     },
     {
       title: '類型',
       dataIndex: 'type',
       key: 'type',
+      width: 90,
+      align: 'center',
       render: (type: string) => {
         const t = typeMap[type] || { label: type, color: 'default' };
         return <Tag color={t.color}>{t.label}</Tag>;
@@ -143,12 +145,15 @@ export default function AnnouncementsPage() {
       title: '優先級',
       dataIndex: 'priority',
       key: 'priority',
+      width: 80,
       align: 'right',
     },
     {
       title: '啟用',
       dataIndex: 'isActive',
       key: 'isActive',
+      width: 80,
+      align: 'center',
       render: (val: boolean) => (
         <Tag color={val ? 'green' : 'default'}>{val ? '啟用' : '停用'}</Tag>
       ),
@@ -157,17 +162,20 @@ export default function AnnouncementsPage() {
       title: '開始時間',
       dataIndex: 'startTime',
       key: 'startTime',
+      width: 160,
       render: (val: string | null) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-'),
     },
     {
       title: '結束時間',
       dataIndex: 'endTime',
       key: 'endTime',
+      width: 160,
       render: (val: string | null) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-'),
     },
     {
       title: '操作',
       key: 'actions',
+      width: 140,
       render: (_, record) => (
         <Space>
           <Button

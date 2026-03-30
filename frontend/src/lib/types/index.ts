@@ -469,6 +469,10 @@ export interface SiteSettings {
   heroEnabled: boolean;
   newsDisplayCount: number;
   featuredArticleIds: string[];
+  // Font & Logo
+  headingFontFamily?: string;
+  bodyFontFamily?: string;
+  logoSize?: string;
   // Color theme
   accentColor?: string;
   accentColorLight?: string;

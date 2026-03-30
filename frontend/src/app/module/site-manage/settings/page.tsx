@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Form, Input, InputNumber, Button, Switch, Select, Collapse, Tabs, message, Typography, Spin } from 'antd';
+import { Form, Input, InputNumber, Button, Switch, Select, Collapse, Tabs, message, Typography, Spin, Radio } from 'antd';
 import ImageUpload from '@/components/ui/ImageUpload';
 import ColorPickerInput from '@/components/ui/ColorPickerInput';
 import { getSiteSettings, updateSiteSettings } from '@/lib/api/site-manage';
 import { getArticles } from '@/lib/api/content';
+import { SITE_FONT_OPTIONS } from '@/lib/fonts';
 import type { Article } from '@/lib/types';
 
 const { Title } = Typography;
@@ -214,6 +215,91 @@ function ThemeWireframe({
   );
 }
 
+/** 字體即時預覽 — 模擬實際網站的深色風格 */
+function FontPreview({ form }: { form: ReturnType<typeof Form.useForm>[0] }) {
+  const values = Form.useWatch([], form) as Record<string, string | undefined> | undefined;
+  const heading = values?.headingFontFamily || "'Georgia', 'Times New Roman', serif";
+  const body = values?.bodyFontFamily || 'sans-serif';
+  const accent = values?.accentColor || DEFAULT_COLORS.accentColor;
+
+  return (
+    <div style={{ position: 'sticky', top: 16 }}>
+      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 8, fontWeight: 500 }}>
+        即時預覽
+      </div>
+      <div
+        style={{
+          background: '#0c0c0c',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 10,
+          overflow: 'hidden',
+        }}
+      >
+        {/* 模擬 Header */}
+        <div style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ color: accent, fontFamily: heading, fontSize: 14, fontWeight: 600, letterSpacing: 1 }}>LOGO</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+            <span style={{ fontFamily: body, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>首頁</span>
+            <span style={{ fontFamily: body, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>最新消息</span>
+          </div>
+        </div>
+
+        {/* 模擬 Hero 區 */}
+        <div style={{
+          padding: '36px 24px 28px',
+          background: 'linear-gradient(180deg, rgba(20,20,30,1) 0%, #0c0c0c 100%)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontFamily: heading, fontSize: 26, fontWeight: 300, color: '#fff', letterSpacing: 3, marginBottom: 8 }}>
+            標題字體預覽
+          </div>
+          <div style={{ fontFamily: heading, fontSize: 16, fontWeight: 300, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>
+            Heading Font Preview
+          </div>
+        </div>
+
+        {/* 模擬內文區 */}
+        <div style={{ padding: '20px 24px 24px' }}>
+          <div style={{ fontFamily: body, fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.9, marginBottom: 16 }}>
+            這是內文字體的預覽，展示選擇的字體在實際頁面上的呈現效果。
+          </div>
+          <div style={{ fontFamily: body, fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.8 }}>
+            The quick brown fox jumps over the lazy dog. 1234567890
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+            <span style={{
+              fontFamily: body,
+              fontSize: 12,
+              background: accent,
+              color: '#000',
+              padding: '4px 14px',
+              borderRadius: 4,
+              fontWeight: 600,
+            }}>
+              按鈕文字
+            </span>
+            <span style={{
+              fontFamily: body,
+              fontSize: 12,
+              color: accent,
+              padding: '4px 14px',
+              borderRadius: 4,
+              border: `1px solid ${accent}`,
+            }}>
+              連結文字
+            </span>
+          </div>
+        </div>
+
+        {/* 模擬 Footer */}
+        <div style={{ padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+          <span style={{ fontFamily: body, fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>Footer 底部文字 © 2026</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
@@ -362,6 +448,17 @@ export default function SettingsPage() {
                   <Form.Item name="footerText" label="Footer 文字">
                     <Input />
                   </Form.Item>
+                  <Form.Item name="logoSize" label="Logo 大小">
+                    <Radio.Group
+                      optionType="button"
+                      buttonStyle="solid"
+                      options={[
+                        { label: '小', value: 'small' },
+                        { label: '中', value: 'medium' },
+                        { label: '大', value: 'large' },
+                      ]}
+                    />
+                  </Form.Item>
                   <Form.Item name="heroEnabled" label="啟用 Hero 輪播" valuePropName="checked">
                     <Switch />
                   </Form.Item>
@@ -427,6 +524,54 @@ export default function SettingsPage() {
                       activeSection={activeSection}
                       onSectionClick={handleWireframeClick}
                     />
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'font',
+              label: '字體設定',
+              children: (
+                <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+                  {/* 左側：字體選擇 */}
+                  <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 400 }}>
+                    <div style={{ marginBottom: 24, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                      選擇網站的標題與內文字體，支援 Google Fonts 自動載入
+                    </div>
+                    <Form.Item name="headingFontFamily" label="標題字體">
+                      <Select
+                        placeholder="選擇標題字體"
+                        options={SITE_FONT_OPTIONS.map((f) => ({
+                          value: f.value,
+                          label: (
+                            <span style={{ fontFamily: f.value }}>
+                              {f.label}
+                            </span>
+                          ),
+                        }))}
+                      />
+                    </Form.Item>
+                    <Form.Item name="bodyFontFamily" label="內文字體">
+                      <Select
+                        placeholder="選擇內文字體"
+                        options={SITE_FONT_OPTIONS.map((f) => ({
+                          value: f.value,
+                          label: (
+                            <span style={{ fontFamily: f.value }}>
+                              {f.label}
+                            </span>
+                          ),
+                        }))}
+                      />
+                    </Form.Item>
+                    <Button type="primary" onClick={handleSave} loading={submitting}>
+                      儲存設定
+                    </Button>
+                  </div>
+
+                  {/* 右側：字體即時預覽（sticky 跟隨） */}
+                  <div style={{ flex: '0 0 380px' }}>
+                    <FontPreview form={form} />
                   </div>
                 </div>
               ),

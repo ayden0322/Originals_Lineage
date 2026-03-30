@@ -131,12 +131,13 @@ export default function ProductsPage() {
       title: '商品名稱',
       dataIndex: 'name',
       key: 'name',
-      ellipsis: true,
+      width: 200,
     },
     {
       title: '價格',
       dataIndex: 'price',
       key: 'price',
+      width: 120,
       align: 'right',
       render: (val: string) => `NT$ ${Number(val).toLocaleString()}`,
     },
@@ -144,12 +145,14 @@ export default function ProductsPage() {
       title: '鑽石數量',
       dataIndex: 'diamondAmount',
       key: 'diamondAmount',
+      width: 100,
       align: 'right',
     },
     {
       title: '分類',
       dataIndex: 'category',
       key: 'category',
+      width: 100,
       render: (cat: string) => {
         const c = categoryMap[cat] || { label: cat, color: 'default' };
         return <Tag color={c.color}>{c.label}</Tag>;
@@ -159,6 +162,7 @@ export default function ProductsPage() {
       title: '庫存',
       dataIndex: 'stock',
       key: 'stock',
+      width: 80,
       align: 'right',
       render: (val: number) => (val === -1 ? '無限' : val),
     },
@@ -166,6 +170,8 @@ export default function ProductsPage() {
       title: '啟用',
       dataIndex: 'isActive',
       key: 'isActive',
+      width: 80,
+      align: 'center',
       render: (val: boolean) => (
         <Tag color={val ? 'green' : 'default'}>{val ? '啟用' : '停用'}</Tag>
       ),
@@ -174,11 +180,13 @@ export default function ProductsPage() {
       title: '排序',
       dataIndex: 'sortOrder',
       key: 'sortOrder',
+      width: 70,
       align: 'right',
     },
     {
       title: '操作',
       key: 'actions',
+      width: 140,
       render: (_, record) => (
         <Space>
           <Button

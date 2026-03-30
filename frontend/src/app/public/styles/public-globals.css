@@ -26,6 +26,9 @@ body {
   --header-bg-color: rgba(0, 0, 0, 0.85);
   --footer-bg-color: var(--bg-secondary);
   --footer-text-color: var(--text-muted);
+  --font-heading: 'Georgia', 'Times New Roman', serif;
+  --font-body: sans-serif;
   --header-height: 44px;
-  --header-total-height: 89px; /* 44px * 2 + 1px divider */
+  --header-top-height: 52px; /* logo row: 36px logo + 8px*2 padding */
+  --header-total-height: 97px; /* 52px top + 1px divider + 44px nav */
 }

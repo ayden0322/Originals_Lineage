@@ -82,6 +82,22 @@ export class UpdateSiteSettingsDto {
   @IsString()
   navFontFamily?: string;
 
+  // ─── Font & Logo Settings ────────────────────────────────────────
+  @ApiPropertyOptional({ example: "'Noto Serif TC', serif", description: '標題字體' })
+  @IsOptional()
+  @IsString()
+  headingFontFamily?: string;
+
+  @ApiPropertyOptional({ example: "'Noto Sans TC', sans-serif", description: '內文字體' })
+  @IsOptional()
+  @IsString()
+  bodyFontFamily?: string;
+
+  @ApiPropertyOptional({ example: 'medium', description: 'Logo 大小 (small/medium/large)' })
+  @IsOptional()
+  @IsString()
+  logoSize?: string;
+
   // ─── Color Theme Settings ────────────────────────────────────────
   @ApiPropertyOptional({ example: '#c4a24e', description: '主題色' })
   @IsOptional()

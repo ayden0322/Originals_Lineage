@@ -142,11 +142,13 @@ export default function MembersPage() {
       title: '遊戲帳號',
       dataIndex: 'gameAccountName',
       key: 'gameAccountName',
+      width: 180,
     },
     {
       title: '第二組密碼',
       dataIndex: 'secondPasswordPlain',
       key: 'secondPasswordPlain',
+      width: 140,
       render: (val: string | null) =>
         val ? <Text code>{val}</Text> : <Text type="secondary">-</Text>,
     },

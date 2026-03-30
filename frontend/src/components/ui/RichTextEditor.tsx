@@ -7,10 +7,12 @@ import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
+import FontFamily from '@tiptap/extension-font-family';
 import Link from '@tiptap/extension-link';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Upload, Tooltip, Divider, Dropdown, message } from 'antd';
 import type { MenuProps } from 'antd';
+import { EDITOR_FONT_OPTIONS } from '@/lib/fonts';
 import {
   BoldOutlined,
   ItalicOutlined,
@@ -120,6 +122,7 @@ export default function RichTextEditor({
       }),
       Underline,
       TextStyle,
+      FontFamily,
       Color,
       AlignableImage.configure({ inline: false, allowBase64: false }),
       TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
@@ -232,6 +235,51 @@ export default function RichTextEditor({
                 : editor.isActive('heading', { level: 3 })
                   ? ' 標題 3'
                   : ' 正文'}
+            <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
+          </Button>
+        </Dropdown>
+
+        {/* Font family dropdown */}
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: '__default', label: '預設字體' },
+              ...EDITOR_FONT_OPTIONS.map((f) => ({
+                key: f.value,
+                label: <span style={{ fontFamily: f.value }}>{f.label}</span>,
+              })),
+            ] as MenuProps['items'],
+            onClick: ({ key }) => {
+              if (savedSelection.current && editor) {
+                editor.commands.setTextSelection(savedSelection.current);
+              }
+              if (key === '__default') {
+                editor.chain().focus().unsetFontFamily().run();
+              } else {
+                editor.chain().focus().setFontFamily(key).run();
+              }
+            },
+            style: { maxHeight: 300, overflowY: 'auto' },
+          }}
+        >
+          <Button
+            size="small"
+            style={{ fontSize: 13, minWidth: 80, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (editor) {
+                const { from, to } = editor.state.selection;
+                savedSelection.current = { from, to };
+              }
+            }}
+          >
+            {(() => {
+              const currentFont = editor.getAttributes('textStyle').fontFamily;
+              if (!currentFont) return '字體';
+              const match = EDITOR_FONT_OPTIONS.find((f) => f.value === currentFont);
+              return match ? match.label : '字體';
+            })()}
             <DownOutlined style={{ fontSize: 10, marginLeft: 4 }} />
           </Button>
         </Dropdown>
