@@ -27,8 +27,7 @@ export class StorageController {
   @Get('list')
   @RequirePermission('module.originals.media.view')
   async list(@Query('folder') folder?: string) {
-    const items = await this.storageService.listObjects(folder);
-    return { data: items };
+    return this.storageService.listObjects(folder);
   }
 
   @Post('upload')

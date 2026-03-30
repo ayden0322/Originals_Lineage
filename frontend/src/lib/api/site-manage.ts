@@ -165,7 +165,9 @@ export async function listMedia(folder?: string): Promise<MediaItem[]> {
   const { data } = await apiClient.get<ApiResponse<MediaItem[]>>(
     `/modules/originals/storage/list${params}`,
   );
-  return data.data;
+  // 相容後端回傳 array 或 { data: array } 兩種格式
+  const result = data.data;
+  return Array.isArray(result) ? result : (result as unknown as { data: MediaItem[] }).data;
 }
 
 export async function deleteMedia(objectName: string): Promise<void> {
