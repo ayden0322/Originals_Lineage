@@ -94,6 +94,34 @@ export class StorageService implements OnModuleInit {
     await this.client.removeObject(this.bucket, objectName);
   }
 
+  /** 列出指定資料夾下的所有檔案 */
+  async listObjects(folder?: string): Promise<
+    { objectName: string; url: string; size: number; lastModified: Date }[]
+  > {
+    if (!this.isReady) {
+      throw new BadRequestException('檔案儲存服務尚未就緒');
+    }
+
+    const prefix = folder ? `${folder}/` : '';
+    const stream = this.client.listObjectsV2(this.bucket, prefix, true);
+    const items: { objectName: string; url: string; size: number; lastModified: Date }[] = [];
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', (obj) => {
+        if (obj.name) {
+          items.push({
+            objectName: obj.name,
+            url: this.getPublicUrl(obj.name),
+            size: obj.size,
+            lastModified: obj.lastModified,
+          });
+        }
+      });
+      stream.on('end', () => resolve(items));
+      stream.on('error', (err) => reject(err));
+    });
+  }
+
   getPublicUrl(objectName: string): string {
     return `${this.publicUrl}/${this.bucket}/${objectName}`;
   }

@@ -12,6 +12,7 @@ import {
   SettingOutlined,
   LogoutOutlined,
   GlobalOutlined,
+  PictureOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -66,6 +67,7 @@ const allMenuItems: MenuItem[] = [
       { key: '/module/site-manage/changelog', label: '更新頁面管理' },
     ],
   },
+  { key: '/module/media', icon: <PictureOutlined />, label: '媒體庫', permission: 'module.originals.media.view' },
   {
     key: 'content',
     icon: <FileTextOutlined />,

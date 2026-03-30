@@ -1,10 +1,12 @@
 import {
   Controller,
   Post,
+  Get,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   Body,
+  Query,
   BadRequestException,
   Delete,
 } from '@nestjs/common';
@@ -22,11 +24,18 @@ import { StorageService } from './storage.service';
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
+  @Get('list')
+  @RequirePermission('module.originals.media.view')
+  async list(@Query('folder') folder?: string) {
+    const items = await this.storageService.listObjects(folder);
+    return { data: items };
+  }
+
   @Post('upload')
   @RequirePermission('module.originals.content.create')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+      limits: { fileSize: 100 * 1024 * 1024 }, // 100MB（支援影片上傳）
     }),
   )
   @ApiConsumes('multipart/form-data')
@@ -50,7 +59,7 @@ export class StorageController {
   }
 
   @Delete('delete')
-  @RequirePermission('module.originals.content.edit')
+  @RequirePermission('module.originals.media.manage')
   async remove(@Body('objectName') objectName: string) {
     if (!objectName) {
       throw new BadRequestException('objectName is required');

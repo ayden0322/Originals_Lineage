@@ -32,6 +32,8 @@ const PERMISSION_SEEDS = [
   { code: 'module.originals.orders.manage', name: '管理訂單', backendLevel: 'module', moduleCode: 'originals-lineage', category: '訂單管理' },
   { code: 'module.originals.settings.manage', name: '管理模組設定', backendLevel: 'module', moduleCode: 'originals-lineage', category: '模組設定' },
   { code: 'module.originals.clan.manage', name: '管理血盟', backendLevel: 'module', moduleCode: 'originals-lineage', category: '血盟管理' },
+  { code: 'module.originals.media.view', name: '查看媒體庫', backendLevel: 'module', moduleCode: 'originals-lineage', category: '媒體管理' },
+  { code: 'module.originals.media.manage', name: '管理媒體庫', backendLevel: 'module', moduleCode: 'originals-lineage', category: '媒體管理' },
 ];
 
 @Injectable()

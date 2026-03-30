@@ -136,7 +136,14 @@ export async function reorderSlides(
   });
 }
 
-// ─── File Upload ────────────────────────────────────────────────────
+// ─── File Upload / Media Library ────────────────────────────────────
+
+export interface MediaItem {
+  objectName: string;
+  url: string;
+  size: number;
+  lastModified: string;
+}
 
 export async function uploadFile(
   file: File,
@@ -151,6 +158,20 @@ export async function uploadFile(
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data.data;
+}
+
+export async function listMedia(folder?: string): Promise<MediaItem[]> {
+  const params = folder ? `?folder=${encodeURIComponent(folder)}` : '';
+  const { data } = await apiClient.get<ApiResponse<MediaItem[]>>(
+    `/modules/originals/storage/list${params}`,
+  );
+  return data.data;
+}
+
+export async function deleteMedia(objectName: string): Promise<void> {
+  await apiClient.delete('/modules/originals/storage/delete', {
+    data: { objectName },
+  });
 }
 
 // ─── Public ─────────────────────────────────────────────────────────
