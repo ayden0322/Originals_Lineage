@@ -1,11 +1,14 @@
 FROM node:18-alpine AS base
 
+# 啟用 corepack 以使用 pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # ─── Dependencies ─────────────────────────────────────────
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # ─── Build ────────────────────────────────────────────────
 FROM base AS builder
@@ -16,7 +19,7 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL=https://back-original-lineage.zeabur.app/api
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-RUN npm run build
+RUN pnpm run build
 
 # ─── Production ───────────────────────────────────────────
 FROM base AS runner
