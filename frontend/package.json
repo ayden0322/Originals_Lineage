@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.21.0",
+    "@ant-design/icons": "^6.1.1",
     "@ant-design/nextjs-registry": "^1.0.0",
     "@tiptap/extension-color": "^3.20.4",
     "@tiptap/extension-font-family": "^3.21.0",
