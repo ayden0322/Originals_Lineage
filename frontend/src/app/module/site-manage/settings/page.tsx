@@ -381,7 +381,7 @@ export default function SettingsPage() {
         getSiteSettings(),
         getArticles(1, 100),
       ]);
-      const merged = { ...DEFAULT_COLORS, ...settings };
+      const merged = { fontScale: 1, ...DEFAULT_COLORS, ...settings };
       form.setFieldsValue(merged);
       setLogoUrl(settings.logoUrl || '');
       setPageBgm(settings.pageBgm || {});
@@ -528,6 +528,15 @@ export default function SettingsPage() {
                         { label: '中', value: 'medium' },
                         { label: '大', value: 'large' },
                       ]}
+                    />
+                  </Form.Item>
+                  <Form.Item name="fontScale" label="全站文字縮放比例" tooltip="調整 Header、Footer、新聞區等文字大小，不影響富文本內容及輪播標題">
+                    <Slider
+                      min={0.8}
+                      max={1.5}
+                      step={0.05}
+                      marks={{ 0.8: '80%', 1: '100%', 1.25: '125%', 1.5: '150%' }}
+                      tooltip={{ formatter: (v) => `${Math.round((v || 1) * 100)}%` }}
                     />
                   </Form.Item>
                   <Form.Item name="heroEnabled" label="啟用 Hero 輪播" valuePropName="checked">

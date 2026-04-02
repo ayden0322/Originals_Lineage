@@ -166,6 +166,12 @@ export class UpdateSiteSettingsDto {
   @IsBoolean()
   bgmAutoPlay?: boolean;
 
+  // ─── Font Scale ────────────────────────────────────────────────
+  @ApiPropertyOptional({ example: 1.0, description: '全站文字縮放比例 (0.8~1.5)，不影響富文本及輪播標題' })
+  @IsOptional()
+  @IsNumber()
+  fontScale?: number;
+
   // ─── News Page Settings ────────────────────────────────────────
   @ApiPropertyOptional({ example: 'magazine', description: '新聞頁佈局模式' })
   @IsOptional()

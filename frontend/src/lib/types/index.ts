@@ -488,6 +488,8 @@ export interface SiteSettings {
   pageBgm?: Record<string, string | null>;
   bgmVolume?: number;
   bgmAutoPlay?: boolean;
+  // Font scale
+  fontScale?: number;
   // Nav style
   navActiveColor?: string;
   navInactiveColor?: string;

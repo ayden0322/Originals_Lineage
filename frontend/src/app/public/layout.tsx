@@ -55,6 +55,8 @@ function ThemeInjector({ children }: { children: React.ReactNode }) {
       // 字體
       '--font-heading': s.headingFontFamily,
       '--font-body': s.bodyFontFamily,
+      // 文字縮放
+      '--font-scale': String(s.fontScale ?? 1),
     };
     Object.entries(map).forEach(([prop, value]) => {
       if (value) {
