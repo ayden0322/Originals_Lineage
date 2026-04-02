@@ -13,6 +13,7 @@ import {
   LogoutOutlined,
   GlobalOutlined,
   PictureOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -78,6 +79,7 @@ const allMenuItems: MenuItem[] = [
       { key: '/module/content/announcements', label: '公告管理', permission: 'module.originals.content.view' },
     ],
   },
+  { key: '/module/logs', icon: <AuditOutlined />, label: '操作日誌', permission: 'module.originals.logs.view' },
   { key: '/module/settings', icon: <SettingOutlined />, label: '模組設定', permission: 'module.originals.settings.manage' },
 ];
 

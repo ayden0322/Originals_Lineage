@@ -2,6 +2,17 @@ import { Injectable, OnModuleInit, Logger, BadRequestException } from '@nestjs/c
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
 import { v4 as uuid } from 'uuid';
+import { execFile } from 'child_process';
+import { writeFile, readFile, unlink } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+/** 需要做 faststart 處理的影片 MIME types */
+const VIDEO_MIMETYPES = new Set([
+  'video/mp4',
+  'video/quicktime', // .mov
+  'video/x-m4v',
+]);
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -76,11 +87,27 @@ export class StorageService implements OnModuleInit {
     const ext = file.originalname.split('.').pop();
     const objectName = `${folder}/${uuid()}.${ext}`;
 
+    let buffer = file.buffer;
+    let size = file.size;
+
+    // MP4/MOV 影片：自動做 faststart（將 moov atom 移到檔案開頭）
+    if (VIDEO_MIMETYPES.has(file.mimetype)) {
+      try {
+        const result = await this.processVideoFaststart(file.buffer);
+        buffer = result;
+        size = result.length;
+        this.logger.log(`Video faststart processed: ${file.originalname} (${file.size} → ${size} bytes)`);
+      } catch (err) {
+        this.logger.warn(`Video faststart failed, uploading original: ${(err as Error).message}`);
+        // fallback: 上傳原始檔案
+      }
+    }
+
     await this.client.putObject(
       this.bucket,
       objectName,
-      file.buffer,
-      file.size,
+      buffer,
+      size,
       { 'Content-Type': file.mimetype },
     );
 
@@ -124,5 +151,84 @@ export class StorageService implements OnModuleInit {
 
   getPublicUrl(objectName: string): string {
     return `${this.publicUrl}/${this.bucket}/${objectName}`;
+  }
+
+  /**
+   * 處理影片：
+   * 1. 偵測 video codec，若非 H.264 則重新編碼為 H.264 + AAC（瀏覽器相容）
+   * 2. 加上 faststart（moov atom 在前面，支援串流播放）
+   */
+  private async processVideoFaststart(inputBuffer: Buffer): Promise<Buffer> {
+    const id = uuid();
+    const inputPath = join(tmpdir(), `upload-${id}-input.mp4`);
+    const outputPath = join(tmpdir(), `upload-${id}-output.mp4`);
+
+    try {
+      await writeFile(inputPath, inputBuffer);
+
+      // 先偵測 codec
+      const codec = await this.detectVideoCodec(inputPath);
+      const needsReencode = codec !== 'h264';
+
+      if (needsReencode) {
+        this.logger.log(`Video codec is "${codec}", re-encoding to H.264 for browser compatibility`);
+      }
+
+      const ffmpegArgs = [
+        '-i', inputPath,
+        ...(needsReencode
+          ? ['-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-b:a', '192k']
+          : ['-c', 'copy']),
+        '-movflags', '+faststart',
+        '-y',
+        outputPath,
+      ];
+
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          'ffmpeg',
+          ffmpegArgs,
+          { timeout: 300_000 },  // 重新編碼可能較久，5 分鐘超時
+          (error, _stdout, stderr) => {
+            if (error) {
+              this.logger.warn(`ffmpeg stderr: ${stderr}`);
+              reject(error);
+            } else {
+              resolve();
+            }
+          },
+        );
+      });
+
+      return await readFile(outputPath);
+    } finally {
+      // 清理暫存檔
+      await unlink(inputPath).catch(() => {});
+      await unlink(outputPath).catch(() => {});
+    }
+  }
+
+  /** 用 ffprobe 偵測影片的 video codec 名稱 */
+  private async detectVideoCodec(filePath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      execFile(
+        'ffprobe',
+        [
+          '-v', 'error',
+          '-select_streams', 'v:0',
+          '-show_entries', 'stream=codec_name',
+          '-of', 'csv=p=0',
+          filePath,
+        ],
+        { timeout: 10_000 },
+        (error, stdout) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(stdout.trim());
+          }
+        },
+      );
+    });
   }
 }

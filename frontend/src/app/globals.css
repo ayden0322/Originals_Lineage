@@ -1,0 +1,8 @@
+/* 自訂字型 — @font-face */
+@font-face {
+  font-family: 'HanWangLiSuMedium';
+  src: url('/fonts/wt021.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

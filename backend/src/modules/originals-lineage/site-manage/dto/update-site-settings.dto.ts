@@ -6,6 +6,7 @@ import {
   IsArray,
   IsUUID,
   IsNumber,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -145,10 +146,11 @@ export class UpdateSiteSettingsDto {
   footerTextColor?: string;
 
   // ─── BGM Settings ────────────────────────────────────────────
-  @ApiPropertyOptional({ description: '全站預設背景音樂 URL' })
+  @ApiPropertyOptional({ description: '全站預設背景音樂 URL（傳 null 表示清除）' })
   @IsOptional()
+  @ValidateIf((o) => o.defaultBgm !== null)
   @IsString()
-  defaultBgm?: string;
+  defaultBgm?: string | null;
 
   @ApiPropertyOptional({ description: '各頁面背景音樂 (JSON: { path: url })' })
   @IsOptional()

@@ -16,6 +16,7 @@ export const SITE_FONT_OPTIONS: FontOption[] = [
   // Google Fonts — 中文
   { label: 'Noto Sans TC（思源黑體）', value: "'Noto Sans TC', sans-serif", googleName: 'Noto+Sans+TC', category: '中文字體' },
   { label: 'Noto Serif TC（思源宋體）', value: "'Noto Serif TC', serif", googleName: 'Noto+Serif+TC', category: '中文字體' },
+  { label: '王漢宗隸書體', value: "'HanWangLiSuMedium', serif", googleName: null, category: '中文字體' },
 
   // Google Fonts — 英文襯線
   { label: 'Playfair Display', value: "'Playfair Display', serif", googleName: 'Playfair+Display', category: '英文襯線' },

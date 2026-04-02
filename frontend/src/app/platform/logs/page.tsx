@@ -16,7 +16,7 @@ export default function LogsPage() {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getLogs(page, limit);
+      const result = await getLogs({ page, limit });
       setLogs(result.items);
       setTotal(result.total);
     } catch {

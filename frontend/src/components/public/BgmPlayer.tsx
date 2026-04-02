@@ -23,21 +23,35 @@ export default function BgmPlayer() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** 是否已嘗試過首次自動播放（避免重複綁定 listener） */
+  const autoplayAttempted = useRef(false);
+
+  // 初始靜音狀態：如果後台開了 autoPlay 且使用者沒有主動關過，預設不靜音
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(0.3);
   const [currentSrc, setCurrentSrc] = useState('');
   const [, setIsPlaying] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [mobile, setMobile] = useState(true);
+  /** 等待使用者互動後自動播放 */
+  const [waitingForInteraction, setWaitingForInteraction] = useState(false);
 
-  // 初始化：讀取使用者偏好 + 偵測裝置
+  // 初始化：讀取使用者偏好 + 偵測裝置 + 處理 autoPlay
   useEffect(() => {
     setMobile(isMobile());
     const savedMuted = localStorage.getItem(STORAGE_KEY_MUTED);
     const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
-    if (savedMuted !== null) setMuted(savedMuted === 'true');
+
     if (savedVol !== null) setVolume(parseFloat(savedVol));
-  }, []);
+
+    if (savedMuted !== null) {
+      // 使用者曾經手動設定過 → 尊重使用者偏好
+      setMuted(savedMuted === 'true');
+    } else if (s?.bgmAutoPlay) {
+      // 使用者從未設定過 + 後台開啟自動播放 → 預設不靜音
+      setMuted(false);
+    }
+  }, [s?.bgmAutoPlay]);
 
   // 取得當前頁面的音樂 URL
   const getBgmUrl = useCallback((): string | null => {
@@ -73,6 +87,24 @@ export default function BgmPlayer() {
     [],
   );
 
+  /** 嘗試播放音樂，如果被瀏覽器阻擋就等待使用者互動 */
+  const tryPlay = useCallback(
+    (audio: HTMLAudioElement) => {
+      audio.play().then(() => {
+        fadeAudio(audio, 0, volume, 800);
+        setIsPlaying(true);
+        setWaitingForInteraction(false);
+      }).catch(() => {
+        // 瀏覽器阻擋了自動播放 → 標記等待互動
+        setIsPlaying(false);
+        if (s?.bgmAutoPlay && !autoplayAttempted.current) {
+          setWaitingForInteraction(true);
+        }
+      });
+    },
+    [fadeAudio, volume, s?.bgmAutoPlay],
+  );
+
   // 路徑或設定變化時切換音樂（行動裝置跳過）
   useEffect(() => {
     if (mobile) return;
@@ -101,12 +133,7 @@ export default function BgmPlayer() {
       setCurrentSrc(bgmUrl);
 
       if (!muted) {
-        audio.play().then(() => {
-          fadeAudio(audio, 0, volume, 800);
-          setIsPlaying(true);
-        }).catch(() => {
-          setIsPlaying(false);
-        });
+        tryPlay(audio);
       }
     };
 
@@ -116,6 +143,42 @@ export default function BgmPlayer() {
       switchTrack();
     }
   }, [pathname, s?.defaultBgm, s?.pageBgm, muted, mobile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 使用者首次互動後自動播放（解決瀏覽器 autoplay 政策）
+  useEffect(() => {
+    if (!waitingForInteraction || mobile || autoplayAttempted.current) return;
+
+    const handleInteraction = () => {
+      autoplayAttempted.current = true;
+      setWaitingForInteraction(false);
+
+      const audio = audioRef.current;
+      if (audio && audio.paused && currentSrc && !muted) {
+        audio.play().then(() => {
+          fadeAudio(audio, 0, volume, 800);
+          setIsPlaying(true);
+        }).catch(() => {});
+      }
+
+      // 清除所有 listener
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('scroll', handleInteraction);
+    };
+
+    document.addEventListener('click', handleInteraction, { once: true });
+    document.addEventListener('touchstart', handleInteraction, { once: true });
+    document.addEventListener('keydown', handleInteraction, { once: true });
+    document.addEventListener('scroll', handleInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('scroll', handleInteraction);
+    };
+  }, [waitingForInteraction, mobile, currentSrc, muted, volume, fadeAudio]);
 
   // 音量 / 靜音同步
   useEffect(() => {
@@ -130,7 +193,30 @@ export default function BgmPlayer() {
     }
   }, [s?.bgmVolume]);
 
+  /** 圖示是否顯示為靜音外觀（實際靜音 或 等待互動中都算） */
+  const visualMuted = muted || waitingForInteraction;
+
   const toggleMute = () => {
+    // 等待互動狀態下：使用者按了按鈕 → 直接播放音樂
+    if (waitingForInteraction) {
+      setWaitingForInteraction(false);
+      autoplayAttempted.current = true;
+      setMuted(false);
+      localStorage.setItem(STORAGE_KEY_MUTED, 'false');
+      const audio = audioRef.current;
+      if (audio && currentSrc) {
+        if (audio.paused) {
+          audio.play().then(() => {
+            fadeAudio(audio, 0, volume, 500);
+            setIsPlaying(true);
+          }).catch(() => {});
+        } else {
+          fadeAudio(audio, 0, volume, 300);
+        }
+      }
+      return;
+    }
+
     const next = !muted;
     setMuted(next);
     localStorage.setItem(STORAGE_KEY_MUTED, String(next));
@@ -170,7 +256,7 @@ export default function BgmPlayer() {
     <div
       style={{
         position: 'fixed',
-        bottom: 20,
+        bottom: 80,
         right: 20,
         zIndex: 9999,
         display: 'flex',
@@ -197,7 +283,7 @@ export default function BgmPlayer() {
             min="0"
             max="1"
             step="0.05"
-            value={muted ? 0 : volume}
+            value={visualMuted ? 0 : volume}
             onChange={handleVolumeChange}
             style={{
               width: 80,
@@ -207,7 +293,7 @@ export default function BgmPlayer() {
             }}
           />
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', minWidth: 30 }}>
-            {muted ? '0%' : `${Math.round(volume * 100)}%`}
+            {visualMuted ? '0%' : `${Math.round(volume * 100)}%`}
           </span>
         </div>
       )}
@@ -221,7 +307,7 @@ export default function BgmPlayer() {
           border: '1px solid rgba(255,255,255,0.15)',
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(8px)',
-          color: muted ? 'rgba(255,255,255,0.3)' : '#c4a24e',
+          color: visualMuted ? 'rgba(255,255,255,0.3)' : '#c4a24e',
           fontSize: 18,
           cursor: 'pointer',
           display: 'flex',
@@ -230,12 +316,12 @@ export default function BgmPlayer() {
           transition: 'all 0.2s',
           position: 'relative',
         }}
-        title={muted ? '開啟音樂' : '靜音'}
+        title={visualMuted ? '開啟音樂' : '靜音'}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
         </svg>
-        {muted && (
+        {visualMuted && (
           <div
             style={{
               position: 'absolute',

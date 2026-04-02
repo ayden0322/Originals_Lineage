@@ -373,6 +373,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [activeSection, setActiveSection] = useState<ThemeSection | null>('accent');
   const [pageBgm, setPageBgm] = useState<Record<string, string | null>>({});
+  const watchedDefaultBgm = Form.useWatch('defaultBgm', form) as string | undefined;
 
   const fetchData = useCallback(async () => {
     try {
@@ -400,7 +401,10 @@ export default function SettingsPage() {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      await updateSiteSettings({ ...values, logoUrl, pageBgm });
+      // 明確帶入 defaultBgm（可能為 null 表示要清除）
+      const payload = { ...values, logoUrl, pageBgm };
+      if (!payload.defaultBgm) payload.defaultBgm = null;
+      await updateSiteSettings(payload);
       message.success('設定已儲存');
     } catch {
       message.error('儲存失敗');
@@ -661,8 +665,8 @@ export default function SettingsPage() {
                       <Input style={{ display: 'none' }} />
                     </Form.Item>
                     <AudioUploadBtn
-                      value={form.getFieldValue('defaultBgm')}
-                      onChange={(url) => form.setFieldValue('defaultBgm', url || undefined)}
+                      value={watchedDefaultBgm}
+                      onChange={(url) => form.setFieldValue('defaultBgm', url || null)}
                     />
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
                       當頁面未指定音樂時，會播放此預設音樂

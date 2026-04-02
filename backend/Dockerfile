@@ -1,5 +1,6 @@
 # ---- Development stage ----
 FROM node:22-alpine AS development
+RUN apk add --no-cache ffmpeg
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -17,6 +18,7 @@ RUN npm run build
 
 # ---- Production stage ----
 FROM node:22-alpine AS production
+RUN apk add --no-cache ffmpeg
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev

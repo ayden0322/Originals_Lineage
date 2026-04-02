@@ -45,7 +45,11 @@ export class SiteManageService {
     if (!config) throw new NotFoundException('Module config not found');
 
     const current = config.configJson?.['siteSettings'] || {};
-    const siteSettings = { ...current, ...dto };
+    const merged = { ...current, ...dto };
+    // 將值為 null 的欄位從設定中移除（前端傳 null 表示要清除）
+    const siteSettings = Object.fromEntries(
+      Object.entries(merged).filter(([, v]) => v !== null),
+    );
     const configJson = { ...config.configJson, siteSettings };
     await this.moduleConfigService.update(MODULE_CODE, { configJson });
     return siteSettings;

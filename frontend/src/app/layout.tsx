@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { AntdProvider } from '@/components/providers/AntdProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import './globals.css';
 
 export const dynamic = 'force-dynamic';
 

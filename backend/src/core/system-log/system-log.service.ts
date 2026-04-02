@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Between, Like } from 'typeorm';
 import { SystemLog } from './entities/system-log.entity';
+
+export interface LogQueryParams {
+  page?: number;
+  limit?: number;
+  ipAddress?: string;
+  action?: string;
+  resourceType?: string;
+  actorId?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 @Injectable()
 export class SystemLogService {
@@ -23,12 +34,34 @@ export class SystemLogService {
     return this.logRepo.save(entry);
   }
 
-  async findAll(page = 1, limit = 50) {
-    const [items, total] = await this.logRepo.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(query: LogQueryParams = {}) {
+    const { page = 1, limit = 50, ipAddress, action, resourceType, actorId, startDate, endDate } = query;
+
+    const qb = this.logRepo.createQueryBuilder('log')
+      .orderBy('log.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (ipAddress) {
+      qb.andWhere('log.ipAddress LIKE :ip', { ip: `%${ipAddress}%` });
+    }
+    if (action) {
+      qb.andWhere('log.action LIKE :action', { action: `%${action}%` });
+    }
+    if (resourceType) {
+      qb.andWhere('log.resourceType = :resourceType', { resourceType });
+    }
+    if (actorId) {
+      qb.andWhere('log.actorId = :actorId', { actorId });
+    }
+    if (startDate) {
+      qb.andWhere('log.createdAt >= :startDate', { startDate: new Date(startDate) });
+    }
+    if (endDate) {
+      qb.andWhere('log.createdAt <= :endDate', { endDate: new Date(endDate) });
+    }
+
+    const [items, total] = await qb.getManyAndCount();
     return { items, total, page, limit };
   }
 
