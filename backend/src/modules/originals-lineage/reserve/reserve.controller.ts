@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -15,12 +16,15 @@ import { Request, Response } from 'express';
 import { ReserveService } from './reserve.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationStatusDto } from './dto/update-reservation-status.dto';
+import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
+import { CreateMilestoneDto } from './dto/create-milestone.dto';
+import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../../common/guards/permission.guard';
 import { RequirePermission } from '../../../core/permission/decorators/require-permission.decorator';
 
 // ──────────────────────────────────────────────
-// Public endpoints (no auth, rate limiting recommended)
+// Public endpoints (no auth)
 // ──────────────────────────────────────────────
 
 @ApiTags('Public - Reservations')
@@ -42,6 +46,21 @@ export class ReservePublicController {
     const count = await this.reserveService.getPublicCount();
     return { count };
   }
+
+  @Get('milestones')
+  async getPublicMilestones() {
+    return this.reserveService.getPublicMilestones();
+  }
+
+  @Post('verify')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.reserveService.verifyEmail(dto.email, dto.code);
+  }
+
+  @Post('resend')
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.reserveService.resendVerification(dto.email);
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -54,6 +73,8 @@ export class ReservePublicController {
 @Controller('modules/originals/reservations')
 export class ReserveAdminController {
   constructor(private readonly reserveService: ReserveService) {}
+
+  // ─── 預約管理 ──────────────────────────────────────────────────
 
   @Get()
   @RequirePermission('module.originals.reserve.view')
@@ -90,5 +111,34 @@ export class ReserveAdminController {
       'Content-Disposition': 'attachment; filename="reservations.csv"',
     });
     res.send(csv);
+  }
+
+  // ─── 里程碑管理 ────────────────────────────────────────────────
+
+  @Get('milestones')
+  @RequirePermission('module.originals.reserve.view')
+  findAllMilestones() {
+    return this.reserveService.findAllMilestones();
+  }
+
+  @Post('milestones')
+  @RequirePermission('module.originals.reserve.manage')
+  createMilestone(@Body() dto: CreateMilestoneDto) {
+    return this.reserveService.createMilestone(dto);
+  }
+
+  @Patch('milestones/:id')
+  @RequirePermission('module.originals.reserve.manage')
+  updateMilestone(
+    @Param('id') id: string,
+    @Body() dto: UpdateMilestoneDto,
+  ) {
+    return this.reserveService.updateMilestone(id, dto);
+  }
+
+  @Delete('milestones/:id')
+  @RequirePermission('module.originals.reserve.manage')
+  deleteMilestone(@Param('id') id: string) {
+    return this.reserveService.deleteMilestone(id);
   }
 }

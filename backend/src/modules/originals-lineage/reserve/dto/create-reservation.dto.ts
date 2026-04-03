@@ -6,9 +6,10 @@ export class CreateReservationDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'Player1' })
+  @ApiPropertyOptional({ example: 'Player1' })
+  @IsOptional()
   @IsString()
-  displayName: string;
+  displayName?: string;
 
   @ApiPropertyOptional({ example: '0912345678' })
   @IsOptional()
@@ -19,9 +20,4 @@ export class CreateReservationDto {
   @IsOptional()
   @IsString()
   lineId?: string;
-
-  @ApiPropertyOptional({ example: 'REF001' })
-  @IsOptional()
-  @IsString()
-  referralCode?: string;
 }

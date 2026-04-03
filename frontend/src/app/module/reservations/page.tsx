@@ -126,11 +126,14 @@ export default function ReservationsPage() {
       render: (val: string | null) => val || '-',
     },
     {
-      title: '推薦碼',
-      dataIndex: 'referralCode',
-      key: 'referralCode',
+      title: 'Email 驗證',
+      dataIndex: 'emailVerified',
+      key: 'emailVerified',
       width: 100,
-      render: (val: string | null) => val || '-',
+      align: 'center' as const,
+      render: (val: boolean) => (
+        <Tag color={val ? 'green' : 'default'}>{val ? '已驗證' : '未驗證'}</Tag>
+      ),
     },
     {
       title: '狀態',

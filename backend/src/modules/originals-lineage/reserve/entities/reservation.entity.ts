@@ -23,8 +23,14 @@ export class Reservation {
   @Column({ name: 'line_id', type: 'varchar', nullable: true })
   lineId: string | null;
 
-  @Column({ name: 'referral_code', type: 'varchar', nullable: true })
-  referralCode: string | null;
+  @Column({ name: 'email_verified', default: false })
+  emailVerified: boolean;
+
+  @Column({ name: 'verification_code', type: 'varchar', nullable: true })
+  verificationCode: string | null;
+
+  @Column({ name: 'verification_code_expires_at', type: 'timestamp', nullable: true })
+  verificationCodeExpiresAt: Date | null;
 
   @Column({ type: 'varchar', default: 'registered' })
   status: 'registered' | 'confirmed' | 'converted';

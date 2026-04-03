@@ -244,4 +244,69 @@ export class UpdateSiteSettingsDto {
   @IsOptional()
   @IsString()
   gameDownloadUrl?: string;
+
+  // ─── Reserve Page Settings ────────────────────────────────
+  @ApiPropertyOptional({ description: '啟用事前預約頁面' })
+  @IsOptional()
+  @IsBoolean()
+  reserveEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: '開服日期（ISO string，倒數計時用）' })
+  @IsOptional()
+  @IsString()
+  reserveLaunchDate?: string;
+
+  @ApiPropertyOptional({ description: '預約頁 Hero Banner 圖片' })
+  @IsOptional()
+  @IsString()
+  reserveBannerUrl?: string;
+
+  @ApiPropertyOptional({ description: '預約頁背景圖' })
+  @IsOptional()
+  @IsString()
+  reserveBgImageUrl?: string;
+
+  @ApiPropertyOptional({ example: '事前預約', description: '預約頁標題' })
+  @IsOptional()
+  @IsString()
+  reserveTitle?: string;
+
+  @ApiPropertyOptional({ description: '預約頁副標題' })
+  @IsOptional()
+  @IsString()
+  reserveSubtitle?: string;
+
+  @ApiPropertyOptional({ description: '預約頁說明文字' })
+  @IsOptional()
+  @IsString()
+  reserveDescription?: string;
+
+  @ApiPropertyOptional({ example: '立即預約', description: '按鈕文字' })
+  @IsOptional()
+  @IsString()
+  reserveButtonText?: string;
+
+  @ApiPropertyOptional({ description: '預約頁強調色' })
+  @IsOptional()
+  @IsString()
+  reserveAccentColor?: string;
+
+  @ApiPropertyOptional({ description: '啟用里程碑顯示' })
+  @IsOptional()
+  @IsBoolean()
+  reserveMilestonesEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: '啟用 Email 驗證' })
+  @IsOptional()
+  @IsBoolean()
+  reserveEmailVerificationEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: '預約成功自訂訊息' })
+  @IsOptional()
+  @IsString()
+  reserveSuccessMessage?: string;
+
+  @ApiPropertyOptional({ description: '表單欄位配置 JSON' })
+  @IsOptional()
+  reserveFieldConfig?: Record<string, { visible: boolean; required: boolean }>;
 }

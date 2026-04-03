@@ -66,6 +66,7 @@ const allMenuItems: MenuItem[] = [
         ],
       },
       { key: '/module/site-manage/changelog', label: '更新頁面管理' },
+      { key: '/module/site-manage/reserve-design', label: '預約頁設計' },
     ],
   },
   { key: '/module/media', icon: <PictureOutlined />, label: '媒體庫', permission: 'module.originals.media.view' },

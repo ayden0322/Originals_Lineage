@@ -73,9 +73,12 @@ export default function PublicHeader() {
     { label: '遊戲下載', path: downloadUrl || '#', external: !!downloadUrl },
   ];
 
+  const reserveEnabled = config?.settings.reserveEnabled;
+
   const mainNav = [
     { label: '首頁', path: '/public' },
     { label: '最新消息', path: '/public/news' },
+    ...(reserveEnabled ? [{ label: '事前預約', path: '/public/reserve' }] : []),
     { label: '贊助專區', path: '/public/sponsor' },
     { label: '線上商城', path: '/public/shop' },
     { label: '活動內容', path: '/public/events' },

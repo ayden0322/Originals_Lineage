@@ -240,9 +240,20 @@ export interface Reservation {
   displayName: string;
   phone: string | null;
   lineId: string | null;
-  referralCode: string | null;
+  emailVerified: boolean;
   status: 'registered' | 'confirmed' | 'converted';
   ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReservationMilestone {
+  id: string;
+  threshold: number;
+  rewardName: string;
+  imageUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -252,6 +263,10 @@ export interface ReservationStats {
   registered: number;
   confirmed: number;
   converted: number;
+}
+
+export interface ReserveFieldConfig {
+  [key: string]: { visible: boolean; required: boolean };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -517,6 +532,20 @@ export interface SiteSettings {
   lineOfficialUrl?: string;
   // Download
   gameDownloadUrl?: string;
+  // Reserve page
+  reserveEnabled?: boolean;
+  reserveLaunchDate?: string;
+  reserveBannerUrl?: string;
+  reserveBgImageUrl?: string;
+  reserveTitle?: string;
+  reserveSubtitle?: string;
+  reserveDescription?: string;
+  reserveButtonText?: string;
+  reserveAccentColor?: string;
+  reserveMilestonesEnabled?: boolean;
+  reserveEmailVerificationEnabled?: boolean;
+  reserveSuccessMessage?: string;
+  reserveFieldConfig?: ReserveFieldConfig;
 }
 
 export interface SiteSection {

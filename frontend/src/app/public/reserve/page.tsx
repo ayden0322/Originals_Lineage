@@ -1,167 +1,499 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Form, Input, Button, Typography, Statistic, message, Result, Spin } from 'antd';
-import { UserOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
-import { createReservation, getReservationCount } from '@/lib/api/reserve';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
+import {
+  createReservation,
+  getReservationCount,
+  getPublicMilestones,
+  verifyReservationEmail,
+  resendVerificationEmail,
+} from '@/lib/api/reserve';
+import type { ReservationMilestone, ReserveFieldConfig } from '@/lib/types';
+import styles from './reserve.module.css';
 
-const { Title, Paragraph } = Typography;
+interface CountdownValues {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
 
-interface ReserveFormValues {
-  email: string;
-  displayName: string;
-  phone?: string;
-  lineId?: string;
-  referralCode?: string;
+function useCountdown(targetDate: string | undefined): CountdownValues {
+  const [time, setTime] = useState<CountdownValues>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    if (!targetDate) return;
+
+    const calc = () => {
+      const diff = new Date(targetDate).getTime() - Date.now();
+      if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      return {
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+      };
+    };
+
+    setTime(calc());
+    const interval = setInterval(() => setTime(calc()), 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return time;
 }
 
 export default function ReservePage() {
-  const [form] = Form.useForm<ReserveFormValues>();
-  const [count, setCount] = useState<number>(0);
+  const router = useRouter();
+  const { config } = useSiteConfig();
+  const s = config?.settings;
+
+  const accentColor = s?.reserveAccentColor || '#c4a24e';
+  const fieldConfig: ReserveFieldConfig = s?.reserveFieldConfig || {
+    displayName: { visible: true, required: false },
+    phone: { visible: true, required: false },
+    lineId: { visible: true, required: false },
+  };
+
+  const countdown = useCountdown(s?.reserveLaunchDate);
+
+  const [count, setCount] = useState(0);
+  const [milestones, setMilestones] = useState<ReservationMilestone[]>([]);
   const [loading, setLoading] = useState(false);
-  const [countLoading, setCountLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const c = await getReservationCount();
-        setCount(c);
-      } catch {
-        // ignore
-      } finally {
-        setCountLoading(false);
-      }
-    };
-    fetchCount();
-  }, []);
+  // Form state
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [lineId, setLineId] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const onFinish = async (values: ReserveFormValues) => {
+  // Verification state
+  const [showVerify, setShowVerify] = useState(false);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval>>();
+
+  const fetchInitData = useCallback(async () => {
+    try {
+      const [c, m] = await Promise.all([
+        getReservationCount(),
+        s?.reserveMilestonesEnabled ? getPublicMilestones() : Promise.resolve([]),
+      ]);
+      setCount(c);
+      setMilestones(m);
+    } catch {
+      // ignore
+    }
+  }, [s?.reserveMilestonesEnabled]);
+
+  useEffect(() => {
+    fetchInitData();
+  }, [fetchInitData]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      cooldownRef.current = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(cooldownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(cooldownRef.current);
+    }
+  }, [resendCooldown]);
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!email.trim()) {
+      errors.email = '請輸入電子信箱';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = '請輸入有效的電子信箱';
+    }
+
+    if (fieldConfig.displayName?.visible && fieldConfig.displayName?.required && !displayName.trim()) {
+      errors.displayName = '請輸入暱稱';
+    }
+    if (fieldConfig.phone?.visible && fieldConfig.phone?.required && !phone.trim()) {
+      errors.phone = '請輸入手機號碼';
+    }
+    if (fieldConfig.lineId?.visible && fieldConfig.lineId?.required && !lineId.trim()) {
+      errors.lineId = '請輸入 LINE ID';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
     try {
-      await createReservation({
-        email: values.email,
-        displayName: values.displayName,
-        phone: values.phone || undefined,
-        lineId: values.lineId || undefined,
-        referralCode: values.referralCode || undefined,
-      });
-      message.success('預約成功！');
-      setSubmitted(true);
+      const dto: Record<string, string> = { email: email.trim() };
+      if (fieldConfig.displayName?.visible && displayName.trim()) dto.displayName = displayName.trim();
+      if (fieldConfig.phone?.visible && phone.trim()) dto.phone = phone.trim();
+      if (fieldConfig.lineId?.visible && lineId.trim()) dto.lineId = lineId.trim();
+
+      await createReservation(dto);
       setCount((prev) => prev + 1);
+
+      if (s?.reserveEmailVerificationEnabled) {
+        setVerifyEmail(email.trim());
+        setShowVerify(true);
+        setResendCooldown(60);
+      } else {
+        setSubmitted(true);
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      message.error(error?.response?.data?.message || '預約失敗，請稍後再試');
+      const msg = error?.response?.data?.message || '預約失敗，請稍後再試';
+      setFormErrors({ submit: msg });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleVerify = async () => {
+    if (verifyCode.length !== 6) return;
+    setVerifyLoading(true);
+    try {
+      await verifyReservationEmail(verifyEmail, verifyCode);
+      setShowVerify(false);
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setFormErrors({ verify: error?.response?.data?.message || '驗證失敗' });
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await resendVerificationEmail(verifyEmail);
+      setResendCooldown(60);
+    } catch {
+      // ignore
+    }
+  };
+
+  // ─── CSS Variable for accent color ──────────────────────────
+
+  const cssVars = {
+    '--reserve-accent': accentColor,
+  } as React.CSSProperties;
+
+  const hasCountdown = !!s?.reserveLaunchDate;
+  const showMilestones = s?.reserveMilestonesEnabled && milestones.length > 0;
+
+  // ─── Success state ──────────────────────────────────────────
+
   if (submitted) {
+    const successMsg =
+      s?.reserveSuccessMessage || '感謝您的事前預約，我們將在開服前通知您。請留意您的信箱。';
+
     return (
-      <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 'calc(var(--header-total-height, 89px) + 24px)' }}>
-        <Result
-          status="success"
-          title="預約成功！"
-          subTitle="感謝您的事前預約，我們將在開服前通知您。請留意您的信箱。"
-          extra={[
-            <Button
-              type="primary"
-              key="home"
-              onClick={() => (window.location.href = '/public')}
-            >
-              返回首頁
-            </Button>,
-          ]}
-        />
+      <div className={styles.reservePage} style={cssVars}>
+        <div className={styles.hero}>
+          {s?.reserveBannerUrl && (
+            <div
+              className={styles.heroBg}
+              style={{ backgroundImage: `url(${s.reserveBannerUrl})` }}
+            />
+          )}
+          <div className={styles.heroContent}>
+            <div className={styles.successOverlay}>
+              <div className={styles.successIcon}>&#10003;</div>
+              <div className={styles.successTitle}>預約成功！</div>
+              <div className={styles.successDesc}>{successMsg}</div>
+              <button
+                className={styles.successButton}
+                onClick={() => router.push('/public')}
+              >
+                返回首頁
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // ─── Main page ──────────────────────────────────────────────
+
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: 'calc(var(--header-total-height, 89px) + 24px)' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <Title level={2}>事前預約</Title>
-        <Paragraph type="secondary" style={{ fontSize: 16 }}>
-          搶先預約，開服即享獨家好禮！
-        </Paragraph>
-        {countLoading ? (
-          <Spin />
-        ) : (
-          <Statistic
-            title="目前預約人數"
-            value={count}
-            suffix="人"
-            valueStyle={{ color: '#722ed1', fontWeight: 'bold' }}
-            prefix={<UserOutlined />}
+    <div
+      className={styles.reservePage}
+      style={{
+        ...cssVars,
+        ...(s?.reserveBgImageUrl
+          ? {
+              backgroundImage: `url(${s.reserveBgImageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundAttachment: 'fixed',
+            }
+          : {}),
+      }}
+    >
+      {/* ─── Hero ────────────────────────────────────────────── */}
+      <section className={styles.hero}>
+        {s?.reserveBannerUrl && (
+          <div
+            className={styles.heroBg}
+            style={{ backgroundImage: `url(${s.reserveBannerUrl})` }}
           />
         )}
-      </div>
+        <div className={styles.heroContent}>
+          <h1 className={styles.heroTitle}>
+            {s?.reserveTitle || '事前預約'}
+          </h1>
+          {s?.reserveSubtitle && (
+            <p className={styles.heroSubtitle}>{s.reserveSubtitle}</p>
+          )}
+          {s?.reserveDescription && (
+            <p className={styles.heroDesc}>{s.reserveDescription}</p>
+          )}
 
-      <Card style={{ borderRadius: 12 }}>
-        <Form<ReserveFormValues>
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          autoComplete="off"
-        >
-          <Form.Item
-            name="email"
-            label="電子信箱"
-            rules={[
-              { required: true, message: '請輸入電子信箱' },
-              { type: 'email', message: '請輸入有效的電子信箱' },
-            ]}
-          >
-            <Input
-              prefix={<MailOutlined />}
-              placeholder="your@email.com"
-              size="large"
-            />
-          </Form.Item>
+          {/* Countdown */}
+          {hasCountdown && (
+            <div className={styles.countdown}>
+              {[
+                { value: countdown.days, label: '天' },
+                { value: countdown.hours, label: '時' },
+                { value: countdown.minutes, label: '分' },
+                { value: countdown.seconds, label: '秒' },
+              ].map((item) => (
+                <div key={item.label} className={styles.countdownItem}>
+                  <span className={styles.countdownValue} style={{ color: accentColor }}>
+                    {String(item.value).padStart(2, '0')}
+                  </span>
+                  <span className={styles.countdownLabel}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-          <Form.Item
-            name="displayName"
-            label="暱稱"
-            rules={[{ required: true, message: '請輸入暱稱' }]}
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="您的暱稱"
-              size="large"
-            />
-          </Form.Item>
+          {/* Counter */}
+          <div className={styles.counter}>
+            <span>已有</span>
+            <span className={styles.counterNumber} style={{ color: accentColor }}>
+              {count.toLocaleString()}
+            </span>
+            <span>人預約</span>
+          </div>
+        </div>
+      </section>
 
-          <Form.Item name="phone" label="手機號碼">
-            <Input
-              prefix={<PhoneOutlined />}
-              placeholder="09xxxxxxxx（選填）"
-              size="large"
-            />
-          </Form.Item>
+      {/* ─── Milestones ──────────────────────────────────────── */}
+      {showMilestones && (
+        <section className={styles.milestones}>
+          <h2 className={styles.milestonesTitle}>預約里程碑獎勵</h2>
+          <div className={styles.milestoneTrack}>
+            {milestones.map((m) => {
+              const reached = count >= m.threshold;
+              return (
+                <div
+                  key={m.id}
+                  className={`${styles.milestoneItem} ${reached ? styles.milestoneReached : styles.milestonePending}`}
+                >
+                  <div
+                    className={styles.milestoneIcon}
+                    style={{
+                      borderColor: accentColor,
+                      backgroundColor: reached ? accentColor : 'transparent',
+                      color: reached ? '#000' : accentColor,
+                    }}
+                  >
+                    {reached ? '✓' : m.threshold}
+                  </div>
+                  <div className={styles.milestoneInfo}>
+                    <div className={styles.milestoneThreshold}>
+                      {m.threshold.toLocaleString()} 人達成
+                    </div>
+                    <div className={styles.milestoneReward}>{m.rewardName}</div>
+                  </div>
+                  {m.imageUrl && (
+                    <img
+                      src={m.imageUrl}
+                      alt={m.rewardName}
+                      className={styles.milestoneImage}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-          <Form.Item name="lineId" label="LINE ID">
-            <Input placeholder="您的 LINE ID（選填）" size="large" />
-          </Form.Item>
+      {/* ─── Form ────────────────────────────────────────────── */}
+      <section className={styles.formSection}>
+        <div className={styles.formCard}>
+          <h2 className={styles.formTitle}>
+            {s?.reserveButtonText || '立即預約'}
+          </h2>
 
-          <Form.Item name="referralCode" label="推薦碼">
-            <Input placeholder="推薦碼（選填）" size="large" />
-          </Form.Item>
+          <form onSubmit={handleSubmit}>
+            {/* Email (always shown) */}
+            <div className={styles.formGroup}>
+              <label className={`${styles.formLabel} ${styles.formRequired}`}>
+                電子信箱
+              </label>
+              <input
+                type="email"
+                className={styles.formInput}
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {formErrors.email && (
+                <div className={styles.formError}>{formErrors.email}</div>
+              )}
+            </div>
 
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              size="large"
-              loading={loading}
-              style={{ height: 48 }}
+            {/* Display Name */}
+            {fieldConfig.displayName?.visible && (
+              <div className={styles.formGroup}>
+                <label
+                  className={`${styles.formLabel} ${fieldConfig.displayName.required ? styles.formRequired : ''}`}
+                >
+                  暱稱
+                </label>
+                <input
+                  type="text"
+                  className={styles.formInput}
+                  placeholder="您的暱稱"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+                {formErrors.displayName && (
+                  <div className={styles.formError}>{formErrors.displayName}</div>
+                )}
+              </div>
+            )}
+
+            {/* Phone */}
+            {fieldConfig.phone?.visible && (
+              <div className={styles.formGroup}>
+                <label
+                  className={`${styles.formLabel} ${fieldConfig.phone.required ? styles.formRequired : ''}`}
+                >
+                  手機號碼
+                </label>
+                <input
+                  type="tel"
+                  className={styles.formInput}
+                  placeholder="09xxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                {formErrors.phone && (
+                  <div className={styles.formError}>{formErrors.phone}</div>
+                )}
+              </div>
+            )}
+
+            {/* LINE ID */}
+            {fieldConfig.lineId?.visible && (
+              <div className={styles.formGroup}>
+                <label
+                  className={`${styles.formLabel} ${fieldConfig.lineId.required ? styles.formRequired : ''}`}
+                >
+                  LINE ID
+                </label>
+                <input
+                  type="text"
+                  className={styles.formInput}
+                  placeholder="您的 LINE ID"
+                  value={lineId}
+                  onChange={(e) => setLineId(e.target.value)}
+                />
+                {formErrors.lineId && (
+                  <div className={styles.formError}>{formErrors.lineId}</div>
+                )}
+              </div>
+            )}
+
+            {formErrors.submit && (
+              <div className={styles.formError} style={{ marginBottom: 12 }}>
+                {formErrors.submit}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className={styles.formButton}
+              style={{ backgroundColor: accentColor }}
+              disabled={loading}
             >
-              立即預約
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+              {loading ? '送出中...' : (s?.reserveButtonText || '立即預約')}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {/* ─── Email Verification Modal ────────────────────────── */}
+      {showVerify && (
+        <div className={styles.verifyOverlay}>
+          <div className={styles.verifyModal}>
+            <div className={styles.verifyTitle}>驗證您的 Email</div>
+            <div className={styles.verifyDesc}>
+              我們已發送 6 位數驗證碼至 {verifyEmail}
+            </div>
+
+            <input
+              type="text"
+              className={styles.verifyCodeInput}
+              placeholder="000000"
+              maxLength={6}
+              value={verifyCode}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setVerifyCode(val);
+              }}
+            />
+
+            {formErrors.verify && (
+              <div className={styles.formError} style={{ marginBottom: 12 }}>
+                {formErrors.verify}
+              </div>
+            )}
+
+            <div className={styles.verifyActions}>
+              <button
+                className={styles.verifyButton}
+                style={{ backgroundColor: accentColor }}
+                onClick={handleVerify}
+                disabled={verifyLoading || verifyCode.length !== 6}
+              >
+                {verifyLoading ? '驗證中...' : '確認驗證'}
+              </button>
+              <button
+                className={styles.verifyResend}
+                onClick={handleResend}
+                disabled={resendCooldown > 0}
+              >
+                {resendCooldown > 0
+                  ? `重新發送 (${resendCooldown}s)`
+                  : '重新發送'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
