@@ -116,19 +116,19 @@ export class ReserveAdminController {
   // ─── 里程碑管理 ────────────────────────────────────────────────
 
   @Get('milestones')
-  @RequirePermission('module.originals.reserve.view')
+  @RequirePermission('module.originals.settings.manage')
   findAllMilestones() {
     return this.reserveService.findAllMilestones();
   }
 
   @Post('milestones')
-  @RequirePermission('module.originals.reserve.manage')
+  @RequirePermission('module.originals.settings.manage')
   createMilestone(@Body() dto: CreateMilestoneDto) {
     return this.reserveService.createMilestone(dto);
   }
 
   @Patch('milestones/:id')
-  @RequirePermission('module.originals.reserve.manage')
+  @RequirePermission('module.originals.settings.manage')
   updateMilestone(
     @Param('id') id: string,
     @Body() dto: UpdateMilestoneDto,
@@ -137,7 +137,7 @@ export class ReserveAdminController {
   }
 
   @Delete('milestones/:id')
-  @RequirePermission('module.originals.reserve.manage')
+  @RequirePermission('module.originals.settings.manage')
   deleteMilestone(@Param('id') id: string) {
     return this.reserveService.deleteMilestone(id);
   }
