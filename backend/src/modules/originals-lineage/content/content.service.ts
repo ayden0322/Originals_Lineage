@@ -73,6 +73,14 @@ export class ContentService {
       order: { createdAt: 'DESC' },
     });
 
+    // Auto-fix articles with empty slugs
+    for (const item of items) {
+      if (!item.slug) {
+        item.slug = await this.generateArticleSlug(item.title);
+        await this.articleRepo.save(item);
+      }
+    }
+
     return { items, total, page, limit };
   }
 
@@ -105,7 +113,18 @@ export class ContentService {
       article.publishedAt = new Date();
     }
 
+    // Prevent overwriting slug with empty string
+    if (dto.slug !== undefined && !dto.slug.trim()) {
+      delete dto.slug;
+    }
+
     Object.assign(article, dto);
+
+    // Ensure slug is never empty (safety net)
+    if (!article.slug) {
+      article.slug = await this.generateArticleSlug(article.title);
+    }
+
     return this.articleRepo.save(article);
   }
 
@@ -126,6 +145,14 @@ export class ContentService {
       take: limit,
       order: { isPinned: 'DESC', publishedAt: 'DESC' },
     });
+
+    // Auto-fix articles with empty slugs
+    for (const item of items) {
+      if (!item.slug) {
+        item.slug = await this.generateArticleSlug(item.title);
+        await this.articleRepo.save(item);
+      }
+    }
 
     return { items, total, page, limit };
   }

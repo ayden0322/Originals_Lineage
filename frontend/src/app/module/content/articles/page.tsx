@@ -120,6 +120,7 @@ export default function ArticlesPage() {
       setSubmitting(true);
       const payload = {
         ...values,
+        slug: values.slug?.trim() || undefined,
         content: content || undefined,
         summary: showSummary ? (summary || undefined) : undefined,
         coverImageUrl: coverImageUrl || undefined,
