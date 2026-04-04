@@ -16,6 +16,7 @@ async function bootstrap() {
     ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
     : [
         'http://localhost:3000',
+        'http://localhost:3001',
         'http://admin.localhost:3000',
         'http://originals-admin.localhost:3000',
         'http://originals.localhost:3000',

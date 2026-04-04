@@ -28,6 +28,7 @@ const FONT_OPTIONS = [
   { label: '中文字體', options: [
     { value: "'Noto Sans TC', sans-serif", label: 'Noto Sans TC (思源黑體)' },
     { value: "'Noto Serif TC', serif", label: 'Noto Serif TC (思源宋體)' },
+    { value: "'HanWangLiSuMedium', serif", label: '王漢宗隸書體' },
     { value: "'Microsoft JhengHei', sans-serif", label: '微軟正黑體' },
     { value: "'PingFang TC', sans-serif", label: '蘋方-繁' },
   ]},
