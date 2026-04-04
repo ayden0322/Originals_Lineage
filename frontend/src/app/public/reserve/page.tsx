@@ -141,7 +141,7 @@ export default function ReservePage() {
 
     setLoading(true);
     try {
-      const dto: Record<string, string> = { email: email.trim() };
+      const dto: { email: string; displayName?: string; phone?: string; lineId?: string } = { email: email.trim() };
       if (fieldConfig.displayName?.visible && displayName.trim()) dto.displayName = displayName.trim();
       if (fieldConfig.phone?.visible && phone.trim()) dto.phone = phone.trim();
       if (fieldConfig.lineId?.visible && lineId.trim()) dto.lineId = lineId.trim();

@@ -63,24 +63,23 @@ export default function ReserveDesignPage() {
         getMilestones(),
       ]);
 
-      const s = settings as Record<string, unknown>;
-      const fc = (s.reserveFieldConfig as ReserveFieldConfig) || DEFAULT_FIELD_CONFIG;
+      const fc = settings.reserveFieldConfig || DEFAULT_FIELD_CONFIG;
       setFieldConfig(fc);
       setMilestones(milestonesData);
 
       form.setFieldsValue({
-        reserveEnabled: s.reserveEnabled ?? false,
-        reserveLaunchDate: s.reserveLaunchDate ? dayjs(s.reserveLaunchDate as string) : null,
-        reserveBannerUrl: s.reserveBannerUrl ?? '',
-        reserveBgImageUrl: s.reserveBgImageUrl ?? '',
-        reserveTitle: s.reserveTitle ?? '事前預約',
-        reserveSubtitle: s.reserveSubtitle ?? '',
-        reserveDescription: s.reserveDescription ?? '',
-        reserveButtonText: s.reserveButtonText ?? '立即預約',
-        reserveAccentColor: s.reserveAccentColor ?? '#c4a24e',
-        reserveMilestonesEnabled: s.reserveMilestonesEnabled ?? false,
-        reserveEmailVerificationEnabled: s.reserveEmailVerificationEnabled ?? false,
-        reserveSuccessMessage: s.reserveSuccessMessage ?? '',
+        reserveEnabled: settings.reserveEnabled ?? false,
+        reserveLaunchDate: settings.reserveLaunchDate ? dayjs(settings.reserveLaunchDate) : null,
+        reserveBannerUrl: settings.reserveBannerUrl ?? '',
+        reserveBgImageUrl: settings.reserveBgImageUrl ?? '',
+        reserveTitle: settings.reserveTitle ?? '事前預約',
+        reserveSubtitle: settings.reserveSubtitle ?? '',
+        reserveDescription: settings.reserveDescription ?? '',
+        reserveButtonText: settings.reserveButtonText ?? '立即預約',
+        reserveAccentColor: settings.reserveAccentColor ?? '#c4a24e',
+        reserveMilestonesEnabled: settings.reserveMilestonesEnabled ?? false,
+        reserveEmailVerificationEnabled: settings.reserveEmailVerificationEnabled ?? false,
+        reserveSuccessMessage: settings.reserveSuccessMessage ?? '',
       });
     } catch {
       message.error('載入設定失敗');
@@ -97,7 +96,7 @@ export default function ReserveDesignPage() {
     setSaving(true);
     try {
       const values = await form.validateFields();
-      const payload: Record<string, unknown> = {
+      const payload = {
         ...values,
         reserveLaunchDate: values.reserveLaunchDate
           ? values.reserveLaunchDate.toISOString()
