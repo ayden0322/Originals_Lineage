@@ -175,6 +175,10 @@ export default function ArticleDetailPage() {
             background: rgba(255, 255, 255, 0.05);
             font-weight: 600;
           }
+          .article-content table td[style*="background-color"],
+          .article-content table th[style*="background-color"] {
+            background: none;
+          }
         `}</style>
 
         {/* ═══ Prev / Next Navigation ═══ */}

@@ -13,6 +13,39 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
+
+// 擴展 TableCell / TableHeader 支援 backgroundColor
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      backgroundColor: {
+        default: null,
+        parseHTML: (el) => el.style.backgroundColor || null,
+        renderHTML: (attrs) => {
+          if (!attrs.backgroundColor) return {};
+          return { style: `background-color: ${attrs.backgroundColor}` };
+        },
+      },
+    };
+  },
+});
+
+const CustomTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      backgroundColor: {
+        default: null,
+        parseHTML: (el) => el.style.backgroundColor || null,
+        renderHTML: (attrs) => {
+          if (!attrs.backgroundColor) return {};
+          return { style: `background-color: ${attrs.backgroundColor}` };
+        },
+      },
+    };
+  },
+});
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Upload, Tooltip, Divider, Dropdown, Popover, message } from 'antd';
 import type { MenuProps } from 'antd';
@@ -45,6 +78,7 @@ import {
   DeleteOutlined,
   MergeCellsOutlined,
   SplitCellsOutlined,
+  BgColorsOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
 
@@ -193,8 +227,8 @@ export default function RichTextEditor({
       Link.configure({ openOnClick: false }),
       Table.configure({ resizable: true }),
       TableRow,
-      TableCell,
-      TableHeader,
+      CustomTableCell,
+      CustomTableHeader,
     ],
     content: value || '',
     onUpdate: ({ editor: ed }) => {
@@ -626,6 +660,38 @@ export default function RichTextEditor({
 
           <Divider type="vertical" style={{ margin: '0 2px' }} />
 
+          {/* 儲存格背景色 */}
+          <Tooltip title="儲存格背景色">
+            <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', position: 'relative' }}>
+              <BgColorsOutlined style={{ fontSize: 14, marginRight: 4, color: '#666' }} />
+              <input
+                type="color"
+                value={editor.getAttributes('tableCell').backgroundColor || editor.getAttributes('tableHeader').backgroundColor || '#ffffff'}
+                onChange={(e) => {
+                  editor.chain().focus().setCellAttribute('backgroundColor', e.target.value).run();
+                }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  border: '1px solid #d9d9d9',
+                  borderRadius: 3,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              />
+            </label>
+          </Tooltip>
+          <Tooltip title="清除背景色">
+            <Button type="text" size="small"
+              style={{ fontSize: 11, padding: '0 4px', color: '#999' }}
+              onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()}
+            >
+              清除
+            </Button>
+          </Tooltip>
+
+          <Divider type="vertical" style={{ margin: '0 2px' }} />
+
           <Tooltip title="刪除表格">
             <Button type="text" size="small" danger icon={<DeleteOutlined />}
               onClick={() => editor.chain().focus().deleteTable().run()} />
@@ -651,7 +717,7 @@ export default function RichTextEditor({
               minHeight,
             }}
           />
-          {editor.isEmpty && (
+          {editor.isEmpty && !editor.getJSON().content?.some((n) => n.type === 'table') && (
             <div
               style={{
                 position: 'absolute',
@@ -731,6 +797,10 @@ export default function RichTextEditor({
         .tiptap table th {
           background: #f5f5f5;
           font-weight: 600;
+        }
+        .tiptap table td[style*="background-color"],
+        .tiptap table th[style*="background-color"] {
+          background: none;
         }
         .tiptap table .selectedCell {
           background: #e6f4ff;
