@@ -14,36 +14,42 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 
-// 擴展 TableCell / TableHeader 支援 backgroundColor
+// 共用：組合 cell 的 inline style
+function buildCellStyle(attrs: Record<string, unknown>): Record<string, string> {
+  const parts: string[] = [];
+  if (attrs.backgroundColor) parts.push(`background-color: ${attrs.backgroundColor}`);
+  if (attrs.verticalAlign) parts.push(`vertical-align: ${attrs.verticalAlign}`);
+  if (!parts.length) return {};
+  return { style: parts.join('; ') };
+}
+
+// 共用：cell 擴展屬性（backgroundColor + verticalAlign）
+const cellAttributes = {
+  backgroundColor: {
+    default: null,
+    parseHTML: (el: HTMLElement) => el.style.backgroundColor || null,
+  },
+  verticalAlign: {
+    default: null,
+    parseHTML: (el: HTMLElement) => el.style.verticalAlign || null,
+  },
+};
+
 const CustomTableCell = TableCell.extend({
   addAttributes() {
-    return {
-      ...this.parent?.(),
-      backgroundColor: {
-        default: null,
-        parseHTML: (el) => el.style.backgroundColor || null,
-        renderHTML: (attrs) => {
-          if (!attrs.backgroundColor) return {};
-          return { style: `background-color: ${attrs.backgroundColor}` };
-        },
-      },
-    };
+    return { ...this.parent?.(), ...cellAttributes };
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['td', { ...HTMLAttributes, ...buildCellStyle(node.attrs) }, 0];
   },
 });
 
 const CustomTableHeader = TableHeader.extend({
   addAttributes() {
-    return {
-      ...this.parent?.(),
-      backgroundColor: {
-        default: null,
-        parseHTML: (el) => el.style.backgroundColor || null,
-        renderHTML: (attrs) => {
-          if (!attrs.backgroundColor) return {};
-          return { style: `background-color: ${attrs.backgroundColor}` };
-        },
-      },
-    };
+    return { ...this.parent?.(), ...cellAttributes };
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['th', { ...HTMLAttributes, ...buildCellStyle(node.attrs) }, 0];
   },
 });
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
@@ -79,6 +85,9 @@ import {
   MergeCellsOutlined,
   SplitCellsOutlined,
   BgColorsOutlined,
+  VerticalAlignTopOutlined,
+  VerticalAlignMiddleOutlined,
+  VerticalAlignBottomOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
 
@@ -534,7 +543,7 @@ export default function RichTextEditor({
           content={
             <TableGridPicker
               onSelect={(rows, cols) => {
-                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).run();
                 setTablePickerOpen(false);
               }}
             />
@@ -692,6 +701,28 @@ export default function RichTextEditor({
 
           <Divider type="vertical" style={{ margin: '0 2px' }} />
 
+          {/* 儲存格垂直對齊 */}
+          <Tooltip title="靠上">
+            <Button
+              type={(editor.getAttributes('tableCell').verticalAlign || editor.getAttributes('tableHeader').verticalAlign || 'top') === 'top' ? 'primary' : 'text'}
+              size="small" icon={<VerticalAlignTopOutlined />}
+              onClick={() => editor.chain().focus().setCellAttribute('verticalAlign', 'top').run()} />
+          </Tooltip>
+          <Tooltip title="置中">
+            <Button
+              type={(editor.getAttributes('tableCell').verticalAlign || editor.getAttributes('tableHeader').verticalAlign) === 'middle' ? 'primary' : 'text'}
+              size="small" icon={<VerticalAlignMiddleOutlined />}
+              onClick={() => editor.chain().focus().setCellAttribute('verticalAlign', 'middle').run()} />
+          </Tooltip>
+          <Tooltip title="靠下">
+            <Button
+              type={(editor.getAttributes('tableCell').verticalAlign || editor.getAttributes('tableHeader').verticalAlign) === 'bottom' ? 'primary' : 'text'}
+              size="small" icon={<VerticalAlignBottomOutlined />}
+              onClick={() => editor.chain().focus().setCellAttribute('verticalAlign', 'bottom').run()} />
+          </Tooltip>
+
+          <Divider type="vertical" style={{ margin: '0 2px' }} />
+
           <Tooltip title="刪除表格">
             <Button type="text" size="small" danger icon={<DeleteOutlined />}
               onClick={() => editor.chain().focus().deleteTable().run()} />
@@ -795,7 +826,6 @@ export default function RichTextEditor({
           vertical-align: top;
         }
         .tiptap table th {
-          background: #f5f5f5;
           font-weight: 600;
         }
         .tiptap table td[style*="background-color"],

@@ -181,7 +181,6 @@ export default function ArticleDetailPage() {
             vertical-align: top;
           }
           .article-content table th {
-            background: rgba(255, 255, 255, 0.05);
             font-weight: 600;
           }
           .article-content table td[style*="background-color"],
