@@ -155,6 +155,26 @@ export default function ArticleDetailPage() {
             color: var(--accent-gold, #c4a24e);
             text-decoration: underline;
           }
+          .article-content hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 1.5em 0;
+          }
+          .article-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+          }
+          .article-content table td,
+          .article-content table th {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            vertical-align: top;
+          }
+          .article-content table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+          }
         `}</style>
 
         {/* ═══ Prev / Next Navigation ═══ */}

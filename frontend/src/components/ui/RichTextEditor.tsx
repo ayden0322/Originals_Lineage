@@ -9,6 +9,10 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import FontFamily from '@tiptap/extension-font-family';
 import Link from '@tiptap/extension-link';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Upload, Tooltip, Divider, Dropdown, message } from 'antd';
 import type { MenuProps } from 'antd';
@@ -30,6 +34,17 @@ import {
   DownOutlined,
   FontSizeOutlined,
   CodeOutlined,
+  TableOutlined,
+  MinusOutlined,
+  InsertRowAboveOutlined,
+  InsertRowBelowOutlined,
+  InsertRowLeftOutlined,
+  InsertRowRightOutlined,
+  DeleteRowOutlined,
+  DeleteColumnOutlined,
+  DeleteOutlined,
+  MergeCellsOutlined,
+  SplitCellsOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
 
@@ -127,6 +142,10 @@ export default function RichTextEditor({
       AlignableImage.configure({ inline: false, allowBase64: false }),
       TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
       Link.configure({ openOnClick: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: value || '',
     onUpdate: ({ editor: ed }) => {
@@ -412,6 +431,62 @@ export default function RichTextEditor({
           </Tooltip>
         </Upload>
 
+        {/* Horizontal Rule */}
+        <Tooltip title="水平線">
+          <Button
+            type="text"
+            size="small"
+            icon={<MinusOutlined />}
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          />
+        </Tooltip>
+
+        {/* Table */}
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: 'insert', icon: <TableOutlined />, label: '插入表格（3×3）' },
+              { type: 'divider' },
+              { key: 'addRowBefore', icon: <InsertRowAboveOutlined />, label: '上方插入列', disabled: !editor.can().addRowBefore() },
+              { key: 'addRowAfter', icon: <InsertRowBelowOutlined />, label: '下方插入列', disabled: !editor.can().addRowAfter() },
+              { key: 'addColBefore', icon: <InsertRowLeftOutlined />, label: '左方插入欄', disabled: !editor.can().addColumnBefore() },
+              { key: 'addColAfter', icon: <InsertRowRightOutlined />, label: '右方插入欄', disabled: !editor.can().addColumnAfter() },
+              { type: 'divider' },
+              { key: 'deleteRow', icon: <DeleteRowOutlined />, label: '刪除列', disabled: !editor.can().deleteRow() },
+              { key: 'deleteCol', icon: <DeleteColumnOutlined />, label: '刪除欄', disabled: !editor.can().deleteColumn() },
+              { type: 'divider' },
+              { key: 'mergeCells', icon: <MergeCellsOutlined />, label: '合併儲存格', disabled: !editor.can().mergeCells() },
+              { key: 'splitCell', icon: <SplitCellsOutlined />, label: '分割儲存格', disabled: !editor.can().splitCell() },
+              { type: 'divider' },
+              { key: 'deleteTable', icon: <DeleteOutlined />, label: '刪除表格', danger: true, disabled: !editor.can().deleteTable() },
+            ] as MenuProps['items'],
+            onClick: ({ key }) => {
+              const actions: Record<string, () => void> = {
+                insert: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+                addRowBefore: () => editor.chain().focus().addRowBefore().run(),
+                addRowAfter: () => editor.chain().focus().addRowAfter().run(),
+                addColBefore: () => editor.chain().focus().addColumnBefore().run(),
+                addColAfter: () => editor.chain().focus().addColumnAfter().run(),
+                deleteRow: () => editor.chain().focus().deleteRow().run(),
+                deleteCol: () => editor.chain().focus().deleteColumn().run(),
+                mergeCells: () => editor.chain().focus().mergeCells().run(),
+                splitCell: () => editor.chain().focus().splitCell().run(),
+                deleteTable: () => editor.chain().focus().deleteTable().run(),
+              };
+              actions[key]?.();
+            },
+          }}
+        >
+          <Tooltip title="表格">
+            <Button
+              type={editor.isActive('table') ? 'primary' : 'text'}
+              size="small"
+              icon={<TableOutlined />}
+            />
+          </Tooltip>
+        </Dropdown>
+
         <Divider type="vertical" style={{ margin: '0 4px' }} />
 
         {/* Undo/Redo */}
@@ -534,6 +609,40 @@ export default function RichTextEditor({
           padding-left: 12px;
           margin-left: 0;
           color: #666;
+        }
+        .tiptap hr {
+          border: none;
+          border-top: 2px solid #d9d9d9;
+          margin: 1em 0;
+        }
+        .tiptap table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 1em 0;
+          overflow: hidden;
+        }
+        .tiptap table td,
+        .tiptap table th {
+          border: 1px solid #d9d9d9;
+          padding: 8px 12px;
+          min-width: 80px;
+          vertical-align: top;
+        }
+        .tiptap table th {
+          background: #f5f5f5;
+          font-weight: 600;
+        }
+        .tiptap table .selectedCell {
+          background: #e6f4ff;
+        }
+        .tiptap table .column-resize-handle {
+          position: absolute;
+          right: -2px;
+          top: 0;
+          bottom: -2px;
+          width: 4px;
+          background-color: #1677ff;
+          pointer-events: none;
         }
       `}</style>
     </div>
