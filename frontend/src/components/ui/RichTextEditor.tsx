@@ -14,7 +14,7 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Button, Upload, Tooltip, Divider, Dropdown, message } from 'antd';
+import { Button, Upload, Tooltip, Divider, Dropdown, Popover, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { EDITOR_FONT_OPTIONS } from '@/lib/fonts';
 import {
@@ -117,6 +117,54 @@ const AlignableImage = ImageExt.extend({
   },
 });
 
+/** 表格格子選擇器 — 滑鼠移過格子即時 highlight，點擊插入對應大小的表格 */
+const MAX_GRID_ROWS = 8;
+const MAX_GRID_COLS = 8;
+const CELL_SIZE = 22;
+const CELL_GAP = 3;
+
+function TableGridPicker({ onSelect }: { onSelect: (rows: number, cols: number) => void }) {
+  const [hover, setHover] = useState<{ r: number; c: number }>({ r: 0, c: 0 });
+
+  return (
+    <div style={{ padding: '8px 8px 4px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${MAX_GRID_COLS}, ${CELL_SIZE}px)`,
+          gap: CELL_GAP,
+        }}
+        onMouseLeave={() => setHover({ r: 0, c: 0 })}
+      >
+        {Array.from({ length: MAX_GRID_ROWS * MAX_GRID_COLS }, (_, idx) => {
+          const r = Math.floor(idx / MAX_GRID_COLS);
+          const c = idx % MAX_GRID_COLS;
+          const active = r < hover.r && c < hover.c;
+          return (
+            <div
+              key={idx}
+              onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+              onClick={() => onSelect(r + 1, c + 1)}
+              style={{
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+                borderRadius: 3,
+                border: `1.5px solid ${active ? '#1677ff' : '#d9d9d9'}`,
+                background: active ? '#e6f4ff' : '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.08s',
+              }}
+            />
+          );
+        })}
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: '#666', lineHeight: '20px' }}>
+        {hover.r > 0 ? `${hover.r} × ${hover.c}` : '選擇表格大小'}
+      </div>
+    </div>
+  );
+}
+
 export default function RichTextEditor({
   value,
   onChange,
@@ -128,6 +176,7 @@ export default function RichTextEditor({
   const savedSelection = useRef<{ from: number; to: number } | null>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlSource, setHtmlSource] = useState('');
+  const [tablePickerOpen, setTablePickerOpen] = useState(false);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -441,51 +490,30 @@ export default function RichTextEditor({
           />
         </Tooltip>
 
-        {/* Table */}
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              { key: 'insert', icon: <TableOutlined />, label: '插入表格（3×3）' },
-              { type: 'divider' },
-              { key: 'addRowBefore', icon: <InsertRowAboveOutlined />, label: '上方插入列', disabled: !editor.can().addRowBefore() },
-              { key: 'addRowAfter', icon: <InsertRowBelowOutlined />, label: '下方插入列', disabled: !editor.can().addRowAfter() },
-              { key: 'addColBefore', icon: <InsertRowLeftOutlined />, label: '左方插入欄', disabled: !editor.can().addColumnBefore() },
-              { key: 'addColAfter', icon: <InsertRowRightOutlined />, label: '右方插入欄', disabled: !editor.can().addColumnAfter() },
-              { type: 'divider' },
-              { key: 'deleteRow', icon: <DeleteRowOutlined />, label: '刪除列', disabled: !editor.can().deleteRow() },
-              { key: 'deleteCol', icon: <DeleteColumnOutlined />, label: '刪除欄', disabled: !editor.can().deleteColumn() },
-              { type: 'divider' },
-              { key: 'mergeCells', icon: <MergeCellsOutlined />, label: '合併儲存格', disabled: !editor.can().mergeCells() },
-              { key: 'splitCell', icon: <SplitCellsOutlined />, label: '分割儲存格', disabled: !editor.can().splitCell() },
-              { type: 'divider' },
-              { key: 'deleteTable', icon: <DeleteOutlined />, label: '刪除表格', danger: true, disabled: !editor.can().deleteTable() },
-            ] as MenuProps['items'],
-            onClick: ({ key }) => {
-              const actions: Record<string, () => void> = {
-                insert: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
-                addRowBefore: () => editor.chain().focus().addRowBefore().run(),
-                addRowAfter: () => editor.chain().focus().addRowAfter().run(),
-                addColBefore: () => editor.chain().focus().addColumnBefore().run(),
-                addColAfter: () => editor.chain().focus().addColumnAfter().run(),
-                deleteRow: () => editor.chain().focus().deleteRow().run(),
-                deleteCol: () => editor.chain().focus().deleteColumn().run(),
-                mergeCells: () => editor.chain().focus().mergeCells().run(),
-                splitCell: () => editor.chain().focus().splitCell().run(),
-                deleteTable: () => editor.chain().focus().deleteTable().run(),
-              };
-              actions[key]?.();
-            },
-          }}
+        {/* Table — Grid Picker */}
+        <Popover
+          open={tablePickerOpen}
+          onOpenChange={setTablePickerOpen}
+          trigger="click"
+          placement="bottom"
+          arrow={false}
+          content={
+            <TableGridPicker
+              onSelect={(rows, cols) => {
+                editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+                setTablePickerOpen(false);
+              }}
+            />
+          }
         >
-          <Tooltip title="表格">
+          <Tooltip title="插入表格">
             <Button
               type={editor.isActive('table') ? 'primary' : 'text'}
               size="small"
               icon={<TableOutlined />}
             />
           </Tooltip>
-        </Dropdown>
+        </Popover>
 
         <Divider type="vertical" style={{ margin: '0 4px' }} />
 
@@ -532,6 +560,78 @@ export default function RichTextEditor({
           />
         </Tooltip>
       </div>
+
+      {/* ═══ 表格上下文工具列 — 僅在游標於表格內時顯示 ═══ */}
+      {editor.isActive('table') && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            padding: '4px 8px',
+            borderBottom: '1px solid #d9d9d9',
+            background: '#f0f7ff',
+            alignItems: 'center',
+            fontSize: 12,
+          }}
+        >
+          <span style={{ color: '#666', marginRight: 4, fontSize: 11, userSelect: 'none' }}>表格：</span>
+
+          <Tooltip title="上方插入列">
+            <Button type="text" size="small" icon={<InsertRowAboveOutlined />}
+              disabled={!editor.can().addRowBefore()}
+              onClick={() => editor.chain().focus().addRowBefore().run()} />
+          </Tooltip>
+          <Tooltip title="下方插入列">
+            <Button type="text" size="small" icon={<InsertRowBelowOutlined />}
+              disabled={!editor.can().addRowAfter()}
+              onClick={() => editor.chain().focus().addRowAfter().run()} />
+          </Tooltip>
+          <Tooltip title="左方插入欄">
+            <Button type="text" size="small" icon={<InsertRowLeftOutlined />}
+              disabled={!editor.can().addColumnBefore()}
+              onClick={() => editor.chain().focus().addColumnBefore().run()} />
+          </Tooltip>
+          <Tooltip title="右方插入欄">
+            <Button type="text" size="small" icon={<InsertRowRightOutlined />}
+              disabled={!editor.can().addColumnAfter()}
+              onClick={() => editor.chain().focus().addColumnAfter().run()} />
+          </Tooltip>
+
+          <Divider type="vertical" style={{ margin: '0 2px' }} />
+
+          <Tooltip title="刪除列">
+            <Button type="text" size="small" icon={<DeleteRowOutlined />}
+              disabled={!editor.can().deleteRow()}
+              onClick={() => editor.chain().focus().deleteRow().run()} />
+          </Tooltip>
+          <Tooltip title="刪除欄">
+            <Button type="text" size="small" icon={<DeleteColumnOutlined />}
+              disabled={!editor.can().deleteColumn()}
+              onClick={() => editor.chain().focus().deleteColumn().run()} />
+          </Tooltip>
+
+          <Divider type="vertical" style={{ margin: '0 2px' }} />
+
+          <Tooltip title="合併儲存格">
+            <Button type="text" size="small" icon={<MergeCellsOutlined />}
+              disabled={!editor.can().mergeCells()}
+              onClick={() => editor.chain().focus().mergeCells().run()} />
+          </Tooltip>
+          <Tooltip title="分割儲存格">
+            <Button type="text" size="small" icon={<SplitCellsOutlined />}
+              disabled={!editor.can().splitCell()}
+              onClick={() => editor.chain().focus().splitCell().run()} />
+          </Tooltip>
+
+          <Divider type="vertical" style={{ margin: '0 2px' }} />
+
+          <Tooltip title="刪除表格">
+            <Button type="text" size="small" danger icon={<DeleteOutlined />}
+              onClick={() => editor.chain().focus().deleteTable().run()} />
+          </Tooltip>
+        </div>
+      )}
 
       {/* Editor content */}
       {htmlMode ? (
