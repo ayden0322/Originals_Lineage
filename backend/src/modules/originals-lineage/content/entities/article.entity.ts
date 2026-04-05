@@ -31,6 +31,9 @@ export class Article {
   @Column({ name: 'cover_image_url', type: 'varchar', nullable: true })
   coverImageUrl: string | null;
 
+  @Column({ name: 'music_url', type: 'varchar', nullable: true })
+  musicUrl: string | null;
+
   @Column({ name: 'author_id' })
   authorId: string;
 

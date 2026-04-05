@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
+import { useArticleMusic } from '@/components/providers/ArticleMusicProvider';
 
 /** 判斷是否為行動裝置 */
 function isMobile(): boolean {
@@ -20,6 +21,7 @@ export default function BgmPlayer() {
   const pathname = usePathname();
   const { config } = useSiteConfig();
   const s = config?.settings;
+  const { musicUrl: articleMusicUrl } = useArticleMusic();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -53,15 +55,17 @@ export default function BgmPlayer() {
     }
   }, [s?.bgmAutoPlay]);
 
-  // 取得當前頁面的音樂 URL
+  // 取得當前頁面的音樂 URL（文章音樂 > 頁面音樂 > 預設音樂）
   const getBgmUrl = useCallback((): string | null => {
+    // 文章音樂最優先
+    if (articleMusicUrl) return articleMusicUrl;
     if (!s) return null;
     const pageBgm = s.pageBgm;
     if (pageBgm && pageBgm[pathname] !== undefined) {
       return pageBgm[pathname];
     }
     return s.defaultBgm || null;
-  }, [s, pathname]);
+  }, [articleMusicUrl, s, pathname]);
 
   // 淡入淡出
   const fadeAudio = useCallback(
@@ -110,16 +114,8 @@ export default function BgmPlayer() {
     if (mobile) return;
     const bgmUrl = getBgmUrl();
 
-    if (!bgmUrl) {
-      if (audioRef.current && !audioRef.current.paused) {
-        fadeAudio(audioRef.current, audioRef.current.volume, 0, 500, () => {
-          audioRef.current?.pause();
-          setIsPlaying(false);
-        });
-      }
-      setCurrentSrc('');
-      return;
-    }
+    // 沒有新音樂 → 維持目前播放，不中斷
+    if (!bgmUrl) return;
 
     if (bgmUrl === currentSrc) return;
 
@@ -142,7 +138,7 @@ export default function BgmPlayer() {
     } else {
       switchTrack();
     }
-  }, [pathname, s?.defaultBgm, s?.pageBgm, muted, mobile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, s?.defaultBgm, s?.pageBgm, articleMusicUrl, muted, mobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 使用者首次互動後自動播放（解決瀏覽器 autoplay 政策）
   useEffect(() => {
@@ -248,7 +244,8 @@ export default function BgmPlayer() {
 
   // 行動裝置 or 沒有任何音樂設定 → 不顯示
   if (mobile) return null;
-  if (!s?.defaultBgm && (!s?.pageBgm || Object.values(s.pageBgm).every((v) => !v))) {
+  const hasAnySiteMusic = s?.defaultBgm || (s?.pageBgm && Object.values(s.pageBgm).some((v) => !!v));
+  if (!articleMusicUrl && !hasAnySiteMusic) {
     return null;
   }
 

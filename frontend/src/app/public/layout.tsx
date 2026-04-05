@@ -5,6 +5,7 @@ import { SiteConfigProvider, useSiteConfig } from '@/components/providers/SiteCo
 import PublicHeader from '@/components/public/PublicHeader';
 import AnnouncementSystem from '@/components/public/AnnouncementSystem';
 import BgmPlayer from '@/components/public/BgmPlayer';
+import { ArticleMusicProvider } from '@/components/providers/ArticleMusicProvider';
 import { useEffect } from 'react';
 import { extractGoogleFontNames, buildGoogleFontsUrl } from '@/lib/fonts';
 import './styles/public-globals.css';
@@ -98,14 +99,16 @@ export default function PublicLayout({
 }) {
   return (
     <SiteConfigProvider>
-      <ThemeInjector>
-        <div className={styles.publicLayout}>
-          <AnnouncementSystem />
-          <PublicHeader />
-          <main>{children}</main>
-          <BgmPlayer />
-        </div>
-      </ThemeInjector>
+      <ArticleMusicProvider>
+        <ThemeInjector>
+          <div className={styles.publicLayout}>
+            <AnnouncementSystem />
+            <PublicHeader />
+            <main>{children}</main>
+            <BgmPlayer />
+          </div>
+        </ThemeInjector>
+      </ArticleMusicProvider>
     </SiteConfigProvider>
   );
 }

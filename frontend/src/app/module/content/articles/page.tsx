@@ -33,6 +33,7 @@ import {
 import type { Article, CreateArticleDto, ArticleCategory } from '@/lib/types';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import ImageUpload from '@/components/ui/ImageUpload';
+import { uploadFile } from '@/lib/api/site-manage';
 
 const statusMap: Record<string, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'default' },
@@ -54,6 +55,8 @@ export default function ArticlesPage() {
   const [summary, setSummary] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [coverMode, setCoverMode] = useState<'upload' | 'url'>('upload');
+  const [musicUrl, setMusicUrl] = useState('');
+  const [musicUploading, setMusicUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [form] = Form.useForm<CreateArticleDto>();
 
@@ -91,6 +94,7 @@ export default function ArticlesPage() {
     setSummary('');
     setCoverImageUrl('');
     setCoverMode('upload');
+    setMusicUrl('');
     setSelectedCategory('');
     setModalOpen(true);
   };
@@ -108,6 +112,7 @@ export default function ArticlesPage() {
     setSummary(record.summary || '');
     setSelectedCategory(record.category || '');
     setCoverImageUrl(record.coverImageUrl || '');
+    setMusicUrl(record.musicUrl || '');
     // Detect if existing cover is an external URL (not from MinIO)
     const url = record.coverImageUrl || '';
     setCoverMode(url && !url.includes('/originals-uploads/') ? 'url' : 'upload');
@@ -124,6 +129,7 @@ export default function ArticlesPage() {
         content: content || undefined,
         summary: showSummary ? (summary || undefined) : undefined,
         coverImageUrl: coverImageUrl || undefined,
+        musicUrl: musicUrl || undefined,
       };
       if (editingId) {
         await updateArticle(editingId, payload);
@@ -357,6 +363,54 @@ export default function ArticlesPage() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+          </Form.Item>
+          <Form.Item label="背景音樂">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button
+                icon={<UploadOutlined />}
+                loading={musicUploading}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'audio/mpeg,audio/mp3,.mp3';
+                  input.onchange = async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    setMusicUploading(true);
+                    try {
+                      const result = await uploadFile(file, 'article-music');
+                      setMusicUrl(result.url);
+                      message.success('音樂上傳成功');
+                    } catch {
+                      message.error('音樂上傳失敗');
+                    } finally {
+                      setMusicUploading(false);
+                    }
+                  };
+                  input.click();
+                }}
+              >
+                上傳 MP3
+              </Button>
+              {musicUrl && (
+                <>
+                  <audio controls src={musicUrl} style={{ height: 32, maxWidth: 280 }} />
+                  <Button
+                    type="link"
+                    danger
+                    size="small"
+                    onClick={() => setMusicUrl('')}
+                  >
+                    移除
+                  </Button>
+                </>
+              )}
+            </div>
+            {musicUrl && (
+              <div style={{ fontSize: 12, color: '#999', marginTop: 4, wordBreak: 'break-all' }}>
+                {musicUrl.split('/').pop()}
               </div>
             )}
           </Form.Item>

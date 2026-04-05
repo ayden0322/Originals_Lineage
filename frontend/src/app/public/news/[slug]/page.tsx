@@ -5,6 +5,7 @@ import { Spin, Button } from 'antd';
 import { ArrowLeftOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter, useParams } from 'next/navigation';
 import { getPublicArticleBySlug, getAdjacentArticles } from '@/lib/api/content';
+import { useArticleMusic } from '@/components/providers/ArticleMusicProvider';
 import type { Article } from '@/lib/types';
 import dayjs from 'dayjs';
 
@@ -24,6 +25,14 @@ export default function ArticleDetailPage() {
   const [error, setError] = useState(false);
   const [prevArticle, setPrevArticle] = useState<AdjacentArticle | null>(null);
   const [nextArticle, setNextArticle] = useState<AdjacentArticle | null>(null);
+  const { setArticleMusic } = useArticleMusic();
+
+  // 有設定音樂的文章才切換，沒設定的就延續上一首
+  useEffect(() => {
+    if (article?.musicUrl) {
+      setArticleMusic(article.musicUrl, article.title);
+    }
+  }, [article?.musicUrl, article?.title, setArticleMusic]);
 
   useEffect(() => {
     if (!slug) return;

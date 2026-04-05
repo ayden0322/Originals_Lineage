@@ -186,6 +186,7 @@ export interface Article {
   category: string;
   summary: string | null;
   coverImageUrl: string | null;
+  musicUrl: string | null;
   authorId: string | null;
   status: 'draft' | 'published' | 'archived';
   isPinned: boolean;
@@ -202,6 +203,7 @@ export interface CreateArticleDto {
   summary?: string;
   slug?: string;
   coverImageUrl?: string;
+  musicUrl?: string;
   status?: 'draft' | 'published' | 'archived';
   isPinned?: boolean;
 }

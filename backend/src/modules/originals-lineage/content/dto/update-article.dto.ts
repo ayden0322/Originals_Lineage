@@ -33,6 +33,11 @@ export class UpdateArticleDto {
   @IsString()
   coverImageUrl?: string;
 
+  @ApiPropertyOptional({ example: 'https://example.com/bgm.mp3', description: '文章背景音樂 URL' })
+  @IsOptional()
+  @IsString()
+  musicUrl?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
