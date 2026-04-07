@@ -137,7 +137,7 @@ export default function ArticleDetailPage() {
         {/* Article Content */}
         <div
           className="article-content"
-          style={{ fontSize: 16, lineHeight: 2, color: 'rgba(255,255,255,0.8)' }}
+          style={{ fontSize: 16, lineHeight: 2, color: 'rgba(255,255,255,0.8)', display: 'flow-root' }}
           dangerouslySetInnerHTML={{ __html: article.content }}
         />
         <style jsx global>{`
@@ -145,17 +145,44 @@ export default function ArticleDetailPage() {
             max-width: 100%;
             height: auto;
             border-radius: 4px;
-            margin: 8px 0;
+          }
+          /* 文繞圖：靠左 → float left；靠右 → float right；置中 → 區塊置中 */
+          .article-content img[data-text-align="left"] {
+            float: left;
+            margin: 4px 16px 8px 0;
+            max-width: 50%;
+            position: relative;
+            z-index: 1;
+          }
+          .article-content img[data-text-align="right"] {
+            float: right;
+            margin: 4px 0 8px 16px;
+            max-width: 50%;
+            position: relative;
+            z-index: 1;
           }
           .article-content img[data-text-align="center"] {
             display: block;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 8px auto;
+            clear: both;
           }
-          .article-content img[data-text-align="right"] {
-            display: block;
-            margin-left: auto;
-            margin-right: 0;
+          /* 浮動圖片旁的段落需要最小高度（編輯器一致性，公開頁亦保留） */
+          .article-content img[data-text-align="left"] + p,
+          .article-content img[data-text-align="right"] + p {
+            min-height: 120px;
+          }
+          /* 標題、表格、引言等自動清除浮動 */
+          .article-content h1,
+          .article-content h2,
+          .article-content h3,
+          .article-content table,
+          .article-content blockquote,
+          .article-content hr {
+            clear: both;
+          }
+          /* 段落 clear-both 類別（手動結束文繞圖） */
+          .article-content p.clear-both {
+            clear: both;
           }
           .article-content p {
             margin: 0.5em 0;

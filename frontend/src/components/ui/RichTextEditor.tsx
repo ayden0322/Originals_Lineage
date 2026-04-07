@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ImageExt from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
@@ -140,23 +140,48 @@ function formatHTML(html: string): string {
   return result.trimEnd();
 }
 
-// 擴展 Image 節點，支援 textAlign 屬性
+// 擴展 Image 節點，支援 textAlign + width + ReactNodeView
+import { ImageNodeView } from './ImageNodeView';
+
 const AlignableImage = ImageExt.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       textAlign: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-text-align') || element.style.textAlign || null,
+        parseHTML: (element) => element.getAttribute('data-text-align') || null,
         renderHTML: (attributes) => {
           if (!attributes.textAlign) return {};
+          // 文繞圖樣式：左/右 → float；置中 → 區塊置中
+          let style = '';
+          if (attributes.textAlign === 'left') {
+            style = 'float: left; margin: 4px 16px 8px 0; max-width: 50%;';
+          } else if (attributes.textAlign === 'right') {
+            style = 'float: right; margin: 4px 0 8px 16px; max-width: 50%;';
+          } else if (attributes.textAlign === 'center') {
+            style = 'display: block; margin: 8px auto; clear: both;';
+          }
           return {
             'data-text-align': attributes.textAlign,
-            style: `display: block; margin-left: ${attributes.textAlign === 'center' ? 'auto' : attributes.textAlign === 'right' ? 'auto' : '0'}; margin-right: ${attributes.textAlign === 'center' ? 'auto' : attributes.textAlign === 'left' ? 'auto' : '0'};`,
+            style,
           };
         },
       },
+      width: {
+        default: null,
+        parseHTML: (element) => {
+          const w = element.getAttribute('width') || element.style.width;
+          return w ? parseInt(w, 10) || null : null;
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.width) return {};
+          return { width: attributes.width, style: `width: ${attributes.width}px` };
+        },
+      },
     };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
   },
 });
 
@@ -259,12 +284,38 @@ export default function RichTextEditor({
     }
   }, [value, editor]);
 
+  // Bug #4：浮動圖片如果是文件最末節點，自動在後面插一個空段落
+  // 否則使用者沒地方點擊輸入文字。
+  // 注意：不能用 inline-style 動態設定 <p> 的 min-height — ProseMirror 會立刻
+  // 因為偵測到 DOM 與 state 不同步而重建 <p>，導致死循環 / 樣式被覆蓋。
+  // → 改用 CSS fallback（min-height: 120px）即可，雖然不是像素級精確但對點擊夠用。
+  useEffect(() => {
+    if (!editor) return;
+
+    const ensureTrailingParagraph = () => {
+      const lastNode = editor.state.doc.lastChild;
+      if (lastNode?.type.name === 'image') {
+        const docEnd = editor.state.doc.content.size;
+        editor.chain().insertContentAt(docEnd, { type: 'paragraph' }).run();
+      }
+    };
+
+    const handler = () => ensureTrailingParagraph();
+    editor.on('update', handler);
+    // 初次載入也檢查一次
+    ensureTrailingParagraph();
+
+    return () => {
+      editor.off('update', handler);
+    };
+  }, [editor]);
+
   const handleImageUpload = useCallback(
     async (file: File) => {
       if (!editor) return;
       try {
         const result = await uploadFile(file, folder);
-        editor.chain().focus().setImage({ src: result.url }).run();
+        editor.chain().focus().setImage({ src: result.url }).createParagraphNear().run();
         message.success('圖片已插入');
       } catch {
         message.error('圖片上傳失敗');
@@ -768,6 +819,8 @@ export default function RichTextEditor({
       <style jsx global>{`
         .tiptap {
           outline: none;
+          /* 建立 BFC，讓編輯器自動撐高去包住浮動圖片，避免溢出 */
+          display: flow-root;
         }
         .tiptap p {
           margin: 0.5em 0;
@@ -777,21 +830,47 @@ export default function RichTextEditor({
         .tiptap h3 {
           margin: 0.8em 0 0.4em;
         }
-        .tiptap img {
+        .tiptap [data-node-view-wrapper] img {
           max-width: 100%;
           height: auto;
           border-radius: 4px;
+        }
+        /* 文繞圖：套在 Tiptap 的 react-renderer 包裹層上，因為它才是區塊兄弟 */
+        /* position: relative + z-index 確保圖片堆疊在後續段落之上，避免段落 bbox 蓋住圖片點擊區 */
+        .tiptap .react-renderer.node-image:has([data-text-align="left"]) {
+          float: left;
+          margin: 4px 16px 8px 0;
+          max-width: 50%;
+          position: relative;
+          z-index: 1;
+        }
+        .tiptap .react-renderer.node-image:has([data-text-align="right"]) {
+          float: right;
+          margin: 4px 0 8px 16px;
+          max-width: 50%;
+          position: relative;
+          z-index: 1;
+        }
+        .tiptap .react-renderer.node-image:has([data-text-align="center"]) {
+          display: block;
+          text-align: center;
+          clear: both;
           margin: 8px 0;
         }
-        .tiptap img[data-text-align="center"] {
-          display: block;
-          margin-left: auto;
-          margin-right: auto;
+        /* 浮動圖片旁的段落需要最小高度，使用者點擊圖片左/右側才能定位游標 */
+        /* 因為 ProseMirror 會在 transaction 後重建 <p>，inline style 不可靠，必須用 CSS 規則 */
+        .tiptap .react-renderer.node-image:has([data-text-align="left"]) + p,
+        .tiptap .react-renderer.node-image:has([data-text-align="right"]) + p {
+          min-height: 120px;
         }
-        .tiptap img[data-text-align="right"] {
-          display: block;
-          margin-left: auto;
-          margin-right: 0;
+        /* 標題、表格、引言、分隔線自動清除浮動 */
+        .tiptap h1,
+        .tiptap h2,
+        .tiptap h3,
+        .tiptap table,
+        .tiptap blockquote,
+        .tiptap hr {
+          clear: both;
         }
         .tiptap a {
           color: #1677ff;
