@@ -74,7 +74,9 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
     [editor, updateAttributes],
   );
 
-  const align = node.attrs.textAlign || 'left';
+  // textAlign 為 null 代表「未指定」，要保持與公開頁相同的 block 排版（不浮動、不置中）
+  // 不能 fallback 'left'，否則編輯器會顯示成浮動，跟前台不一致
+  const align: string | null = node.attrs.textAlign ?? null;
   const isFloat = align === 'left' || align === 'right';
 
   // 浮動圖片時，後續兄弟段落需要有最小高度，使用者點擊圖片左/右側才能定位游標
@@ -91,16 +93,15 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
     cursor: 'pointer',
   };
 
-  // wrapper 樣式：靠左/右浮動 → 由 CSS .react-renderer:has(...) 處理
-  // wrapper 自身只負責內部佈局（置中或全寬）
+  // wrapper 樣式：
+  // - 靠左/右浮動（isFloat）→ 由 CSS .react-renderer:has(...) 處理 float
+  // - 明確 center → 區塊置中
+  // - 未指定（null）→ 跟公開頁一樣，block-level 自然排版（不置中、不浮動）
   const wrapperStyle: React.CSSProperties = isFloat
-    ? {
-        display: 'inline-block',
-      }
-    : {
-        textAlign: 'center',
-        minHeight: 20,
-      };
+    ? { display: 'inline-block' }
+    : align === 'center'
+      ? { textAlign: 'center', minHeight: 20 }
+      : { display: 'block', minHeight: 20 };
 
   // 圖片容器（inline-block，只包住圖片大小）
   const containerStyle: React.CSSProperties = {
@@ -133,7 +134,7 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
   return (
     <NodeViewWrapper
       style={wrapperStyle}
-      data-text-align={align}
+      {...(align ? { 'data-text-align': align } : {})}
     >
       <div style={containerStyle} data-img-container data-drag-handle>
         <img
@@ -180,7 +181,7 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
             {/* 對齊 */}
             <Tooltip title="靠左">
               <Button
-                type={align === 'left' || !align ? 'primary' : 'text'}
+                type={align === 'left' ? 'primary' : 'text'}
                 size="small"
                 icon={<AlignLeftOutlined />}
                 onClick={() => updateAttributes({ textAlign: 'left' })}
