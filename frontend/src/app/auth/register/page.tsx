@@ -132,7 +132,7 @@ export default function RegisterPage() {
             extra={isExistingPlayer ? '請輸入您目前的遊戲密碼來驗證身份' : '此密碼將同時作為官網登入密碼'}
             rules={[
               { required: true, message: '請輸入遊戲密碼' },
-              { min: 6, message: '密碼至少 6 位' },
+              ...(isExistingPlayer ? [] : [{ min: 6, message: '密碼至少 6 位' }]),
               { max: 50, message: '密碼最多 50 個字元' },
             ]}
           >

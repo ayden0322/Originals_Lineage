@@ -68,6 +68,10 @@ export class MemberService {
       // Game DB password stays as-is, website password syncs to the same value
     } else {
       // ─── NEW PLAYER FLOW ──────────────────────────────────
+      // 新玩家強制密碼長度政策（既有玩家走驗證路徑，密碼長度由遊戲端舊資料決定，不在此處限制）
+      if (dto.password.length < 6) {
+        throw new BadRequestException('密碼至少 6 位');
+      }
       // Create game account with the given password
       const gamePasswordHash = this.gameDbService.hashGamePassword(
         dto.password,

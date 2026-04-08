@@ -16,9 +16,12 @@ export class CreateWebsiteUserDto {
   })
   gameAccountName: string;
 
-  @ApiProperty({ example: 'secret123', minLength: 6, description: '遊戲密碼（官網密碼自動同步）' })
+  @ApiProperty({
+    example: 'secret123',
+    description: '遊戲密碼（既有玩家：輸入目前遊戲密碼以驗證身份；新玩家：至少 6 碼，將同步為官網密碼）',
+  })
   @IsString()
-  @MinLength(6)
+  @MinLength(1)
   @MaxLength(50)
   password: string;
 
