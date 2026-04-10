@@ -167,7 +167,7 @@ export class MemberService {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }
 
-    const tokens = await this.generatePlayerTokens(user.id, user.email ?? '');
+    const tokens = await this.generatePlayerTokens(user.id, user.email ?? '', user.gameAccountName);
 
     // Store refresh token hash
     const refreshHash = await bcrypt.hash(tokens.refreshToken, 10);
@@ -433,11 +433,12 @@ export class MemberService {
 
   // ─── Private Helpers ──────────────────────────────────────────────
 
-  private async generatePlayerTokens(userId: string, email: string) {
+  private async generatePlayerTokens(userId: string, email: string, gameAccountName: string) {
     const payload = {
       sub: userId,
       email,
       type: 'player',
+      gameAccountName,
     };
 
     // Player token TTL 與後台 admin 分開：玩家逛商城時段較長，預設 2h；

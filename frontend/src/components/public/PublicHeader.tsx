@@ -23,11 +23,8 @@ export default function PublicHeader() {
       setIsLoggedIn(!!token);
       if (token) {
         try {
-          const user = localStorage.getItem('player_user');
-          if (user) {
-            const parsed = JSON.parse(user);
-            setDisplayName(parsed.displayName || parsed.email || '用戶');
-          }
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setDisplayName(payload.gameAccountName || payload.email || '用戶');
         } catch {
           setDisplayName('用戶');
         }
