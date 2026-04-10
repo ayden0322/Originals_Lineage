@@ -215,6 +215,8 @@ export interface Announcement {
   type: 'maintenance' | 'event' | 'notice' | 'urgent';
   priority: number;
   isActive: boolean;
+  barBgColor: string | null;
+  barBorderColor: string | null;
   startTime: string | null;
   endTime: string | null;
   authorId: string | null;
@@ -228,6 +230,8 @@ export interface CreateAnnouncementDto {
   type: 'maintenance' | 'event' | 'notice' | 'urgent';
   priority?: number;
   isActive?: boolean;
+  barBgColor?: string;
+  barBorderColor?: string;
   startTime?: string;
   endTime?: string;
 }
@@ -275,16 +279,30 @@ export interface ReserveFieldConfig {
 // Shop (Product & Order)
 // ═══════════════════════════════════════════════════════════════
 
+export type ProductCategory = 'diamond' | 'game_item' | 'monthly_card';
+
 export interface Product {
   id: string;
   name: string;
   description: string;
   price: string;
+  category: ProductCategory;
+  // 鑽石類專用
   diamondAmount: number;
-  category: 'diamond_pack' | 'special_bundle' | 'event_pack';
+  // 遊戲禮包/月卡類專用
+  gameItemId: number | null;
+  gameItemName: string | null;
+  gameItemQuantity: number;
   imageUrl: string | null;
   stock: number;
-  maxPerUser: number;
+  // 限購
+  accountLimit: number;
+  dailyLimit: number | null;
+  weeklyLimit: number | null;
+  weeklyResetDay: number | null;
+  weeklyResetHour: number | null;
+  monthlyLimit: number | null;
+  requiredLevel: number | null;
   isActive: boolean;
   sortOrder: number;
   startTime: string | null;
@@ -295,17 +313,47 @@ export interface Product {
 
 export interface CreateProductDto {
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  diamondAmount: number;
-  category: 'diamond_pack' | 'special_bundle' | 'event_pack';
+  category: ProductCategory;
+  diamondAmount?: number;
+  gameItemId?: number;
+  gameItemName?: string;
+  gameItemQuantity?: number;
   imageUrl?: string;
   stock?: number;
-  maxPerUser?: number;
+  accountLimit?: number;
+  dailyLimit?: number | null;
+  weeklyLimit?: number | null;
+  weeklyResetDay?: number | null;
+  weeklyResetHour?: number | null;
+  monthlyLimit?: number | null;
+  requiredLevel?: number | null;
   isActive?: boolean;
   sortOrder?: number;
   startTime?: string;
   endTime?: string;
+}
+
+export interface GameItem {
+  itemId: number;
+  name: string;
+}
+
+export interface ProductTemplate {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  snapshot: Record<string, unknown>;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductTemplateDto {
+  name: string;
+  category: ProductCategory;
+  snapshot: Record<string, unknown>;
 }
 
 export interface Order {
@@ -360,6 +408,40 @@ export interface PaymentResult {
   formData?: Record<string, string>;
 }
 
+export type PaymentVendorType = 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+
+export type PaymentMethod = 'atm' | 'cvs';
+
+/** 實名制欄位開關（哪些欄位玩家結帳時必填） */
+export interface RealNameSettings {
+  name?: boolean;
+  phone?: boolean;
+  email?: boolean;
+  idNumber?: boolean;
+  bankAccount?: boolean;
+  address?: boolean;
+}
+
+/** 通道級別設定（ATM / 超商，含啟用、限額） */
+export interface ChannelSettings {
+  atm?: {
+    enabled: boolean;
+    displayName?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  };
+  cvs?: {
+    enabled: boolean;
+    channels?: Array<{
+      code: string;
+      displayName: string;
+      enabled: boolean;
+      minAmount?: number;
+      maxAmount?: number;
+    }>;
+  };
+}
+
 export interface PaymentGateway {
   id: string;
   moduleCode: string;
@@ -367,6 +449,12 @@ export interface PaymentGateway {
   displayName: string;
   credentials: Record<string, unknown>;
   supportedMethods: string[];
+  vendorType: PaymentVendorType;
+  productName: string;
+  minAmount: number;
+  orderInterval: number;
+  realNameSettings: RealNameSettings;
+  channelSettings: ChannelSettings;
   isActive: boolean;
   isSandbox: boolean;
   priority: number;
@@ -380,6 +468,12 @@ export interface CreateGatewayDto {
   displayName: string;
   credentials: Record<string, unknown>;
   supportedMethods?: string[];
+  vendorType?: PaymentVendorType;
+  productName?: string;
+  minAmount?: number;
+  orderInterval?: number;
+  realNameSettings?: RealNameSettings;
+  channelSettings?: ChannelSettings;
   isActive?: boolean;
   isSandbox?: boolean;
   priority?: number;
@@ -389,9 +483,24 @@ export interface UpdateGatewayDto {
   displayName?: string;
   credentials?: Record<string, unknown>;
   supportedMethods?: string[];
+  vendorType?: PaymentVendorType;
+  productName?: string;
+  minAmount?: number;
+  orderInterval?: number;
+  realNameSettings?: RealNameSettings;
+  channelSettings?: ChannelSettings;
   isActive?: boolean;
   isSandbox?: boolean;
   priority?: number;
+}
+
+export interface PaymentRouteItem {
+  paymentMethod: PaymentMethod;
+  gatewayId: string | null;
+}
+
+export interface UpdatePaymentRoutesDto {
+  routes: PaymentRouteItem[];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -583,4 +692,22 @@ export interface PublicSiteConfig {
   heroSlides: CarouselSlide[];
   sections: (SiteSection & { slides: CarouselSlide[] })[];
   featuredArticles: Article[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Shop Manage (商城美編設定)
+// ═══════════════════════════════════════════════════════════════
+
+export interface ShopSettings {
+  // Hero
+  heroEnabled: boolean;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroBgImageUrl: string | null;
+  heroHeight: number;
+  heroTextColor: string;
+}
+
+export interface PublicShopConfig {
+  settings: ShopSettings;
 }

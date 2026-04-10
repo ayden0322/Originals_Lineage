@@ -8,19 +8,11 @@ import type { Announcement } from '@/lib/types';
  * Auto-rotates if multiple. Dismiss with X.
  */
 
-const TYPE_CONFIG: Record<string, { bg: string; border: string; icon: string; label: string }> = {
-  urgent: {
-    bg: 'linear-gradient(90deg, rgba(139,0,0,0.95) 0%, rgba(100,0,0,0.9) 100%)',
-    border: '#ff4d4f',
-    icon: '⚠',
-    label: '緊急公告',
-  },
-  maintenance: {
-    bg: 'linear-gradient(90deg, rgba(196,162,78,0.15) 0%, rgba(196,162,78,0.08) 100%)',
-    border: '#c4a24e',
-    icon: '🔧',
-    label: '維護通知',
-  },
+const TYPE_DEFAULTS: Record<string, { bg: string; border: string; label: string }> = {
+  urgent: { bg: '#8b0000', border: '#ff4d4f', label: '緊急公告' },
+  maintenance: { bg: '#7a6a2e', border: '#c4a24e', label: '維護通知' },
+  event: { bg: '#1050c8', border: '#1677ff', label: '活動公告' },
+  notice: { bg: '#1e6e3c', border: '#52c41a', label: '一般公告' },
 };
 
 interface AnnouncementBarProps {
@@ -31,10 +23,7 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
   const [current, setCurrent] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
-  // Filter urgent + maintenance only
-  const items = announcements.filter(
-    (a) => a.type === 'urgent' || a.type === 'maintenance',
-  );
+  const items = announcements;
 
   // Set CSS variable so header knows to push down
   useEffect(() => {
@@ -63,7 +52,12 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
   if (items.length === 0 || dismissed) return null;
 
   const announcement = items[current];
-  const config = TYPE_CONFIG[announcement.type] || TYPE_CONFIG.maintenance;
+  const defaults = TYPE_DEFAULTS[announcement.type] || TYPE_DEFAULTS.notice;
+  const config = {
+    bg: announcement.barBgColor || defaults.bg,
+    border: announcement.barBorderColor || defaults.border,
+    label: defaults.label,
+  };
 
   return (
     <div
@@ -74,7 +68,7 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
         right: 0,
         zIndex: 1100,
         background: config.bg,
-        borderBottom: `1px solid ${config.border}`,
+        border: `1px solid ${config.border}`,
         backdropFilter: 'blur(12px)',
         height: 40,
         display: 'flex',
@@ -85,7 +79,20 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
         animation: 'slideDown 0.3s ease-out',
       }}
     >
-      {/* Content */}
+      {/* Type badge + Content */}
+      <span
+        style={{
+          fontSize: 11,
+          color: '#fff',
+          background: 'rgba(255,255,255,0.15)',
+          borderRadius: 3,
+          padding: '1px 6px',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        {config.label}
+      </span>
       <span
         style={{
           fontSize: 13,

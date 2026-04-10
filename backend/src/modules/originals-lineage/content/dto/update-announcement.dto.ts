@@ -28,6 +28,16 @@ export class UpdateAnnouncementDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @ApiPropertyOptional({ example: '#8b0000', description: '前台通知列背景色' })
+  @IsOptional()
+  @IsString()
+  barBgColor?: string;
+
+  @ApiPropertyOptional({ example: '#ff4d4f', description: '前台通知列外框色' })
+  @IsOptional()
+  @IsString()
+  barBorderColor?: string;
+
   @ApiPropertyOptional({ example: '2026-03-04T10:00:00Z' })
   @IsOptional()
   @IsDateString()

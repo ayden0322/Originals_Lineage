@@ -14,6 +14,7 @@ import {
   InputNumber,
   DatePicker,
   Popconfirm,
+  ColorPicker,
   message,
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -32,6 +33,13 @@ const typeMap: Record<string, { label: string; color: string }> = {
   event: { label: '活動', color: 'blue' },
   notice: { label: '公告', color: 'default' },
   urgent: { label: '緊急', color: 'red' },
+};
+
+const typeDefaultColors: Record<string, { bg: string; border: string }> = {
+  urgent: { bg: '#8b0000', border: '#ff4d4f' },
+  maintenance: { bg: '#7a6a2e', border: '#c4a24e' },
+  event: { bg: '#1050c8', border: '#1677ff' },
+  notice: { bg: '#1e6e3c', border: '#52c41a' },
 };
 
 export default function AnnouncementsPage() {
@@ -70,12 +78,15 @@ export default function AnnouncementsPage() {
 
   const openEdit = (record: Announcement) => {
     setEditingId(record.id);
+    const defaults = typeDefaultColors[record.type] || typeDefaultColors.notice;
     form.setFieldsValue({
       title: record.title,
       content: record.content,
       type: record.type,
       priority: record.priority,
       isActive: record.isActive,
+      barBgColor: record.barBgColor || defaults.bg,
+      barBorderColor: record.barBorderColor || defaults.border,
       startTime: record.startTime ? dayjs(record.startTime) : null,
       endTime: record.endTime ? dayjs(record.endTime) : null,
     });
@@ -93,6 +104,8 @@ export default function AnnouncementsPage() {
         type: values.type,
         priority: values.priority,
         isActive: values.isActive,
+        barBgColor: typeof values.barBgColor === 'string' ? values.barBgColor : values.barBgColor?.toHexString?.() || undefined,
+        barBorderColor: typeof values.barBorderColor === 'string' ? values.barBorderColor : values.barBorderColor?.toHexString?.() || undefined,
         startTime: values.startTime ? values.startTime.toISOString() : undefined,
         endTime: values.endTime ? values.endTime.toISOString() : undefined,
       };
@@ -243,7 +256,13 @@ export default function AnnouncementsPage() {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ type: 'notice', priority: 0, isActive: true }}
+          initialValues={{
+            type: 'notice',
+            priority: 0,
+            isActive: true,
+            barBgColor: typeDefaultColors.notice.bg,
+            barBorderColor: typeDefaultColors.notice.border,
+          }}
         >
           <Form.Item
             name="title"
@@ -264,13 +283,72 @@ export default function AnnouncementsPage() {
             label="類型"
             rules={[{ required: true, message: '請選擇類型' }]}
           >
-            <Select>
+            <Select
+              onChange={(val: string) => {
+                const colors = typeDefaultColors[val] || typeDefaultColors.notice;
+                form.setFieldsValue({
+                  barBgColor: colors.bg,
+                  barBorderColor: colors.border,
+                });
+              }}
+            >
               <Select.Option value="maintenance">維護</Select.Option>
               <Select.Option value="event">活動</Select.Option>
               <Select.Option value="notice">公告</Select.Option>
               <Select.Option value="urgent">緊急</Select.Option>
             </Select>
           </Form.Item>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Form.Item name="barBgColor" label="通知列背景色" style={{ flex: 1 }}>
+              <ColorPicker
+                showText
+                format="hex"
+                onChange={(_, hex) => form.setFieldValue('barBgColor', hex)}
+              />
+            </Form.Item>
+            <Form.Item name="barBorderColor" label="通知列外框色" style={{ flex: 1 }}>
+              <ColorPicker
+                showText
+                format="hex"
+                onChange={(_, hex) => form.setFieldValue('barBorderColor', hex)}
+              />
+            </Form.Item>
+            <div style={{ flex: 2, paddingTop: 30 }}>
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.barBgColor !== cur.barBgColor || prev.barBorderColor !== cur.barBorderColor || prev.title !== cur.title || prev.type !== cur.type}>
+                {() => {
+                  const rawBg = form.getFieldValue('barBgColor');
+                  const rawBorder = form.getFieldValue('barBorderColor');
+                  const bg = (typeof rawBg === 'string' ? rawBg : rawBg?.toHexString?.()) || '#1e6e3c';
+                  const border = (typeof rawBorder === 'string' ? rawBorder : rawBorder?.toHexString?.()) || '#52c41a';
+                  const title = form.getFieldValue('title') || '公告標題預覽';
+                  const type = form.getFieldValue('type') || 'notice';
+                  const label = typeMap[type]?.label || type;
+                  return (
+                    <div
+                      style={{
+                        background: bg,
+                        border: `2px solid ${border}`,
+                        borderRadius: 4,
+                        height: 36,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        padding: '0 12px',
+                      }}
+                    >
+                      <span style={{ fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.15)', borderRadius: 3, padding: '1px 6px', whiteSpace: 'nowrap' }}>
+                        {label}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {title}
+                      </span>
+                    </div>
+                  );
+                }}
+              </Form.Item>
+            </div>
+          </div>
           <Form.Item name="priority" label="優先級">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>

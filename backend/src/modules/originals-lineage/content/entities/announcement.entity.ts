@@ -32,6 +32,12 @@ export class Announcement {
   @Column({ name: 'end_time', type: 'timestamp', nullable: true })
   endTime: Date | null;
 
+  @Column({ name: 'bar_bg_color', type: 'varchar', nullable: true })
+  barBgColor: string | null;
+
+  @Column({ name: 'bar_border_color', type: 'varchar', nullable: true })
+  barBorderColor: string | null;
+
   @Column({ name: 'author_id' })
   authorId: string;
 
