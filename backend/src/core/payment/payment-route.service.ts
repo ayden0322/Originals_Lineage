@@ -82,10 +82,14 @@ export class PaymentRouteService {
       }
     }
 
-    // 驗證所有 gatewayId 都存在於該 module
-    const gatewayIds = dto.routes
-      .map((r) => r.gatewayId)
-      .filter((id): id is string => id !== null && id !== undefined);
+    // 驗證所有 gatewayId 都存在於該 module（去重避免同一 gateway 對應多個付款方式時誤判）
+    const gatewayIds = [
+      ...new Set(
+        dto.routes
+          .map((r) => r.gatewayId)
+          .filter((id): id is string => id !== null && id !== undefined),
+      ),
+    ];
 
     if (gatewayIds.length > 0) {
       const gateways = await this.gatewayRepo.find({
