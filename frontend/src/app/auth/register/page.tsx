@@ -63,8 +63,8 @@ export default function RegisterPage() {
         password: values.password,
         secondPassword: values.secondPassword,
       });
-      message.success('註冊成功，請登入');
-      router.push('/auth/login');
+      message.success('註冊成功！歡迎加入無盡天堂');
+      router.push('/public');
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -102,7 +102,7 @@ export default function RegisterPage() {
             rules={[
               { required: true, message: '請輸入遊戲帳號' },
               { min: 4, message: '遊戲帳號至少 4 個字元' },
-              { max: 50, message: '遊戲帳號最多 50 個字元' },
+              { max: 13, message: '遊戲帳號最多 13 個字元（受遊戲資料庫限制）' },
               { pattern: /^[a-zA-Z0-9_]+$/, message: '只能包含英文、數字和底線' },
             ]}
           >

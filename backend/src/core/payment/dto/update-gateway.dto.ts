@@ -21,11 +21,41 @@ export class UpdateGatewayDto {
   @IsOptional()
   credentials?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ example: ['credit_card', 'atm', 'cvs'] })
+  @ApiPropertyOptional({ example: ['atm', 'cvs'] })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   supportedMethods?: string[];
+
+  @ApiPropertyOptional({ enum: ['smilepay', 'ecpay', 'antpay', 'tx2', 'mock'] })
+  @IsString()
+  @IsOptional()
+  vendorType?: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  productName?: string;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  minAmount?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  orderInterval?: number;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+  realNameSettings?: Record<string, boolean>;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+  channelSettings?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsBoolean()

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Table,
   Tag,
@@ -9,43 +9,106 @@ import {
   Modal,
   Form,
   Input,
-  Select,
+  Radio,
   Switch,
   InputNumber,
   Popconfirm,
   message,
+  Tabs,
+  Select,
+  Upload,
+  Row,
+  Col,
+  Image,
+  Empty,
+  Tooltip,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  UploadOutlined,
+  SaveOutlined,
+  AppstoreOutlined,
+  PictureOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   getProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  moveProduct,
+  getGameItems,
+  getProductTemplates,
+  createProductTemplate,
 } from '@/lib/api/shop';
-import type { Product, CreateProductDto } from '@/lib/types';
+import { uploadFile, listMedia, type MediaItem } from '@/lib/api/site-manage';
+import type {
+  Product,
+  CreateProductDto,
+  ProductCategory,
+  GameItem,
+  ProductTemplate,
+} from '@/lib/types';
 
-const categoryMap: Record<string, { label: string; color: string }> = {
-  diamond_pack: { label: '鑽石包', color: 'blue' },
-  special_bundle: { label: '特殊禮包', color: 'purple' },
-  event_pack: { label: '活動包', color: 'orange' },
-};
+// ─── 常數 ──────────────────────────────────────────────────────────────
+
+const CATEGORY_TABS: { key: ProductCategory; label: string; color: string }[] = [
+  { key: 'diamond', label: '鑽石', color: 'blue' },
+  { key: 'game_item', label: '遊戲禮包', color: 'purple' },
+  { key: 'monthly_card', label: '月卡', color: 'gold' },
+];
+
+const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+type LimitKey = 'daily' | 'weekly' | 'monthly' | 'account' | 'level';
+
+const LIMIT_OPTIONS: { key: LimitKey; label: string }[] = [
+  { key: 'daily', label: '每日限購' },
+  { key: 'weekly', label: '每週限購' },
+  { key: 'monthly', label: '每月限購' },
+  { key: 'account', label: '帳號總限購' },
+  { key: 'level', label: '角色等級限制' },
+];
+
+// ─── 主元件 ────────────────────────────────────────────────────────────
 
 export default function ProductsPage() {
+  const [activeCategory, setActiveCategory] = useState<ProductCategory>('diamond');
   const [data, setData] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
+
+  // 表單相關
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<CreateProductDto>();
+  const [enabledLimits, setEnabledLimits] = useState<LimitKey[]>([]);
+  const formCategory = Form.useWatch('category', form);
+
+  // 遊戲物品挑選器
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
+
+  // 媒體庫挑選器
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+
+  // 儲存範本對話框
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
+  const [saveTplName, setSaveTplName] = useState('');
+
+  // 載入範本下拉
+  const [templates, setTemplates] = useState<ProductTemplate[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getProducts(page, pageSize);
+      const res = await getProducts(page, pageSize, activeCategory);
       setData(res.items);
       setTotal(res.total);
     } catch {
@@ -53,53 +116,104 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, activeCategory]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // ─── 表單操作 ─────────────────────────────────────────────────────
+
+  const resetForm = (category: ProductCategory) => {
+    form.resetFields();
+    form.setFieldsValue({
+      category,
+      gameItemQuantity: 1,
+      stock: -1,
+      accountLimit: 0,
+      isActive: true,
+      sortOrder: 0,
+    });
+    setEnabledLimits([]);
+  };
+
   const openCreate = () => {
     setEditingId(null);
-    form.resetFields();
+    resetForm(activeCategory);
     setModalOpen(true);
   };
 
   const openEdit = (record: Product) => {
     setEditingId(record.id);
+    const limits: LimitKey[] = [];
+    if (record.dailyLimit != null) limits.push('daily');
+    if (record.weeklyLimit != null) limits.push('weekly');
+    if (record.monthlyLimit != null) limits.push('monthly');
+    if (record.accountLimit > 0) limits.push('account');
+    if (record.requiredLevel != null) limits.push('level');
+    setEnabledLimits(limits);
+
+    // 先 reset 避免上一筆編輯殘留欄位（例如 A 是 diamond 有 diamondAmount，
+    // 切到 B 是 game_item 時 form 內 diamondAmount 還在）
+    form.resetFields();
     form.setFieldsValue({
       name: record.name,
-      description: record.description,
+      description: record.description ?? undefined,
       price: Number(record.price),
-      diamondAmount: record.diamondAmount,
       category: record.category,
-      imageUrl: record.imageUrl || undefined,
+      diamondAmount: record.diamondAmount,
+      gameItemId: record.gameItemId ?? undefined,
+      gameItemName: record.gameItemName ?? undefined,
+      gameItemQuantity: record.gameItemQuantity,
+      imageUrl: record.imageUrl ?? undefined,
       stock: record.stock,
-      maxPerUser: record.maxPerUser,
+      accountLimit: record.accountLimit,
+      dailyLimit: record.dailyLimit ?? undefined,
+      weeklyLimit: record.weeklyLimit ?? undefined,
+      weeklyResetDay: record.weeklyResetDay ?? undefined,
+      weeklyResetHour: record.weeklyResetHour ?? undefined,
+      monthlyLimit: record.monthlyLimit ?? undefined,
+      requiredLevel: record.requiredLevel ?? undefined,
       isActive: record.isActive,
       sortOrder: record.sortOrder,
     });
     setModalOpen(true);
   };
 
+  const buildDtoFromForm = async (): Promise<CreateProductDto> => {
+    const values = await form.validateFields();
+    // 沒勾選的限制欄位 → 設為 null/0
+    const dto: CreateProductDto = {
+      name: values.name,
+      description: values.description,
+      price: values.price,
+      category: values.category,
+      imageUrl: values.imageUrl || undefined,
+      stock: values.stock,
+      accountLimit: enabledLimits.includes('account') ? values.accountLimit ?? 0 : 0,
+      dailyLimit: enabledLimits.includes('daily') ? values.dailyLimit ?? null : null,
+      weeklyLimit: enabledLimits.includes('weekly') ? values.weeklyLimit ?? null : null,
+      weeklyResetDay: enabledLimits.includes('weekly') ? values.weeklyResetDay ?? null : null,
+      weeklyResetHour: enabledLimits.includes('weekly') ? values.weeklyResetHour ?? null : null,
+      monthlyLimit: enabledLimits.includes('monthly') ? values.monthlyLimit ?? null : null,
+      requiredLevel: enabledLimits.includes('level') ? values.requiredLevel ?? null : null,
+      isActive: values.isActive,
+      sortOrder: values.sortOrder,
+    };
+    if (values.category === 'diamond') {
+      dto.diamondAmount = values.diamondAmount;
+    } else {
+      dto.gameItemId = values.gameItemId;
+      dto.gameItemName = values.gameItemName;
+      dto.gameItemQuantity = values.gameItemQuantity ?? 1;
+    }
+    return dto;
+  };
+
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const dto = await buildDtoFromForm();
       setSubmitting(true);
-
-      const dto: CreateProductDto = {
-        name: values.name,
-        description: values.description,
-        price: values.price,
-        diamondAmount: values.diamondAmount,
-        category: values.category,
-        imageUrl: values.imageUrl || undefined,
-        stock: values.stock,
-        maxPerUser: values.maxPerUser,
-        isActive: values.isActive,
-        sortOrder: values.sortOrder,
-      };
-
       if (editingId) {
         await updateProduct(editingId, dto);
         message.success('商品更新成功');
@@ -109,8 +223,10 @@ export default function ProductsPage() {
       }
       setModalOpen(false);
       fetchData();
-    } catch {
-      message.error('操作失敗');
+    } catch (err) {
+      const error = err as { errorFields?: unknown[]; response?: { data?: { message?: string } } };
+      if (error?.errorFields) return; // form validation error already shown
+      message.error(error?.response?.data?.message || '操作失敗');
     } finally {
       setSubmitting(false);
     }
@@ -119,107 +235,209 @@ export default function ProductsPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
-      message.success('商品刪除成功');
+      message.success('刪除成功');
       fetchData();
     } catch {
       message.error('刪除失敗');
     }
   };
 
-  const columns: ColumnsType<Product> = [
-    {
-      title: '商品名稱',
-      dataIndex: 'name',
-      key: 'name',
-      width: 200,
-    },
-    {
-      title: '價格',
-      dataIndex: 'price',
-      key: 'price',
-      width: 120,
-      align: 'right',
-      render: (val: string) => `NT$ ${Number(val).toLocaleString()}`,
-    },
-    {
-      title: '鑽石數量',
-      dataIndex: 'diamondAmount',
-      key: 'diamondAmount',
-      width: 100,
-      align: 'right',
-    },
-    {
-      title: '分類',
-      dataIndex: 'category',
-      key: 'category',
-      width: 100,
-      render: (cat: string) => {
-        const c = categoryMap[cat] || { label: cat, color: 'default' };
-        return <Tag color={c.color}>{c.label}</Tag>;
+  const handleMove = async (id: string, direction: 'up' | 'down') => {
+    try {
+      await moveProduct(id, direction);
+      fetchData();
+    } catch {
+      message.error('排序失敗');
+    }
+  };
+
+  // ─── 範本操作 ─────────────────────────────────────────────────────
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const tpls = await getProductTemplates(formCategory);
+      setTemplates(tpls);
+    } catch {
+      // silent
+    }
+  }, [formCategory]);
+
+  useEffect(() => {
+    if (modalOpen) loadTemplates();
+  }, [modalOpen, loadTemplates]);
+
+  const handleApplyTemplate = (id: string) => {
+    const tpl = templates.find((t) => t.id === id);
+    if (!tpl) return;
+    const snap = tpl.snapshot as Partial<CreateProductDto>;
+    form.setFieldsValue(snap);
+    // 同步限制 chips 狀態
+    const limits: LimitKey[] = [];
+    if (snap.dailyLimit != null) limits.push('daily');
+    if (snap.weeklyLimit != null) limits.push('weekly');
+    if (snap.monthlyLimit != null) limits.push('monthly');
+    if ((snap.accountLimit ?? 0) > 0) limits.push('account');
+    if (snap.requiredLevel != null) limits.push('level');
+    setEnabledLimits(limits);
+    message.success(`已套用範本「${tpl.name}」`);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!saveTplName.trim()) {
+      message.warning('請輸入範本名稱');
+      return;
+    }
+    try {
+      const dto = await buildDtoFromForm();
+      await createProductTemplate({
+        name: saveTplName.trim(),
+        category: dto.category,
+        snapshot: dto as unknown as Record<string, unknown>,
+      });
+      message.success('範本已儲存');
+      setSaveTplOpen(false);
+      setSaveTplName('');
+      loadTemplates();
+    } catch (err) {
+      const error = err as { errorFields?: unknown[] };
+      if (!error?.errorFields) message.error('儲存範本失敗');
+    }
+  };
+
+  // ─── 表格欄位 ─────────────────────────────────────────────────────
+
+  const columns: ColumnsType<Product> = useMemo(
+    () => [
+      {
+        title: '排序',
+        key: 'order',
+        width: 110,
+        render: (_, record) => (
+          <Space size={2}>
+            <Tooltip title="上移">
+              <Button
+                size="small"
+                icon={<ArrowUpOutlined />}
+                onClick={() => handleMove(record.id, 'up')}
+              />
+            </Tooltip>
+            <Tooltip title="下移">
+              <Button
+                size="small"
+                icon={<ArrowDownOutlined />}
+                onClick={() => handleMove(record.id, 'down')}
+              />
+            </Tooltip>
+            <span style={{ marginLeft: 4, color: '#999' }}>{record.sortOrder}</span>
+          </Space>
+        ),
       },
-    },
-    {
-      title: '庫存',
-      dataIndex: 'stock',
-      key: 'stock',
-      width: 80,
-      align: 'right',
-      render: (val: number) => (val === -1 ? '無限' : val),
-    },
-    {
-      title: '啟用',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 80,
-      align: 'center',
-      render: (val: boolean) => (
-        <Tag color={val ? 'green' : 'default'}>{val ? '啟用' : '停用'}</Tag>
-      ),
-    },
-    {
-      title: '排序',
-      dataIndex: 'sortOrder',
-      key: 'sortOrder',
-      width: 70,
-      align: 'right',
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 140,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => openEdit(record)}
-          >
-            編輯
-          </Button>
-          <Popconfirm
-            title="確定要刪除此商品嗎？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="確定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              刪除
+      {
+        title: '圖片',
+        dataIndex: 'imageUrl',
+        key: 'imageUrl',
+        width: 80,
+        render: (url: string | null) =>
+          url ? (
+            <Image src={url} width={48} height={48} style={{ objectFit: 'cover' }} />
+          ) : (
+            <PictureOutlined style={{ fontSize: 24, color: '#ccc' }} />
+          ),
+      },
+      { title: '商品名稱', dataIndex: 'name', key: 'name', width: 200 },
+      {
+        title: '價格',
+        dataIndex: 'price',
+        key: 'price',
+        width: 100,
+        align: 'right',
+        render: (val: string) => `NT$ ${Number(val).toLocaleString()}`,
+      },
+      {
+        title: '內容',
+        key: 'content',
+        width: 180,
+        render: (_, r) =>
+          r.category === 'diamond'
+            ? `💎 ${r.diamondAmount} 鑽`
+            : `🎁 ${r.gameItemName ?? '-'} x${r.gameItemQuantity}`,
+      },
+      {
+        title: '限購',
+        key: 'limits',
+        width: 200,
+        render: (_, r) => {
+          const tags: string[] = [];
+          if (r.dailyLimit != null) tags.push(`日 ${r.dailyLimit}`);
+          if (r.weeklyLimit != null) tags.push(`週 ${r.weeklyLimit}`);
+          if (r.monthlyLimit != null) tags.push(`月 ${r.monthlyLimit}`);
+          if (r.accountLimit > 0) tags.push(`帳 ${r.accountLimit}`);
+          if (r.requiredLevel != null) tags.push(`Lv≥${r.requiredLevel}`);
+          return tags.length === 0 ? (
+            <span style={{ color: '#ccc' }}>無</span>
+          ) : (
+            <Space size={4} wrap>
+              {tags.map((t) => (
+                <Tag key={t}>{t}</Tag>
+              ))}
+            </Space>
+          );
+        },
+      },
+      {
+        title: '啟用',
+        dataIndex: 'isActive',
+        key: 'isActive',
+        width: 70,
+        align: 'center',
+        render: (val: boolean) => <Tag color={val ? 'green' : 'default'}>{val ? '啟用' : '停用'}</Tag>,
+      },
+      {
+        title: '操作',
+        key: 'actions',
+        width: 140,
+        render: (_, record) => (
+          <Space>
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+              編輯
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+            <Popconfirm
+              title="確定要刪除此商品嗎？"
+              onConfirm={() => handleDelete(record.id)}
+              okText="確定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                刪除
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // ─── Render ───────────────────────────────────────────────────────
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2>商品管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           新增商品
         </Button>
       </div>
+
+      <Tabs
+        activeKey={activeCategory}
+        onChange={(k) => {
+          setActiveCategory(k as ProductCategory);
+          setPage(1);
+        }}
+        items={CATEGORY_TABS.map((c) => ({ key: c.key, label: c.label }))}
+      />
 
       <Table
         rowKey="id"
@@ -237,9 +455,9 @@ export default function ProductsPage() {
             setPageSize(ps);
           },
         }}
-        style={{ marginTop: 16 }}
       />
 
+      {/* ─── 商品編輯 Modal ───────────────────────────── */}
       <Modal
         title={editingId ? '編輯商品' : '新增商品'}
         open={modalOpen}
@@ -248,80 +466,452 @@ export default function ProductsPage() {
         confirmLoading={submitting}
         okText="儲存"
         cancelText="取消"
-        width={640}
-        destroyOnClose
+        width={760}
+        forceRender
       >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            category: 'diamond_pack',
-            stock: -1,
-            maxPerUser: 0,
-            isActive: true,
-            sortOrder: 0,
-          }}
-        >
-          <Form.Item
-            name="name"
-            label="商品名稱"
-            rules={[{ required: true, message: '請輸入商品名稱' }]}
-          >
+        {/* 範本工具列 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 6 }}>
+          <Select
+            placeholder="📋 載入常用範本..."
+            style={{ flex: 1 }}
+            allowClear
+            onChange={(v) => v && handleApplyTemplate(v)}
+            options={templates.map((t) => ({ value: t.id, label: t.name }))}
+          />
+          <Button icon={<SaveOutlined />} onClick={() => setSaveTplOpen(true)}>
+            儲存為常用
+          </Button>
+        </div>
+
+        <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item name="category" label="商品分類" rules={[{ required: true }]}>
+            <Radio.Group
+              onChange={() => {
+                // 切換分類時清掉另一邊的欄位
+                form.setFieldsValue({
+                  diamondAmount: undefined,
+                  gameItemId: undefined,
+                  gameItemName: undefined,
+                });
+              }}
+            >
+              {CATEGORY_TABS.map((c) => (
+                <Radio.Button key={c.key} value={c.key}>
+                  {c.label}
+                </Radio.Button>
+              ))}
+            </Radio.Group>
+          </Form.Item>
+
+          {/* 鑽石類欄位 */}
+          {formCategory === 'diamond' && (
+            <Form.Item
+              name="diamondAmount"
+              label="鑽石數量"
+              rules={[{ required: true, message: '請輸入鑽石數量' }]}
+            >
+              <InputNumber min={1} style={{ width: '100%' }} />
+            </Form.Item>
+          )}
+
+          {/* 遊戲禮包/月卡欄位 */}
+          {(formCategory === 'game_item' || formCategory === 'monthly_card') && (
+            <>
+              <Form.Item label="遊戲物品" required>
+                <Space.Compact style={{ width: '100%' }}>
+                  <Form.Item name="gameItemName" noStyle rules={[{ required: true, message: '請選擇遊戲物品' }]}>
+                    <Input readOnly placeholder="點右側按鈕從遊戲庫挑選" />
+                  </Form.Item>
+                  <Button icon={<AppstoreOutlined />} onClick={() => setItemPickerOpen(true)}>
+                    選擇
+                  </Button>
+                </Space.Compact>
+                <Form.Item name="gameItemId" hidden>
+                  <InputNumber />
+                </Form.Item>
+              </Form.Item>
+              <Form.Item name="gameItemQuantity" label="每次發放數量" rules={[{ required: true }]}>
+                <InputNumber min={1} style={{ width: '100%' }} />
+              </Form.Item>
+            </>
+          )}
+
+          <Form.Item name="name" label="商品名稱" rules={[{ required: true, message: '請輸入商品名稱' }]}>
             <Input />
           </Form.Item>
-          <Form.Item
-            name="description"
-            label="描述"
-            rules={[{ required: true, message: '請輸入描述' }]}
-          >
-            <Input.TextArea rows={3} />
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item
-            name="price"
-            label="價格"
-            rules={[{ required: true, message: '請輸入價格' }]}
-          >
+          <Form.Item name="price" label="價格 (NT$)" rules={[{ required: true, message: '請輸入價格' }]}>
             <InputNumber min={0} style={{ width: '100%' }} addonBefore="NT$" />
           </Form.Item>
-          <Form.Item
-            name="diamondAmount"
-            label="鑽石數量"
-            rules={[{ required: true, message: '請輸入鑽石數量' }]}
-          >
-            <InputNumber min={0} style={{ width: '100%' }} />
+
+          {/* 圖片 */}
+          <Form.Item label="商品圖片">
+            <Form.Item name="imageUrl" noStyle>
+              <Input placeholder="圖片網址" />
+            </Form.Item>
+            <Space style={{ marginTop: 8 }}>
+              <Upload
+                showUploadList={false}
+                customRequest={async ({ file, onSuccess, onError }) => {
+                  try {
+                    const result = await uploadFile(file as File, 'shop');
+                    form.setFieldsValue({ imageUrl: result.url });
+                    message.success('上傳成功');
+                    onSuccess?.(result);
+                  } catch (e) {
+                    message.error('上傳失敗');
+                    onError?.(e as Error);
+                  }
+                }}
+              >
+                <Button icon={<UploadOutlined />}>上傳新圖片</Button>
+              </Upload>
+              <Button icon={<PictureOutlined />} onClick={() => setMediaPickerOpen(true)}>
+                從媒體庫選擇
+              </Button>
+            </Space>
+            <Form.Item shouldUpdate noStyle>
+              {() => {
+                const url = form.getFieldValue('imageUrl');
+                return url ? (
+                  <div style={{ marginTop: 8 }}>
+                    <Image src={url} width={120} />
+                  </div>
+                ) : null;
+              }}
+            </Form.Item>
           </Form.Item>
-          <Form.Item
-            name="category"
-            label="分類"
-            rules={[{ required: true, message: '請選擇分類' }]}
-          >
-            <Select>
-              <Select.Option value="diamond_pack">鑽石包</Select.Option>
-              <Select.Option value="special_bundle">特殊禮包</Select.Option>
-              <Select.Option value="event_pack">活動包</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="imageUrl" label="圖片網址">
-            <Input placeholder="https://..." />
-          </Form.Item>
-          <Form.Item
-            name="stock"
-            label="庫存"
-            extra="-1 代表無限"
-          >
+
+          <Form.Item name="stock" label="庫存" extra="-1 代表無限">
             <InputNumber min={-1} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="maxPerUser" label="每人購買上限" extra="0 代表不限">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
+
+          {/* ─── 限購區 ─────────────────────────── */}
+          <div style={{ border: '1px dashed #d9d9d9', borderRadius: 6, padding: 16, marginBottom: 16 }}>
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <strong>購買限制</strong>
+              <Select<LimitKey>
+                size="small"
+                placeholder="+ 新增限制"
+                style={{ width: 160 }}
+                value={undefined}
+                onChange={(v) => {
+                  if (v && !enabledLimits.includes(v)) {
+                    setEnabledLimits([...enabledLimits, v]);
+                  }
+                }}
+                options={LIMIT_OPTIONS.filter((o) => !enabledLimits.includes(o.key)).map((o) => ({
+                  value: o.key,
+                  label: o.label,
+                }))}
+              />
+            </div>
+
+            {enabledLimits.length === 0 && (
+              <div style={{ color: '#999' }}>尚未設定任何購買限制</div>
+            )}
+
+            {enabledLimits.includes('daily') && (
+              <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                <Col flex="120px">每日限購</Col>
+                <Col flex="auto">
+                  <Form.Item name="dailyLimit" noStyle rules={[{ required: true, message: '請輸入次數' }]}>
+                    <InputNumber min={1} style={{ width: '100%' }} addonAfter="次" />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button type="link" danger size="small" onClick={() => setEnabledLimits(enabledLimits.filter((k) => k !== 'daily'))}>
+                    移除
+                  </Button>
+                </Col>
+              </Row>
+            )}
+
+            {enabledLimits.includes('weekly') && (
+              <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                <Col flex="120px">每週限購</Col>
+                <Col flex="auto">
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Form.Item name="weeklyLimit" noStyle rules={[{ required: true }]}>
+                      <InputNumber min={1} placeholder="次數" style={{ width: '33%' }} addonAfter="次" />
+                    </Form.Item>
+                    <Form.Item name="weeklyResetDay" noStyle rules={[{ required: true }]}>
+                      <Select
+                        placeholder="重置星期"
+                        style={{ width: '33%' }}
+                        options={WEEKDAY_LABELS.map((label, i) => ({ value: i, label }))}
+                      />
+                    </Form.Item>
+                    <Form.Item name="weeklyResetHour" noStyle rules={[{ required: true }]}>
+                      <InputNumber min={0} max={23} placeholder="時" style={{ width: '34%' }} addonAfter="時" />
+                    </Form.Item>
+                  </Space.Compact>
+                </Col>
+                <Col>
+                  <Button type="link" danger size="small" onClick={() => setEnabledLimits(enabledLimits.filter((k) => k !== 'weekly'))}>
+                    移除
+                  </Button>
+                </Col>
+              </Row>
+            )}
+
+            {enabledLimits.includes('monthly') && (
+              <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                <Col flex="120px">每月限購</Col>
+                <Col flex="auto">
+                  <Form.Item name="monthlyLimit" noStyle rules={[{ required: true }]}>
+                    <InputNumber min={1} style={{ width: '100%' }} addonAfter="次（每月 1 號重置）" />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button type="link" danger size="small" onClick={() => setEnabledLimits(enabledLimits.filter((k) => k !== 'monthly'))}>
+                    移除
+                  </Button>
+                </Col>
+              </Row>
+            )}
+
+            {enabledLimits.includes('account') && (
+              <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                <Col flex="120px">帳號總限購</Col>
+                <Col flex="auto">
+                  <Form.Item name="accountLimit" noStyle rules={[{ required: true }]}>
+                    <InputNumber min={1} style={{ width: '100%' }} addonAfter="次（永久）" />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button type="link" danger size="small" onClick={() => setEnabledLimits(enabledLimits.filter((k) => k !== 'account'))}>
+                    移除
+                  </Button>
+                </Col>
+              </Row>
+            )}
+
+            {enabledLimits.includes('level') && (
+              <Row gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                <Col flex="120px">角色等級</Col>
+                <Col flex="auto">
+                  <Form.Item name="requiredLevel" noStyle rules={[{ required: true }]}>
+                    <InputNumber min={1} style={{ width: '100%' }} addonBefore="Lv ≥" />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Button type="link" danger size="small" onClick={() => setEnabledLimits(enabledLimits.filter((k) => k !== 'level'))}>
+                    移除
+                  </Button>
+                </Col>
+              </Row>
+            )}
+          </div>
+
           <Form.Item name="isActive" label="啟用" valuePropName="checked">
             <Switch />
           </Form.Item>
-          <Form.Item name="sortOrder" label="排序">
+          <Form.Item name="sortOrder" label="排序（小的在前）">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* ─── 遊戲物品挑選 Modal ─────────────────── */}
+      <GameItemPickerModal
+        open={itemPickerOpen}
+        onCancel={() => setItemPickerOpen(false)}
+        onSelect={(item) => {
+          form.setFieldsValue({ gameItemId: item.itemId, gameItemName: item.name });
+          if (!form.getFieldValue('name')) {
+            form.setFieldsValue({ name: item.name });
+          }
+          setItemPickerOpen(false);
+        }}
+      />
+
+      {/* ─── 媒體庫挑選 Modal ───────────────────── */}
+      <MediaPickerModal
+        open={mediaPickerOpen}
+        onCancel={() => setMediaPickerOpen(false)}
+        onSelect={(url) => {
+          form.setFieldsValue({ imageUrl: url });
+          setMediaPickerOpen(false);
+        }}
+      />
+
+      {/* ─── 儲存範本對話框 ─────────────────────── */}
+      <Modal
+        title="儲存為常用範本"
+        open={saveTplOpen}
+        onCancel={() => setSaveTplOpen(false)}
+        onOk={handleSaveTemplate}
+        okText="儲存"
+        cancelText="取消"
+      >
+        <p>將目前表單的所有設定儲存為共用範本，所有管理者皆可使用。</p>
+        <Input
+          placeholder="範本名稱（例：標準鑽石包）"
+          value={saveTplName}
+          onChange={(e) => setSaveTplName(e.target.value)}
+        />
+      </Modal>
     </div>
+  );
+}
+
+// ─── 子元件：遊戲物品挑選 ────────────────────────────────────────────
+
+function GameItemPickerModal({
+  open,
+  onCancel,
+  onSelect,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onSelect: (item: GameItem) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [items, setItems] = useState<GameItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getGameItems(search || undefined, page, 30);
+      setItems(res.items);
+      setTotal(res.total);
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      message.error(error?.response?.data?.message || '查詢遊戲物品失敗');
+    } finally {
+      setLoading(false);
+    }
+  }, [search, page]);
+
+  useEffect(() => {
+    if (open) fetchItems();
+  }, [open, fetchItems]);
+
+  return (
+    <Modal
+      title="從遊戲庫選擇物品（item_id > 6000000）"
+      open={open}
+      onCancel={onCancel}
+      footer={null}
+      width={720}
+      destroyOnClose
+    >
+      <Input.Search
+        placeholder="搜尋物品名稱"
+        onSearch={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
+        style={{ marginBottom: 12 }}
+        allowClear
+      />
+      <Table
+        rowKey="itemId"
+        size="small"
+        loading={loading}
+        dataSource={items}
+        columns={[
+          { title: 'item_id', dataIndex: 'itemId', width: 110 },
+          { title: '名稱', dataIndex: 'name' },
+          {
+            title: '操作',
+            width: 80,
+            render: (_, r: GameItem) => (
+              <Button size="small" type="primary" onClick={() => onSelect(r)}>
+                選擇
+              </Button>
+            ),
+          },
+        ]}
+        pagination={{
+          current: page,
+          total,
+          pageSize: 30,
+          onChange: (p) => setPage(p),
+          showSizeChanger: false,
+        }}
+      />
+    </Modal>
+  );
+}
+
+// ─── 子元件：媒體庫挑選 ────────────────────────────────────────────
+
+function MediaPickerModal({
+  open,
+  onCancel,
+  onSelect,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onSelect: (url: string) => void;
+}) {
+  const [items, setItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    listMedia('shop')
+      .then((list) => setItems(list || []))
+      .catch(() => message.error('載入媒體庫失敗'))
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  return (
+    <Modal
+      title="從媒體庫選擇圖片（shop 資料夾）"
+      open={open}
+      onCancel={onCancel}
+      footer={null}
+      width={720}
+      destroyOnClose
+    >
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40 }}>載入中...</div>
+      ) : items.length === 0 ? (
+        <Empty description="媒體庫沒有 shop 資料夾的檔案" />
+      ) : (
+        <Row gutter={[12, 12]}>
+          {items.map((item) => (
+            <Col key={item.objectName} xs={12} sm={8} md={6}>
+              <div
+                style={{
+                  border: '1px solid #f0f0f0',
+                  borderRadius: 4,
+                  padding: 4,
+                  cursor: 'pointer',
+                }}
+                onClick={() => onSelect(item.url)}
+              >
+                <img
+                  src={item.url}
+                  alt={item.objectName}
+                  style={{ width: '100%', height: 120, objectFit: 'cover' }}
+                />
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#666',
+                    marginTop: 4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.objectName.split('/').pop()}
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      )}
+    </Modal>
   );
 }

@@ -5,6 +5,13 @@
   color: var(--text-primary);
 }
 
+/* 防止手機版整頁出現橫向捲動（header 內任何一處溢位都會導致主體被撐寬） */
+@media (max-width: 768px) {
+  .publicLayout {
+    overflow-x: hidden;
+  }
+}
+
 /* ─── Header (Two-layer) ───────────────────────────────────── */
 .headerWrapper {
   position: fixed;
@@ -115,6 +122,66 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* ─── Mobile Header (≤768px) ─────────────────────────────────
+ * 原本 desktop 版本：上層 utility links + 下層 main nav，
+ * 在 375px 寬度下 top bar 會整排擠成直書字、main nav gap:32 會溢出。
+ *
+ * Mobile 策略：
+ * 1. 縮小 padding 從 32px → 16px
+ * 2. Top bar 只保留「登入 / 註冊」或「用戶名 + 登出」，其他 utility 連結隱藏
+ *    （這些功能在主 nav 或 footer 仍找得到）
+ * 3. Main nav 變成橫向滑動，縮小 gap + 字體
+ * 4. Logo 縮小
+ */
+@media (max-width: 768px) {
+  .headerTop {
+    padding: 0 16px !important;
+  }
+  .headerTopRight {
+    gap: 10px;
+  }
+  /* 隱藏 utility 連結與分隔線，只留最後一個「登入/登出」按鈕 */
+  .headerTopRight > .headerTopLink:not(:last-child),
+  .headerTopRight > .headerTopDivider {
+    display: none;
+  }
+  .headerTopUser {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .headerDivider {
+    margin: 0 16px;
+  }
+
+  .headerMain {
+    padding: 0 16px;
+  }
+  .headerMainInner {
+    gap: 16px;
+  }
+  .nav {
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .navLink {
+    font-size: calc(13px * var(--font-scale, 1));
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+  .logoText {
+    font-size: calc(16px * var(--font-scale, 1));
+    letter-spacing: 1px;
+  }
 }
 
 .navLink {

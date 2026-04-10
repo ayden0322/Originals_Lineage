@@ -21,10 +21,30 @@ function detectRoleFromPath(): TokenRole {
   return 'platform-admin';
 }
 
-/** Get the access token for the current page's role. */
+/** 解析 JWT exp 判斷是否過期；無法解析時視為過期（保守處理）。 */
+function isJwtExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (typeof payload.exp !== 'number') return false; // 沒有 exp 欄位就不擋
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Get the access token for the current page's role.
+ * 若 token 已過期，會自動清掉並回傳 null（過期 token 等同於沒登入）。
+ */
 export function getAccessToken(role?: TokenRole): string | null {
   const r = role ?? detectRoleFromPath();
-  return localStorage.getItem(TOKEN_KEYS[r].access);
+  const token = localStorage.getItem(TOKEN_KEYS[r].access);
+  if (!token) return null;
+  if (isJwtExpired(token)) {
+    clearTokens(r);
+    return null;
+  }
+  return token;
 }
 
 /** Get the refresh token for the current page's role. */
@@ -33,16 +53,27 @@ export function getRefreshToken(role?: TokenRole): string | null {
   return localStorage.getItem(TOKEN_KEYS[r].refresh);
 }
 
+/** 同分頁 token 變動事件名稱（跨分頁有原生的 'storage' 事件） */
+export const AUTH_CHANGED_EVENT = 'auth-token-changed';
+
+function emitAuthChanged(role: TokenRole) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT, { detail: { role } }));
+  }
+}
+
 /** Save tokens for a specific role. */
 export function setTokens(role: TokenRole, accessToken: string, refreshToken: string) {
   localStorage.setItem(TOKEN_KEYS[role].access, accessToken);
   localStorage.setItem(TOKEN_KEYS[role].refresh, refreshToken);
+  emitAuthChanged(role);
 }
 
 /** Clear tokens for a specific role. */
 export function clearTokens(role: TokenRole) {
   localStorage.removeItem(TOKEN_KEYS[role].access);
   localStorage.removeItem(TOKEN_KEYS[role].refresh);
+  emitAuthChanged(role);
 }
 
 // ── Axios instance ─────────────────────────────────────────────
@@ -76,7 +107,9 @@ apiClient.interceptors.response.use(
       const role = detectRoleFromPath();
 
       // Skip auto-refresh for player tokens
+      // 但要把失效的 token 清掉，讓 UI（PublicHeader 等）下一次 render 顯示為登出狀態
       if (role === 'player') {
+        clearTokens('player');
         return Promise.reject(error);
       }
 

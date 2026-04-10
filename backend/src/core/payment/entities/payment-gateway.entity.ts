@@ -28,6 +28,59 @@ export class PaymentGateway {
   @Column({ name: 'supported_methods', type: 'simple-array', default: '' })
   supportedMethods: string[];
 
+  /** 金流商類型（用來區分前端顯示與 Adapter 行為），通常等同 providerCode */
+  @Column({
+    name: 'vendor_type',
+    type: 'varchar',
+    length: 32,
+    default: 'mock',
+  })
+  vendorType: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+
+  /** 顯示在金流商收銀台的商品名稱 */
+  @Column({ name: 'product_name', type: 'varchar', length: 128, default: '' })
+  productName: string;
+
+  /** 單筆最小金額（0 表示不限制） */
+  @Column({ name: 'min_amount', type: 'int', default: 0 })
+  minAmount: number;
+
+  /** 開單間隔（分鐘，0 表示不限制） */
+  @Column({ name: 'order_interval', type: 'int', default: 0 })
+  orderInterval: number;
+
+  /** 實名制欄位開關 */
+  @Column({ name: 'real_name_settings', type: 'jsonb', default: '{}' })
+  realNameSettings: {
+    name?: boolean;
+    phone?: boolean;
+    email?: boolean;
+    idNumber?: boolean;
+    bankAccount?: boolean;
+    address?: boolean;
+  };
+
+  /** 通道級別設定（ATM / 超商，含啟用、限額） */
+  @Column({ name: 'channel_settings', type: 'jsonb', default: '{}' })
+  channelSettings: {
+    atm?: {
+      enabled: boolean;
+      displayName?: string;
+      minAmount?: number;
+      maxAmount?: number;
+    };
+    cvs?: {
+      enabled: boolean;
+      channels?: Array<{
+        code: string;
+        displayName: string;
+        enabled: boolean;
+        minAmount?: number;
+        maxAmount?: number;
+      }>;
+    };
+  };
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

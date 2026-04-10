@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getPublicCategories, getPublicArticles } from '@/lib/api/content';
 import type { ArticleCategory, Article } from '@/lib/types';
+
+/**
+ * 這些頁面的浮動公告預設要縮成小按鈕，避免擋住主要內容。
+ * 使用者點開按鈕後才會展開。
+ */
+const PAGES_DEFAULT_MINIMIZED = ['/public/shop'];
+const MOBILE_BREAKPOINT = 768;
+const DISMISS_STORAGE_KEY = 'announcementFloat.dismissed';
 
 /**
  * Right-bottom floating card showing categorized article lists.
@@ -17,8 +25,22 @@ const LATEST_TAB = '__latest__';
 
 export default function AnnouncementFloat() {
   const router = useRouter();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  // 決定「初始是否要最小化」：
+  // 1. 當前頁面在 PAGES_DEFAULT_MINIMIZED 列表（例如商城）→ 是
+  // 2. 畫面寬度 < 768px（手機）→ 是，避免擋住主要內容
+  // 3. 使用者先前已手動關閉（sessionStorage 記憶）→ 是
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const shouldMinimize =
+      PAGES_DEFAULT_MINIMIZED.some((p) => pathname?.startsWith(p)) ||
+      window.innerWidth < MOBILE_BREAKPOINT ||
+      sessionStorage.getItem(DISMISS_STORAGE_KEY) === '1';
+    if (shouldMinimize) setDismissed(true);
+  }, [pathname]);
   const [categories, setCategories] = useState<ArticleCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string>(LATEST_TAB);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -111,12 +133,19 @@ export default function AnnouncementFloat() {
 
   const handleDismiss = () => {
     setDismissed(true);
+    // 記住使用者的關閉意圖，當次 session 都保持縮小
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(DISMISS_STORAGE_KEY, '1');
+    }
   };
 
   const handleReopen = () => {
     setDismissed(false);
     setPosition({ x: 0, y: 0 });
     setHasEntrance(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(DISMISS_STORAGE_KEY);
+    }
     // Turn off entrance animation after it plays
     setTimeout(() => setHasEntrance(false), 500);
   };

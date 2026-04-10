@@ -14,6 +14,7 @@ import {
   GlobalOutlined,
   PictureOutlined,
   AuditOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -40,7 +41,9 @@ const allMenuItems: MenuItem[] = [
     label: '商城管理',
     children: [
       { key: '/module/shop/products', label: '商品管理', permission: 'module.originals.shop.view' },
+      { key: '/module/shop/templates', label: '常用範本', permission: 'module.originals.shop.manage' },
       { key: '/module/shop/orders', label: '訂單管理', permission: 'module.originals.orders.view' },
+      { key: '/module/shop/settings', label: '商城設定', permission: 'module.originals.shop.manage' },
     ],
   },
   {
@@ -81,6 +84,16 @@ const allMenuItems: MenuItem[] = [
     ],
   },
   { key: '/module/logs', icon: <AuditOutlined />, label: '操作日誌', permission: 'module.originals.logs.view' },
+  {
+    key: 'payment',
+    icon: <CreditCardOutlined />,
+    label: '金流管理',
+    permission: 'module.originals.settings.manage',
+    children: [
+      { key: '/module/payment-gateways', label: '金流商管理' },
+      { key: '/module/payment-routes', label: '伺服器金流設定' },
+    ],
+  },
   { key: '/module/settings', icon: <SettingOutlined />, label: '模組設定', permission: 'module.originals.settings.manage' },
 ];
 
@@ -169,7 +182,7 @@ export default function ModuleAdminLayout({
           theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
-          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop']}
+          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment']}
           items={menuItems}
           onClick={({ key }) => {
             // Only navigate for leaf items (those with actual paths)

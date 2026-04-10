@@ -440,10 +440,12 @@ export class MemberService {
       type: 'player',
     };
 
+    // Player token TTL 與後台 admin 分開：玩家逛商城時段較長，預設 2h；
+    // 後台 admin 仍維持 15m（透過 JWT_ACCESS_EXPIRY 控制）。
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.get('JWT_ACCESS_EXPIRY', '15m'),
+        expiresIn: this.configService.get('PLAYER_JWT_ACCESS_EXPIRY', '2h'),
       }),
       this.jwtService.signAsync(
         { sub: userId, email, type: 'player' },

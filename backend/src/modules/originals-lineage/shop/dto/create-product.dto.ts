@@ -3,17 +3,17 @@ import {
   IsOptional,
   IsNumber,
   IsInt,
-  IsEnum,
+  IsIn,
   IsBoolean,
   IsDateString,
+  Min,
+  Max,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export enum ProductCategory {
-  DIAMOND_PACK = 'diamond_pack',
-  SPECIAL_BUNDLE = 'special_bundle',
-  EVENT_PACK = 'event_pack',
-}
+export const PRODUCT_CATEGORIES = ['diamond', 'game_item', 'monthly_card'] as const;
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
 export class CreateProductDto {
   @ApiProperty({ example: '鑽石禮包 100' })
@@ -25,20 +25,42 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 30 })
+  @ApiProperty({ example: 30, description: '商品價格（NT$），至少 1' })
   @IsNumber()
+  @Min(1)
   price: number;
 
-  @ApiProperty({ example: 100 })
-  @IsNumber()
-  @IsInt()
-  diamondAmount: number;
-
-  @ApiProperty({ enum: ProductCategory, example: ProductCategory.DIAMOND_PACK })
-  @IsEnum(ProductCategory)
+  @ApiProperty({ enum: PRODUCT_CATEGORIES, example: 'diamond' })
+  @IsIn(PRODUCT_CATEGORIES as unknown as string[])
   category: ProductCategory;
 
-  @ApiPropertyOptional({ example: 'https://example.com/diamond-pack.png' })
+  // ─── 鑽石類專用 ────────────────────────────────────────────────
+  @ApiPropertyOptional({ example: 100, description: '鑽石類必填，發放鑽石數量' })
+  @ValidateIf((o) => o.category === 'diamond')
+  @IsInt()
+  @Min(1)
+  diamondAmount?: number;
+
+  // ─── 遊戲禮包/月卡類專用 ──────────────────────────────────────
+  @ApiPropertyOptional({ example: 6000121, description: '遊戲禮包/月卡必填，etcitem.item_id' })
+  @ValidateIf((o) => o.category === 'game_item' || o.category === 'monthly_card')
+  @IsInt()
+  @Min(6000001)
+  gameItemId?: number;
+
+  @ApiPropertyOptional({ example: '命名大師算命所' })
+  @ValidateIf((o) => o.category === 'game_item' || o.category === 'monthly_card')
+  @IsString()
+  gameItemName?: string;
+
+  @ApiPropertyOptional({ example: 1, default: 1, description: '每次發放數量' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  gameItemQuantity?: number;
+
+  // ─── 通用 ────────────────────────────────────────────────────
+  @ApiPropertyOptional({ example: 'https://example.com/img.png' })
   @IsOptional()
   @IsString()
   imageUrl?: string;
@@ -46,12 +68,51 @@ export class CreateProductDto {
   @ApiPropertyOptional({ default: -1, description: '-1 = unlimited' })
   @IsOptional()
   @IsInt()
-  stock?: number = -1;
+  stock?: number;
 
-  @ApiPropertyOptional({ default: 0, description: '0 = unlimited' })
+  @ApiPropertyOptional({ default: 0, description: '帳號總購買上限，0 = 不限' })
   @IsOptional()
   @IsInt()
-  maxPerUser?: number = 0;
+  @Min(0)
+  accountLimit?: number;
+
+  @ApiPropertyOptional({ description: '每日購買上限' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  dailyLimit?: number | null;
+
+  @ApiPropertyOptional({ description: '每週購買上限' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  weeklyLimit?: number | null;
+
+  @ApiPropertyOptional({ description: '每週重置星期 0=週日 ~ 6=週六' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  weeklyResetDay?: number | null;
+
+  @ApiPropertyOptional({ description: '每週重置時點 0~23' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  weeklyResetHour?: number | null;
+
+  @ApiPropertyOptional({ description: '每月購買上限' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  monthlyLimit?: number | null;
+
+  @ApiPropertyOptional({ description: '角色最低等級限制' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  requiredLevel?: number | null;
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()

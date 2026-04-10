@@ -65,7 +65,41 @@ export class GameDbService implements OnModuleInit {
     }
   }
 
+  /**
+   * 防呆檢查：在非 production 環境下若連到「非本機」的 game DB（通常代表正式環境），
+   * 印出醒目警告。這條不會擋住連線（接正式庫測試是合法用例），
+   * 但確保開發者啟動 / 切換連線時都能看到「我現在連到正式庫了」。
+   */
+  private warnIfConnectingToProdInDev(config: GameDbConfig): void {
+    const isProd = process.env.NODE_ENV === 'production';
+    const localHosts = new Set([
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      'mysql',
+      'mysql-dev',
+      'originals-mysql-dev',
+    ]);
+    if (!isProd && !localHosts.has(config.host)) {
+      const banner = '⚠️ '.repeat(20);
+      this.logger.warn(banner);
+      this.logger.warn(
+        `[GameDB] DEV 環境正在連接「非本機」遊戲資料庫：${config.host}:${config.port || 3306}/${config.database} (user=${config.username})`,
+      );
+      this.logger.warn(
+        '[GameDB] 任何寫入操作（鑽石儲值、獎勵發送）都會直接影響該資料庫，請確認這是你的本意！',
+      );
+      this.logger.warn(banner);
+    } else {
+      this.logger.log(
+        `[GameDB] 連接 ${config.host}:${config.port || 3306}/${config.database}`,
+      );
+    }
+  }
+
   async initializeDataSource(config: GameDbConfig): Promise<void> {
+    this.warnIfConnectingToProdInDev(config);
+
     const oldDs = this.dataSource;
 
     const newDs = new DataSource({
@@ -325,6 +359,103 @@ export class GameDbService implements OnModuleInit {
       'SELECT * FROM characters WHERE account_name = ?',
       [accountName],
     );
+  }
+
+  // ─── Shop / 商城專用 ─────────────────────────────────────
+
+  /**
+   * 查詢遊戲物品（etcitem.item_id > 6000000）
+   * 供後台新增商品時選擇遊戲禮包/月卡用
+   */
+  async findGameItems(
+    search: string | undefined,
+    page: number,
+    limit: number,
+  ): Promise<{ items: Array<{ itemId: number; name: string }>; total: number }> {
+    const ds = this.ensureConnected();
+    const offset = (page - 1) * limit;
+
+    const where: string[] = ['item_id > 6000000'];
+    const params: unknown[] = [];
+    if (search) {
+      where.push('name LIKE ?');
+      params.push(`%${search}%`);
+    }
+    const whereSql = `WHERE ${where.join(' AND ')}`;
+
+    const [rows, countRows] = await Promise.all([
+      ds.query(
+        `SELECT item_id, name FROM etcitem ${whereSql} ORDER BY item_id ASC LIMIT ? OFFSET ?`,
+        [...params, limit, offset],
+      ),
+      ds.query(
+        `SELECT COUNT(*) AS total FROM etcitem ${whereSql}`,
+        params,
+      ),
+    ]);
+
+    return {
+      items: (rows as Array<{ item_id: number; name: string }>).map((r) => ({
+        itemId: r.item_id,
+        // 過濾 L2J 顏色控制碼：\f 後面接任一字元（例如 \f=、\fD、\f3、\fY ...）
+        name: (r.name || '').replace(/\\f./g, ''),
+      })),
+      total: Number(countRows[0]?.total ?? 0),
+    };
+  }
+
+  /**
+   * 取得帳號下角色的最高等級（用於商品等級限制檢查）
+   * 找不到角色回傳 0
+   */
+  async getMaxLevelByAccount(accountName: string): Promise<number> {
+    const ds = this.ensureConnected();
+    const rows = await ds.query(
+      'SELECT MAX(level) AS max_level FROM characters WHERE account_name = ?',
+      [accountName],
+    );
+    const value = (rows as Array<{ max_level: number | null }>)[0]?.max_level;
+    return value == null ? 0 : Number(value);
+  }
+
+  /**
+   * 寫入鑽石儲值記錄 → ancestor.贊助_儲值記錄
+   * 對應規則：p_id=44070, count=diamondAmount, trueMoney=1, out=0, ready=1
+   */
+  async insertDiamondTopup(
+    accountName: string,
+    diamondAmount: number,
+  ): Promise<number> {
+    const ds = this.ensureConnected();
+    const result = await ds.query(
+      `INSERT INTO \`贊助_儲值記錄\`
+        (p_id, p_name, count, account, \`out\`, play, play_clanname, time, ip, ready, trueMoney)
+       VALUES (44070, NULL, ?, ?, 0, NULL, NULL, NULL, NULL, 1, 1)`,
+      [diamondAmount, accountName],
+    );
+    return (result as { insertId: number }).insertId;
+  }
+
+  /**
+   * 寫入遊戲禮包/月卡發送記錄 → ancestor.輔助_獎勵發送
+   * 強化值固定 0，是否已送出=0，是否已經可以領取=1
+   */
+  async insertGiftReward(
+    accountName: string,
+    itemId: number,
+    itemName: string,
+    quantity: number,
+  ): Promise<number> {
+    const ds = this.ensureConnected();
+    const result = await ds.query(
+      `INSERT INTO \`輔助_獎勵發送\`
+        (\`獎勵道具編號\`, \`獎勵道具名稱\`, \`強化值\`, \`獎勵道具數量\`,
+         \`指定發送玩家帳號\`, \`是否已送出\`, \`領取人名稱\`, \`領取時間\`,
+         \`領取人ip\`, \`是否已經可以領取\`)
+       VALUES (?, ?, 0, ?, ?, 0, NULL, NULL, NULL, 1)`,
+      [itemId, itemName, quantity, accountName],
+    );
+    return (result as { insertId: number }).insertId;
   }
 
   async healthCheck(): Promise<boolean> {

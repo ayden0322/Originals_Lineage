@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAccessToken, clearTokens } from '@/lib/api/client';
+import { getAccessToken, clearTokens, AUTH_CHANGED_EVENT } from '@/lib/api/client';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import styles from '@/app/public/styles/public.module.css';
 
@@ -15,20 +15,49 @@ export default function PublicHeader() {
   const [displayName, setDisplayName] = useState('');
 
   useEffect(() => {
-    const token = getAccessToken('player');
-    setIsLoggedIn(!!token);
-    // Try to get display name from localStorage
-    if (token) {
-      try {
-        const user = localStorage.getItem('player_user');
-        if (user) {
-          const parsed = JSON.parse(user);
-          setDisplayName(parsed.displayName || parsed.email || '用戶');
+    // 重新讀取登入狀態（getAccessToken 會自動清掉過期 token，所以這裡也是真實狀態）
+    const refresh = () => {
+      const token = getAccessToken('player');
+      setIsLoggedIn(!!token);
+      if (token) {
+        try {
+          const user = localStorage.getItem('player_user');
+          if (user) {
+            const parsed = JSON.parse(user);
+            setDisplayName(parsed.displayName || parsed.email || '用戶');
+          }
+        } catch {
+          setDisplayName('用戶');
         }
-      } catch {
-        setDisplayName('用戶');
+      } else {
+        setDisplayName('');
       }
-    }
+    };
+
+    refresh();
+
+    // 1. token 變動事件（同分頁，例如 API 401 自動 clearTokens、登入/登出）
+    const onAuthChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ role: string }>).detail;
+      if (!detail || detail.role === 'player') refresh();
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+
+    // 2. 跨分頁 storage 事件
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'playerAccessToken') refresh();
+    };
+    window.addEventListener('storage', onStorage);
+
+    // 3. 視窗重新取得焦點時重新檢查（覆蓋「使用者離開分頁很久回來」的情境）
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [pathname]);
 
   useEffect(() => {
