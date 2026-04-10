@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAccessToken, clearTokens, AUTH_CHANGED_EVENT } from '@/lib/api/client';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
@@ -13,6 +13,8 @@ export default function PublicHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // 重新讀取登入狀態（getAccessToken 會自動清掉過期 token，所以這裡也是真實狀態）
@@ -70,8 +72,22 @@ export default function PublicHeader() {
     clearTokens('player');
     setIsLoggedIn(false);
     setDisplayName('');
+    setUserMenuOpen(false);
     router.push('/public');
   };
+
+  // 點擊外部關閉下拉選單
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
 
   const downloadUrl = config?.settings.gameDownloadUrl;
   const logoSize = config?.settings.logoSize || 'medium';
@@ -160,12 +176,35 @@ export default function PublicHeader() {
             ))}
             <span className={styles.headerTopDivider} />
             {isLoggedIn ? (
-              <>
-                <span className={styles.headerTopUser}>{displayName}</span>
-                <button className={styles.headerTopLink} onClick={handleLogout}>
-                  登出
+              <div className={styles.userMenuWrapper} ref={userMenuRef}>
+                <button
+                  className={styles.userMenuTrigger}
+                  onClick={() => setUserMenuOpen((prev) => !prev)}
+                >
+                  <span className={styles.headerTopUser}>{displayName}</span>
+                  <span className={styles.userMenuArrow}>{userMenuOpen ? '▲' : '▼'}</span>
                 </button>
-              </>
+                {userMenuOpen && (
+                  <div className={styles.userMenuDropdown}>
+                    <button
+                      className={styles.userMenuItem}
+                      onClick={() => { setUserMenuOpen(false); router.push('/public/profile'); }}
+                    >
+                      個人資料
+                    </button>
+                    <button
+                      className={styles.userMenuItem}
+                      onClick={() => { setUserMenuOpen(false); router.push('/public/profile#orders'); }}
+                    >
+                      訂單查詢
+                    </button>
+                    <div className={styles.userMenuDivider} />
+                    <button className={styles.userMenuItem} onClick={handleLogout}>
+                      登出
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 className={styles.headerTopLink}
