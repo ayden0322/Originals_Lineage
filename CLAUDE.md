@@ -1,4 +1,4 @@
-# 無盡天堂（Originals Lineage）專案 CLAUDE.md
+# 始祖天堂（Originals Lineage）專案 CLAUDE.md
 
 ## 開發原則
 

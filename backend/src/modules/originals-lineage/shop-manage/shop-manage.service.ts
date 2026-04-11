@@ -8,7 +8,7 @@ const SETTINGS_KEY = 'shopSettings';
 /** 商城美編設定預設值 */
 export const DEFAULT_SHOP_SETTINGS = {
   heroEnabled: true,
-  heroTitle: '無盡商城',
+  heroTitle: '始祖商城',
   heroSubtitle: '選購超值商品，開啟您的冒險之旅',
   heroBgImageUrl: null as string | null,
   heroHeight: 240,

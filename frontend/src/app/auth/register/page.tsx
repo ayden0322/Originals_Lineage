@@ -5,11 +5,14 @@ import { Card, Form, Input, Button, Typography, message, Alert, Spin } from 'ant
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import * as authApi from '@/lib/api/auth';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 
 const { Title } = Typography;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { config } = useSiteConfig();
+  const siteName = config.settings.siteName || '始祖天堂';
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [checkingAccount, setCheckingAccount] = useState(false);
@@ -63,7 +66,7 @@ export default function RegisterPage() {
         password: values.password,
         secondPassword: values.secondPassword,
       });
-      message.success('註冊成功！歡迎加入無盡天堂');
+      message.success(`註冊成功！歡迎加入${siteName}`);
       router.push('/public');
     } catch (err: unknown) {
       const msg =

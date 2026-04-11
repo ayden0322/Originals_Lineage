@@ -98,7 +98,7 @@ export default function ShopSettingsPage() {
           </Form.Item>
 
           <Form.Item label="標題" name="heroTitle">
-            <Input placeholder="例如：無盡商城" />
+            <Input placeholder="例如：始祖商城" />
           </Form.Item>
 
           <Form.Item label="副標題" name="heroSubtitle">

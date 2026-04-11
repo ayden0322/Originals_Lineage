@@ -20,7 +20,7 @@ export class UpdateShopSettingsDto {
   @IsBoolean()
   heroEnabled?: boolean;
 
-  @ApiPropertyOptional({ example: '無盡商城', description: 'Hero 標題' })
+  @ApiPropertyOptional({ example: '始祖商城', description: 'Hero 標題' })
   @IsOptional()
   @IsString()
   heroTitle?: string;

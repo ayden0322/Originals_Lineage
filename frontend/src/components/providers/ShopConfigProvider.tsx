@@ -7,7 +7,7 @@ import type { PublicShopConfig, ShopSettings } from '@/lib/types';
 /** 與後端 DEFAULT_SHOP_SETTINGS 保持一致，作為 fallback 與型別保證 */
 const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   heroEnabled: true,
-  heroTitle: '無盡商城',
+  heroTitle: '始祖商城',
   heroSubtitle: '選購超值商品，開啟您的冒險之旅',
   heroBgImageUrl: null,
   heroHeight: 240,
