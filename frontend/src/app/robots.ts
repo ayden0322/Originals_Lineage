@@ -1,0 +1,24 @@
+import type { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+  return {
+    rules: [
+      {
+        userAgent: '*',
+        allow: ['/public', '/public/news', '/public/shop', '/public/reserve', '/public/support', '/public/changelog'],
+        disallow: [
+          '/admin',
+          '/platform',
+          '/module',
+          '/originals',
+          '/auth',
+          '/api',
+          '/dashboard',
+        ],
+      },
+    ],
+    sitemap: `${base}/sitemap.xml`,
+  };
+}

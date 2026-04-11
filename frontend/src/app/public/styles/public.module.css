@@ -5,6 +5,17 @@
   color: var(--text-primary);
 }
 
+/* 鍵盤操作時顯示可見焦點框；滑鼠點擊預設不會觸發 :focus-visible */
+.publicLayout a:focus-visible,
+.publicLayout button:focus-visible,
+.publicLayout input:focus-visible,
+.publicLayout textarea:focus-visible,
+.publicLayout select:focus-visible {
+  outline: 2px solid var(--accent-gold, #c4a24e);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* 防止手機版整頁出現橫向捲動（header 內任何一處溢位都會導致主體被撐寬） */
 @media (max-width: 768px) {
   .publicLayout {
@@ -120,8 +131,10 @@
   color: var(--text-muted);
   font-size: calc(13px * var(--font-scale, 1));
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  font-family: inherit;
 }
 
 .userMenuItem:hover {
@@ -183,64 +196,178 @@
   padding: 0;
 }
 
+/* ─── Hamburger (行動版漢堡按鈕) ─────────────────────────────── */
+.hamburger {
+  display: none;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  z-index: 1200;
+}
+
+.hamburgerBar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--text-primary, #fff);
+  border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  transform-origin: center;
+}
+
+.hamburgerBarOpen1 {
+  transform: translateY(8px) rotate(45deg);
+}
+.hamburgerBarOpen2 {
+  opacity: 0;
+}
+.hamburgerBarOpen3 {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+/* ─── Mobile Drawer ─────────────────────────────────────────── */
+.mobileDrawerBackdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1050;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobileDrawer {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(84vw, 320px);
+  background: var(--header-bg-color, rgba(15, 15, 22, 0.98));
+  backdrop-filter: blur(16px);
+  z-index: 1100;
+  padding: 72px 0 24px;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.5);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobileDrawer.mobileDrawerOpen {
+  transform: translateX(0);
+}
+
+.mobileNav {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileNavItem {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--text-primary, #fff);
+  font-size: 17px;
+  letter-spacing: 1px;
+  text-align: left;
+  text-decoration: none;
+  padding: 14px 24px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+  font-family: inherit;
+}
+
+.mobileNavItem:hover,
+.mobileNavItemActive {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--accent-gold, #c4a24e);
+}
+
+.mobileNavItemSub {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-align: left;
+  text-decoration: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+  font-family: inherit;
+}
+
+.mobileNavItemSub:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary, #fff);
+}
+
+.mobileNavDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 16px;
+}
+
+.mobileNavUser {
+  padding: 12px 24px 4px;
+  color: var(--accent-gold, #c4a24e);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ─── Mobile Header (≤768px) ─────────────────────────────────
- * 原本 desktop 版本：上層 utility links + 下層 main nav，
- * 在 375px 寬度下 top bar 會整排擠成直書字、main nav gap:32 會溢出。
- *
- * Mobile 策略：
- * 1. 縮小 padding 從 32px → 16px
- * 2. Top bar 只保留「登入 / 註冊」或「用戶名 + 登出」，其他 utility 連結隱藏
- *    （這些功能在主 nav 或 footer 仍找得到）
- * 3. Main nav 變成橫向滑動，縮小 gap + 字體
- * 4. Logo 縮小
+ * 策略：桌機 utility + main nav 隱藏，改用漢堡選單帶出側邊抽屜。
+ * 保留：logo、hamburger。
  */
 @media (max-width: 768px) {
   .headerTop {
     padding: 0 16px !important;
   }
+
+  /* 顯示漢堡、隱藏桌機 utility 列 */
+  .hamburger {
+    display: flex;
+  }
   .headerTopRight {
-    gap: 10px;
-  }
-  /* 隱藏 utility 連結與分隔線，只留最後一個「登入/登出」按鈕 */
-  .headerTopRight > .headerTopLink:not(:last-child),
-  .headerTopRight > .headerTopDivider {
     display: none;
-  }
-  .headerTopUser {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .headerDivider {
-    margin: 0 16px;
-  }
-
-  .headerMain {
-    padding: 0 16px;
-  }
-  .headerMainInner {
-    gap: 16px;
-  }
-  .nav {
-    gap: 16px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .nav::-webkit-scrollbar {
     display: none;
   }
-  .navLink {
-    font-size: calc(13px * var(--font-scale, 1));
-    white-space: nowrap;
-    letter-spacing: 0.5px;
+
+  /* 主 nav 列整組隱藏，由側抽屜取代 */
+  .headerMain {
+    display: none;
   }
+
+  .mobileDrawerBackdrop {
+    display: block;
+  }
+  .mobileDrawer {
+    display: block;
+  }
+
   .logoText {
-    font-size: calc(16px * var(--font-scale, 1));
+    font-size: clamp(15px, 4.2vw, 18px);
     letter-spacing: 1px;
   }
+
 }
 
 .navLink {
@@ -538,4 +665,56 @@
   0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
   40% { transform: translateX(-50%) translateY(-8px); }
   60% { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ─── Mobile overrides (must be at file end to win source-order against later base rules) ── */
+@media (max-width: 768px) {
+  /* 手機版隱藏左側 SectionNav（會蓋住 hero 內容） */
+  .sectionNav {
+    display: none;
+  }
+
+  /* Hero 內的富文本整體縮排、字體縮小，避免字級撐爆畫面 */
+  .sectionContent {
+    padding: 72px 20px 60px;
+  }
+  .sectionContent h1 { font-size: clamp(24px, 7vw, 32px); line-height: 1.3; }
+  .sectionContent h2 { font-size: clamp(20px, 5.6vw, 26px); line-height: 1.35; }
+  .sectionContent h3 { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.4; }
+  .sectionContent p {
+    font-size: clamp(13px, 3.8vw, 15px);
+    line-height: 1.8;
+  }
+  /* 針對後台富文本常見的 inline font-size，一併用強制覆蓋 */
+  .sectionContent h1 span,
+  .sectionContent h1 strong,
+  .sectionContent h2 span,
+  .sectionContent h2 strong,
+  .sectionContent h3 span,
+  .sectionContent h3 strong,
+  .sectionContent p span,
+  .sectionContent p strong {
+    font-size: inherit !important;
+  }
+  .sectionContent img {
+    max-width: 86%;
+  }
+
+  /* 新聞區手機版縮邊 + 單欄 */
+  .newsSection {
+    padding: 56px 16px;
+  }
+  .newsSectionTitle {
+    font-size: calc(22px * var(--font-scale, 1));
+    margin-bottom: 24px;
+  }
+  .newsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Footer 手機版縮邊 */
+  .footer {
+    padding: 32px 16px;
+  }
 }

@@ -1,0 +1,282 @@
+'use client';
+
+import { useEffect } from 'react';
+import { Button } from 'antd';
+import { ArrowLeftOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useArticleMusic } from '@/components/providers/ArticleMusicProvider';
+import type { Article } from '@/lib/types';
+
+interface AdjacentArticle {
+  title: string;
+  slug: string;
+  coverImageUrl: string | null;
+}
+
+interface Props {
+  article: Article | null;
+  prevArticle: AdjacentArticle | null;
+  nextArticle: AdjacentArticle | null;
+  /** server 端預先格式化的日期字串，避免 SSR/CSR tz 不一致造成 hydration error */
+  publishedLabel: string;
+}
+
+export default function ArticleView({ article, prevArticle, nextArticle, publishedLabel }: Props) {
+  const router = useRouter();
+  const { setArticleMusic } = useArticleMusic();
+
+  useEffect(() => {
+    if (article?.musicUrl) {
+      setArticleMusic(article.musicUrl, article.title);
+    }
+  }, [article?.musicUrl, article?.title, setArticleMusic]);
+
+  if (!article) {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 200, color: 'rgba(255,255,255,0.6)' }}>
+        <h2 style={{ fontSize: 24, color: '#fff', marginBottom: 16 }}>找不到文章</h2>
+        <p>您要尋找的文章不存在或已被移除。</p>
+        <Button onClick={() => router.push('/public/news')} style={{ marginTop: 16 }}>
+          返回消息列表
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', paddingTop: 'var(--header-total-height, 89px)' }}>
+      {article.coverImageUrl ? (
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
+          <img
+            src={article.coverImageUrl}
+            alt={article.title}
+            style={{
+              width: '100%',
+              maxHeight: '70vh',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.15) 60%, rgba(10,10,10,1) 100%)',
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            height: 120,
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          }}
+        />
+      )}
+
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 24px 80px' }}>
+        <Link
+          href="/public/news"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#c4a24e',
+            cursor: 'pointer',
+            fontSize: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '16px 0',
+            marginTop: article.coverImageUrl ? -40 : 16,
+            position: 'relative',
+            zIndex: 2,
+            textDecoration: 'none',
+          }}
+        >
+          <ArrowLeftOutlined /> 返回消息列表
+        </Link>
+
+        <div style={{ fontSize: 12, color: '#c4a24e', letterSpacing: 2, marginBottom: 12, marginTop: 16 }}>
+          {(article.category || '').toUpperCase()}
+        </div>
+
+        <h1 style={{ fontSize: 32, fontWeight: 400, color: '#fff', lineHeight: 1.4, marginBottom: 16 }}>
+          {article.title}
+        </h1>
+
+        <div style={{ display: 'flex', gap: 24, marginBottom: 40, fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+          <span>{publishedLabel}</span>
+          <span>{article.viewCount} 次瀏覽</span>
+        </div>
+
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginBottom: 40 }} />
+
+        <div
+          className="article-content"
+          style={{ fontSize: 16, lineHeight: 2, color: 'rgba(255,255,255,0.8)', display: 'flow-root' }}
+          dangerouslySetInnerHTML={{ __html: article.content }}
+        />
+        <style jsx global>{`
+          .article-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+          }
+          .article-content img[data-text-align="left"] {
+            float: left;
+            margin: 4px 16px 8px 0;
+            max-width: 50%;
+            position: relative;
+            z-index: 1;
+          }
+          .article-content img[data-text-align="right"] {
+            float: right;
+            margin: 4px 0 8px 16px;
+            max-width: 50%;
+            position: relative;
+            z-index: 1;
+          }
+          .article-content img[data-text-align="center"] {
+            display: block;
+            margin: 8px auto;
+            clear: both;
+          }
+          .article-content img[data-text-align="left"] + p,
+          .article-content img[data-text-align="right"] + p {
+            min-height: 120px;
+          }
+          .article-content h1,
+          .article-content h2,
+          .article-content h3,
+          .article-content table,
+          .article-content blockquote,
+          .article-content hr {
+            clear: both;
+          }
+          .article-content p.clear-both {
+            clear: both;
+          }
+          .article-content p {
+            margin: 0.5em 0;
+          }
+          .article-content a {
+            color: var(--accent-gold, #c4a24e);
+            text-decoration: underline;
+          }
+          .article-content hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 1.5em 0;
+          }
+          .article-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+          }
+          .article-content table td,
+          .article-content table th {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 12px;
+            vertical-align: top;
+          }
+          .article-content table th {
+            font-weight: 600;
+          }
+          .article-content table td[style*="background-color"],
+          .article-content table th[style*="background-color"] {
+            background: none;
+          }
+        `}</style>
+
+        {(prevArticle || nextArticle) && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 16,
+              marginTop: 60,
+              paddingTop: 32,
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {prevArticle ? (
+              <Link
+                href={`/public/news/${prevArticle.slug}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '16px 20px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                }}
+                aria-label={`上一篇：${prevArticle.title}`}
+              >
+                <LeftOutlined style={{ color: '#c4a24e', fontSize: 16, flexShrink: 0 }} />
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>上一篇</div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: '#fff',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {prevArticle.title}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <div />
+            )}
+
+            {nextArticle ? (
+              <Link
+                href={`/public/news/${nextArticle.slug}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '16px 20px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  textAlign: 'right',
+                  justifyContent: 'flex-end',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                }}
+                aria-label={`下一篇：${nextArticle.title}`}
+              >
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>下一篇</div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      color: '#fff',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {nextArticle.title}
+                  </div>
+                </div>
+                <RightOutlined style={{ color: '#c4a24e', fontSize: 16, flexShrink: 0 }} />
+              </Link>
+            ) : (
+              <div />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -54,9 +54,11 @@ export default function ChangelogPage() {
   );
 
   useEffect(() => {
-    if (!configLoading && categorySlug) {
+    // categorySlug 準備好就立刻拉（可能來自 localStorage 快取，不用等 API）
+    if (categorySlug) {
       fetchArticles(1);
-    } else if (!configLoading && !categorySlug) {
+    } else if (!configLoading) {
+      // config 已載入但仍無 categorySlug，結束 loading
       setLoading(false);
     }
   }, [configLoading, categorySlug, fetchArticles]);
@@ -78,13 +80,7 @@ export default function ChangelogPage() {
     return `${y}/${m}/${day}`;
   };
 
-  if (configLoading || loading) {
-    return (
-      <div style={{ background: COLORS.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  // 注意：不再 block 整頁的 configLoading，讓 header / banner 先渲染
 
   return (
     <div style={{ background: COLORS.bg, minHeight: '100vh', color: COLORS.textPrimary, paddingTop: 'var(--header-total-height, 89px)' }}>
@@ -142,7 +138,11 @@ export default function ChangelogPage() {
 
       {/* Content */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 24px 64px' }}>
-        {articles.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <Spin size="large" />
+          </div>
+        ) : articles.length === 0 ? (
           <div
             style={{
               textAlign: 'center',

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAccessToken, clearTokens, AUTH_CHANGED_EVENT } from '@/lib/api/client';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
@@ -97,15 +98,6 @@ export default function PublicHeader() {
     }
   }, [mobileMenuOpen]);
 
-  const navigateTo = (path: string, external = false) => {
-    setMobileMenuOpen(false);
-    if (external) {
-      window.open(path, '_blank', 'noopener,noreferrer');
-    } else {
-      router.push(path);
-    }
-  };
-
   // 點擊外部關閉下拉選單
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -171,14 +163,15 @@ export default function PublicHeader() {
       <div className={styles.headerTop} style={{ height: topRowHeight, padding: `${topRowPaddingV}px 32px` }}>
         <div className={styles.headerTopInner}>
           {/* Logo */}
-          <div
+          <Link
+            href="/public"
             className={styles.headerLogo}
-            onClick={() => router.push('/public')}
+            aria-label={`${config?.settings.siteName || '始祖天堂'} 首頁`}
           >
             {config?.settings.logoUrl ? (
               <img
                 src={config.settings.logoUrl}
-                alt={config.settings.siteName || ''}
+                alt={config.settings.siteName || '始祖天堂'}
                 style={{ height: logoHeight, cursor: 'pointer' }}
               />
             ) : (
@@ -186,7 +179,7 @@ export default function PublicHeader() {
                 {config?.settings.siteName || '始祖天堂'}
               </span>
             )}
-          </div>
+          </Link>
           {/* Hamburger — 僅行動版顯示 */}
           <button
             type="button"
@@ -201,21 +194,23 @@ export default function PublicHeader() {
           </button>
 
           <div className={styles.headerTopRight}>
-            {topLinks.map((item) => (
-              <button
-                key={item.label}
-                className={styles.headerTopLink}
-                onClick={() => {
-                  if (item.external) {
-                    window.open(item.path, '_blank', 'noopener,noreferrer');
-                  } else {
-                    router.push(item.path);
-                  }
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
+            {topLinks.map((item) =>
+              item.external ? (
+                <a
+                  key={item.label}
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.headerTopLink}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link key={item.label} href={item.path} className={styles.headerTopLink}>
+                  {item.label}
+                </Link>
+              ),
+            )}
             <span className={styles.headerTopDivider} />
             {isLoggedIn ? (
               <div className={styles.userMenuWrapper} ref={userMenuRef}>
@@ -227,33 +222,39 @@ export default function PublicHeader() {
                   <span className={styles.userMenuArrow}>{userMenuOpen ? '▲' : '▼'}</span>
                 </button>
                 {userMenuOpen && (
-                  <div className={styles.userMenuDropdown}>
-                    <button
+                  <div className={styles.userMenuDropdown} role="menu">
+                    <Link
+                      href="/public/profile"
                       className={styles.userMenuItem}
-                      onClick={() => { setUserMenuOpen(false); router.push('/public/profile'); }}
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
                     >
                       個人資料
-                    </button>
-                    <button
+                    </Link>
+                    <Link
+                      href="/public/profile#orders"
                       className={styles.userMenuItem}
-                      onClick={() => { setUserMenuOpen(false); router.push('/public/profile#orders'); }}
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
                     >
                       訂單查詢
-                    </button>
+                    </Link>
                     <div className={styles.userMenuDivider} />
-                    <button className={styles.userMenuItem} onClick={handleLogout}>
+                    <button
+                      type="button"
+                      className={styles.userMenuItem}
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
                       登出
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <button
-                className={styles.headerTopLink}
-                onClick={() => router.push('/auth/login?tab=player')}
-              >
+              <Link href="/auth/login?tab=player" className={styles.headerTopLink}>
                 登入 / 註冊
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -265,20 +266,22 @@ export default function PublicHeader() {
       {/* ─── Main nav bar: navigation ─── */}
       <div className={styles.headerMain}>
         <div className={styles.headerMainInner}>
-          <nav>
+          <nav aria-label="主要導覽">
             <ul className={styles.nav}>
-              {mainNav.map((item) => (
-                <li key={item.path}>
-                  <button
-                    className={`${styles.navLink} ${
-                      pathname === item.path ? styles.navLinkActive : ''
-                    }`}
-                    onClick={() => router.push(item.path)}
-                  >
-                    {item.label}
-                  </button>
-                </li>
-              ))}
+              {mainNav.map((item) => {
+                const isActive = pathname === item.path;
+                return (
+                  <li key={item.path}>
+                    <Link
+                      href={item.path}
+                      className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         </div>
@@ -299,56 +302,83 @@ export default function PublicHeader() {
           <aside
             className={`${styles.mobileDrawer} ${mobileMenuOpen ? styles.mobileDrawerOpen : ''}`}
             aria-hidden={!mobileMenuOpen}
+            aria-label="行動版主要選單"
           >
-            <nav className={styles.mobileNav}>
-              {mainNav.map((item) => (
-                <button
-                  key={item.path}
-                  className={`${styles.mobileNavItem} ${
-                    pathname === item.path ? styles.mobileNavItemActive : ''
-                  }`}
-                  onClick={() => navigateTo(item.path)}
-                >
-                  {item.label}
-                </button>
-              ))}
+            <nav className={styles.mobileNav} aria-label="主要導覽">
+              {mainNav.map((item) => {
+                const isActive = pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={`${styles.mobileNavItem} ${
+                      isActive ? styles.mobileNavItemActive : ''
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
               <div className={styles.mobileNavDivider} />
-              {topLinks.map((item) => (
-                <button
-                  key={item.label}
-                  className={styles.mobileNavItemSub}
-                  onClick={() => navigateTo(item.path, item.external)}
-                >
-                  {item.label}
-                </button>
-              ))}
+              {topLinks.map((item) =>
+                item.external ? (
+                  <a
+                    key={item.label}
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.mobileNavItemSub}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.label}
+                    href={item.path}
+                    className={styles.mobileNavItemSub}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ),
+              )}
               <div className={styles.mobileNavDivider} />
               {isLoggedIn ? (
                 <>
                   <div className={styles.mobileNavUser}>{displayName}</div>
-                  <button
+                  <Link
+                    href="/public/profile"
                     className={styles.mobileNavItemSub}
-                    onClick={() => navigateTo('/public/profile')}
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     個人資料
-                  </button>
-                  <button
+                  </Link>
+                  <Link
+                    href="/public/profile#orders"
                     className={styles.mobileNavItemSub}
-                    onClick={() => navigateTo('/public/profile#orders')}
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     訂單查詢
-                  </button>
-                  <button className={styles.mobileNavItemSub} onClick={handleLogout}>
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.mobileNavItemSub}
+                    onClick={handleLogout}
+                  >
                     登出
                   </button>
                 </>
               ) : (
-                <button
+                <Link
+                  href="/auth/login?tab=player"
                   className={styles.mobileNavItemSub}
-                  onClick={() => navigateTo('/auth/login?tab=player')}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   登入 / 註冊
-                </button>
+                </Link>
               )}
             </nav>
           </aside>

@@ -3,14 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Spin, Input, Pagination } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getPublicArticles, getPublicCategories } from '@/lib/api/content';
 import { getPublicSiteConfig } from '@/lib/api/site-manage';
 import type { Article, ArticleCategory, SiteSettings } from '@/lib/types';
 import dayjs from 'dayjs';
 
 export default function NewsListPage() {
-  const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<ArticleCategory[]>([]);
   const [settings, setSettings] = useState<Partial<SiteSettings>>({});
@@ -71,7 +70,6 @@ export default function NewsListPage() {
     return cat?.color || '#c4a24e';
   };
 
-  const goToArticle = (slug: string) => router.push(`/public/news/${slug}`);
 
   // Separate pinned (hero) article for magazine layout
   const heroArticle = layout === 'magazine' ? filteredArticles.find((a) => a.isPinned) || filteredArticles[0] : null;
@@ -166,11 +164,13 @@ export default function NewsListPage() {
               <>
                 {/* Hero article */}
                 {heroArticle && (
-                  <div
-                    onClick={() => goToArticle(heroArticle.slug)}
+                  <Link
+                    href={`/public/news/${heroArticle.slug}`}
+                    aria-label={heroArticle.title}
                     style={{
-                      position: 'relative', borderRadius: 12, overflow: 'hidden',
+                      display: 'block', position: 'relative', borderRadius: 12, overflow: 'hidden',
                       height: 400, marginBottom: 24, cursor: 'pointer',
+                      textDecoration: 'none',
                       background: heroArticle.coverImageUrl && showCover
                         ? `linear-gradient(transparent 30%, rgba(0,0,0,0.85)), url(${heroArticle.coverImageUrl}) center/cover`
                         : 'linear-gradient(135deg, #1a1a2e, #16213e)',
@@ -193,14 +193,13 @@ export default function NewsListPage() {
                         {heroArticle.isPinned && ' · 置頂'}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 )}
                 {/* Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                   {gridArticles.map((a) => (
                     <MagazineCard key={a.id} article={a} showCover={showCover} showViewCount={showViewCount}
-                      getCategoryName={getCategoryName} getCategoryColor={getCategoryColor}
-                      onClick={() => goToArticle(a.slug)} />
+                      getCategoryName={getCategoryName} getCategoryColor={getCategoryColor} />
                   ))}
                 </div>
               </>
@@ -222,14 +221,18 @@ export default function NewsListPage() {
                       </span>
                     </div>
                     {items.map((a) => (
-                      <div
+                      <Link
                         key={a.id}
-                        onClick={() => goToArticle(a.slug)}
+                        href={`/public/news/${a.slug}`}
+                        aria-label={a.title}
                         style={{
+                          display: 'block',
                           position: 'relative', marginBottom: 24, padding: 24,
                           background: '#141414', borderRadius: 8,
                           border: '1px solid rgba(255,255,255,0.06)',
                           cursor: 'pointer', transition: 'all 0.2s',
+                          textDecoration: 'none',
+                          color: 'inherit',
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(196,162,78,0.3)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
@@ -241,7 +244,7 @@ export default function NewsListPage() {
                         <div style={{ display: 'flex', gap: 20 }}>
                           {showCover && a.coverImageUrl && (
                             <div style={{ width: 160, height: 100, borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}>
-                              <img src={a.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={a.coverImageUrl} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </div>
                           )}
                           <div style={{ flex: 1 }}>
@@ -259,7 +262,7 @@ export default function NewsListPage() {
                             )}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 ))}
@@ -273,20 +276,24 @@ export default function NewsListPage() {
                   const heights = [260, 180, 220, 160, 280, 200, 190, 240, 170];
                   const imgH = showCover && a.coverImageUrl ? heights[i % heights.length] : 0;
                   return (
-                    <div
+                    <Link
                       key={a.id}
-                      onClick={() => goToArticle(a.slug)}
+                      href={`/public/news/${a.slug}`}
+                      aria-label={a.title}
                       style={{
+                        display: 'block',
                         breakInside: 'avoid' as const, marginBottom: 20,
                         background: '#141414', borderRadius: 8, overflow: 'hidden',
                         cursor: 'pointer', transition: 'transform 0.2s',
                         border: '1px solid rgba(255,255,255,0.06)',
+                        textDecoration: 'none',
+                        color: 'inherit',
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                     >
                       {imgH > 0 && a.coverImageUrl && (
-                        <img src={a.coverImageUrl} alt="" style={{ width: '100%', height: imgH, objectFit: 'cover' }} />
+                        <img src={a.coverImageUrl} alt={a.title} style={{ width: '100%', height: imgH, objectFit: 'cover' }} />
                       )}
                       {imgH > 0 && !a.coverImageUrl && (
                         <div style={{ width: '100%', height: imgH, background: 'linear-gradient(135deg, #1a1a2e, #0f3460)' }} />
@@ -308,7 +315,7 @@ export default function NewsListPage() {
                           {showViewCount && ` · ${a.viewCount} 次瀏覽`}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -332,19 +339,22 @@ export default function NewsListPage() {
 
 // ═══ Magazine Card Component ═══
 function MagazineCard({
-  article, showCover, showViewCount, getCategoryName, getCategoryColor, onClick,
+  article, showCover, showViewCount, getCategoryName, getCategoryColor,
 }: {
   article: Article; showCover: boolean; showViewCount: boolean;
   getCategoryName: (s: string) => string; getCategoryColor: (s: string) => string;
-  onClick: () => void;
 }) {
   return (
-    <div
-      onClick={onClick}
+    <Link
+      href={`/public/news/${article.slug}`}
+      aria-label={article.title}
       style={{
+        display: 'block',
         background: '#141414', borderRadius: 8, overflow: 'hidden',
         cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
         border: '1px solid rgba(255,255,255,0.06)',
+        textDecoration: 'none',
+        color: 'inherit',
       }}
       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -372,6 +382,6 @@ function MagazineCard({
           {showViewCount && ` · ${article.viewCount} 次瀏覽`}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { Spin } from 'antd';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import SectionCarousel from '@/components/public/SectionCarousel';
 import SectionNav from '@/components/public/SectionNav';
@@ -9,24 +8,7 @@ import PublicFooter from '@/components/public/PublicFooter';
 import styles from './styles/public.module.css';
 
 export default function HomePage() {
-  const { config, loading } = useSiteConfig();
-
-  if (loading || !config) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          background: '#0a0a0a',
-        }}
-      >
-        <Spin size="large" />
-      </div>
-    );
-  }
-
+  const { config } = useSiteConfig();
   const { settings, sections, featuredArticles } = config;
 
   return (
