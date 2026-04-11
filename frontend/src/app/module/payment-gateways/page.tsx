@@ -47,6 +47,7 @@ const { Title, Paragraph } = Typography;
 const PAYMENT_METHODS = [
   { label: 'ATM 轉帳', value: 'atm' },
   { label: '超商代碼', value: 'cvs' },
+  { label: '信用卡', value: 'credit_card' },
 ];
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -85,6 +86,7 @@ const DEFAULT_CHANNEL_SETTINGS: ChannelSettings = {
       maxAmount: 0,
     })),
   },
+  creditCard: { enabled: true, minAmount: 0, maxAmount: 0 },
 };
 
 export default function PaymentGatewaysPage() {
@@ -126,7 +128,7 @@ export default function PaymentGatewaysPage() {
       isActive: true,
       isSandbox: true,
       priority: 0,
-      supportedMethods: ['atm', 'cvs'],
+      supportedMethods: ['atm', 'cvs', 'credit_card'],
       productName: '遊戲點數',
       minAmount: 0,
       orderInterval: 0,
@@ -554,6 +556,31 @@ export default function PaymentGatewaysPage() {
               </Form.Item>
             </Space>
           ))}
+
+          <Divider orientation="left" plain>
+            信用卡
+          </Divider>
+          <Space align="start" wrap>
+            <Form.Item
+              name={['channelSettings', 'creditCard', 'enabled']}
+              valuePropName="checked"
+              label="啟用"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name={['channelSettings', 'creditCard', 'minAmount']}
+              label="最小金額（0=不限）"
+            >
+              <InputNumber min={0} />
+            </Form.Item>
+            <Form.Item
+              name={['channelSettings', 'creditCard', 'maxAmount']}
+              label="最大金額（0=不限）"
+            >
+              <InputNumber min={0} />
+            </Form.Item>
+          </Space>
 
           <Divider orientation="left" plain>
             狀態

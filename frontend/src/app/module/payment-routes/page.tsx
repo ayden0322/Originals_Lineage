@@ -12,6 +12,7 @@ const { Title, Paragraph } = Typography;
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   atm: 'ATM 轉帳',
   cvs: '超商代碼',
+  credit_card: '信用卡',
 };
 
 interface RouteRow {

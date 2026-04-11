@@ -125,7 +125,7 @@ export async function getPublicProducts(): Promise<Product[]> {
   return data.data;
 }
 
-export type PublicPaymentMethod = { method: 'atm' | 'cvs'; label: string };
+export type PublicPaymentMethod = { method: 'atm' | 'cvs' | 'credit_card'; label: string };
 
 export async function getPublicPaymentMethods(): Promise<PublicPaymentMethod[]> {
   const { data } = await apiClient.get<ApiResponse<PublicPaymentMethod[]>>(

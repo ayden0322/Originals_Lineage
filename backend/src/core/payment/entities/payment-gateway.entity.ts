@@ -60,7 +60,7 @@ export class PaymentGateway {
     address?: boolean;
   };
 
-  /** 通道級別設定（ATM / 超商，含啟用、限額） */
+  /** 通道級別設定（ATM / 超商 / 信用卡，含啟用、限額） */
   @Column({ name: 'channel_settings', type: 'jsonb', default: '{}' })
   channelSettings: {
     atm?: {
@@ -78,6 +78,11 @@ export class PaymentGateway {
         minAmount?: number;
         maxAmount?: number;
       }>;
+    };
+    creditCard?: {
+      enabled: boolean;
+      minAmount?: number;
+      maxAmount?: number;
     };
   };
 

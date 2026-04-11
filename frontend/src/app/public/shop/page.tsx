@@ -71,7 +71,7 @@ export default function ShopPage() {
   // 購買 Modal 狀態
   const [buyingProduct, setBuyingProduct] = useState<Product | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>([]);
-  const [selectedMethod, setSelectedMethod] = useState<'atm' | 'cvs' | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<'atm' | 'cvs' | 'credit_card' | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

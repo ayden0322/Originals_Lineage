@@ -3,10 +3,10 @@ import { IsArray, IsIn, IsOptional, IsString, IsUUID, ValidateNested } from 'cla
 import { Type } from 'class-transformer';
 
 export class PaymentRouteItemDto {
-  @ApiProperty({ enum: ['atm', 'cvs'], example: 'atm' })
+  @ApiProperty({ enum: ['atm', 'cvs', 'credit_card'], example: 'atm' })
   @IsString()
-  @IsIn(['atm', 'cvs'])
-  paymentMethod: 'atm' | 'cvs';
+  @IsIn(['atm', 'cvs', 'credit_card'])
+  paymentMethod: 'atm' | 'cvs' | 'credit_card';
 
   @ApiProperty({
     example: '550e8400-e29b-41d4-a716-446655440000',

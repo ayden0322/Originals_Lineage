@@ -410,7 +410,7 @@ export interface PaymentResult {
 
 export type PaymentVendorType = 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
 
-export type PaymentMethod = 'atm' | 'cvs';
+export type PaymentMethod = 'atm' | 'cvs' | 'credit_card';
 
 /** 實名制欄位開關（哪些欄位玩家結帳時必填） */
 export interface RealNameSettings {
@@ -439,6 +439,11 @@ export interface ChannelSettings {
       minAmount?: number;
       maxAmount?: number;
     }>;
+  };
+  creditCard?: {
+    enabled: boolean;
+    minAmount?: number;
+    maxAmount?: number;
   };
 }
 

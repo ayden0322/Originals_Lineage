@@ -13,7 +13,7 @@ import { Tx2PaymentProvider } from './providers/tx2-payment.provider';
 /**
  * 第一期支援的付款方式
  */
-const SUPPORTED_PAYMENT_METHODS = ['atm', 'cvs'] as const;
+const SUPPORTED_PAYMENT_METHODS = ['atm', 'cvs', 'credit_card'] as const;
 type SupportedPaymentMethod = (typeof SUPPORTED_PAYMENT_METHODS)[number];
 
 @Injectable()

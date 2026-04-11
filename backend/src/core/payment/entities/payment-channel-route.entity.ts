@@ -24,9 +24,9 @@ export class PaymentChannelRoute {
   @Column({ name: 'module_code' })
   moduleCode: string;
 
-  /** 付款方式：第一期僅支援 atm / cvs */
+  /** 付款方式 */
   @Column({ name: 'payment_method', type: 'varchar', length: 32 })
-  paymentMethod: 'atm' | 'cvs';
+  paymentMethod: 'atm' | 'cvs' | 'credit_card';
 
   /** 對應的金流商 id；null = 尚未設定（玩家看不到該付款方式） */
   @Column({ name: 'gateway_id', type: 'uuid', nullable: true })

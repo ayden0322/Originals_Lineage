@@ -5,7 +5,8 @@ import { PaymentChannelRoute } from './entities/payment-channel-route.entity';
 import { PaymentGateway } from './entities/payment-gateway.entity';
 import { UpdatePaymentRoutesDto } from './dto/update-payment-routes.dto';
 
-const SUPPORTED_METHODS: Array<'atm' | 'cvs'> = ['atm', 'cvs'];
+type PaymentMethod = 'atm' | 'cvs' | 'credit_card';
+const SUPPORTED_METHODS: PaymentMethod[] = ['atm', 'cvs', 'credit_card'];
 
 @Injectable()
 export class PaymentRouteService {
@@ -21,7 +22,7 @@ export class PaymentRouteService {
    * 若資料表還沒有對應的紀錄，會回傳 gatewayId=null 的預設項
    */
   async findByModule(moduleCode: string): Promise<
-    Array<{ paymentMethod: 'atm' | 'cvs'; gatewayId: string | null }>
+    Array<{ paymentMethod: PaymentMethod; gatewayId: string | null }>
   > {
     const existing = await this.routeRepo.find({ where: { moduleCode } });
     const map = new Map(existing.map((r) => [r.paymentMethod, r.gatewayId]));
@@ -40,7 +41,7 @@ export class PaymentRouteService {
    */
   async findAvailableMethodsForPublic(
     moduleCode: string,
-  ): Promise<Array<{ method: 'atm' | 'cvs'; label: string }>> {
+  ): Promise<Array<{ method: PaymentMethod; label: string }>> {
     const routes = await this.routeRepo.find({ where: { moduleCode } });
     const validRoutes = routes.filter((r) => !!r.gatewayId);
     if (validRoutes.length === 0) return [];
@@ -49,18 +50,33 @@ export class PaymentRouteService {
     const gateways = await this.gatewayRepo.find({
       where: { id: In(gatewayIds), isActive: true },
     });
-    const activeGatewayIds = new Set(gateways.map((g) => g.id));
+    const gatewayMap = new Map(gateways.map((g) => [g.id, g]));
 
-    const labelMap: Record<'atm' | 'cvs', string> = {
+    const labelMap: Record<PaymentMethod, string> = {
       atm: 'ATM 轉帳',
       cvs: '超商代碼',
+      credit_card: '信用卡',
+    };
+
+    // channelSettings 對應的 key（creditCard 是 camelCase）
+    const channelKeyMap: Record<PaymentMethod, 'atm' | 'cvs' | 'creditCard'> = {
+      atm: 'atm',
+      cvs: 'cvs',
+      credit_card: 'creditCard',
     };
 
     return validRoutes
-      .filter((r) => activeGatewayIds.has(r.gatewayId as string))
+      .filter((r) => {
+        const gw = gatewayMap.get(r.gatewayId as string);
+        if (!gw) return false;
+        const key = channelKeyMap[r.paymentMethod as PaymentMethod];
+        const channel = (gw.channelSettings as Record<string, { enabled?: boolean } | undefined>)?.[key];
+        // 若沒有 channelSettings 則預設視為啟用（相容舊資料）
+        return channel?.enabled !== false;
+      })
       .map((r) => ({
-        method: r.paymentMethod as 'atm' | 'cvs',
-        label: labelMap[r.paymentMethod as 'atm' | 'cvs'],
+        method: r.paymentMethod as PaymentMethod,
+        label: labelMap[r.paymentMethod as PaymentMethod],
       }));
   }
 
@@ -72,7 +88,7 @@ export class PaymentRouteService {
   async updateRoutes(
     moduleCode: string,
     dto: UpdatePaymentRoutesDto,
-  ): Promise<Array<{ paymentMethod: 'atm' | 'cvs'; gatewayId: string | null }>> {
+  ): Promise<Array<{ paymentMethod: PaymentMethod; gatewayId: string | null }>> {
     // 驗證 paymentMethod 都在白名單中
     for (const item of dto.routes) {
       if (!SUPPORTED_METHODS.includes(item.paymentMethod)) {
