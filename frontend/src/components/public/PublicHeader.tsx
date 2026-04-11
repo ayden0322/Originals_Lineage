@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAccessToken, clearTokens, AUTH_CHANGED_EVENT } from '@/lib/api/client';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
@@ -14,7 +15,13 @@ export default function PublicHeader() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // 重新讀取登入狀態（getAccessToken 會自動清掉過期 token，所以這裡也是真實狀態）
@@ -70,7 +77,33 @@ export default function PublicHeader() {
     setIsLoggedIn(false);
     setDisplayName('');
     setUserMenuOpen(false);
+    setMobileMenuOpen(false);
     router.push('/public');
+  };
+
+  // 切換路由時自動關閉行動版選單
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // 行動版選單開啟時鎖住背景捲動
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [mobileMenuOpen]);
+
+  const navigateTo = (path: string, external = false) => {
+    setMobileMenuOpen(false);
+    if (external) {
+      window.open(path, '_blank', 'noopener,noreferrer');
+    } else {
+      router.push(path);
+    }
   };
 
   // 點擊外部關閉下拉選單
@@ -121,9 +154,7 @@ export default function PublicHeader() {
     { label: '首頁', path: '/public' },
     { label: '最新消息', path: '/public/news' },
     ...(reserveEnabled ? [{ label: '事前預約', path: '/public/reserve' }] : []),
-    { label: '贊助專區', path: '/public/sponsor' },
     { label: '線上商城', path: '/public/shop' },
-    { label: '活動內容', path: '/public/events' },
     { label: '掉落查詢', path: '/public/drops' },
   ];
 
@@ -132,6 +163,7 @@ export default function PublicHeader() {
   const showSolidBg = !isHomePage || scrolled;
 
   return (
+    <>
     <header
       className={`${styles.headerWrapper} ${showSolidBg ? styles.headerWrapperScrolled : ''}`}
     >
@@ -155,6 +187,19 @@ export default function PublicHeader() {
               </span>
             )}
           </div>
+          {/* Hamburger — 僅行動版顯示 */}
+          <button
+            type="button"
+            className={styles.hamburger}
+            aria-label={mobileMenuOpen ? '關閉選單' : '開啟選單'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+          >
+            <span className={`${styles.hamburgerBar} ${mobileMenuOpen ? styles.hamburgerBarOpen1 : ''}`} />
+            <span className={`${styles.hamburgerBar} ${mobileMenuOpen ? styles.hamburgerBarOpen2 : ''}`} />
+            <span className={`${styles.hamburgerBar} ${mobileMenuOpen ? styles.hamburgerBarOpen3 : ''}`} />
+          </button>
+
           <div className={styles.headerTopRight}>
             {topLinks.map((item) => (
               <button
@@ -238,6 +283,78 @@ export default function PublicHeader() {
           </nav>
         </div>
       </div>
+
     </header>
+
+    {/* ─── Mobile Drawer（透過 portal 掛到 body，避開 header 的 backdrop-filter containing block） ─── */}
+    {mounted &&
+      createPortal(
+        <>
+          {mobileMenuOpen && (
+            <div
+              className={styles.mobileDrawerBackdrop}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+          <aside
+            className={`${styles.mobileDrawer} ${mobileMenuOpen ? styles.mobileDrawerOpen : ''}`}
+            aria-hidden={!mobileMenuOpen}
+          >
+            <nav className={styles.mobileNav}>
+              {mainNav.map((item) => (
+                <button
+                  key={item.path}
+                  className={`${styles.mobileNavItem} ${
+                    pathname === item.path ? styles.mobileNavItemActive : ''
+                  }`}
+                  onClick={() => navigateTo(item.path)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <div className={styles.mobileNavDivider} />
+              {topLinks.map((item) => (
+                <button
+                  key={item.label}
+                  className={styles.mobileNavItemSub}
+                  onClick={() => navigateTo(item.path, item.external)}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <div className={styles.mobileNavDivider} />
+              {isLoggedIn ? (
+                <>
+                  <div className={styles.mobileNavUser}>{displayName}</div>
+                  <button
+                    className={styles.mobileNavItemSub}
+                    onClick={() => navigateTo('/public/profile')}
+                  >
+                    個人資料
+                  </button>
+                  <button
+                    className={styles.mobileNavItemSub}
+                    onClick={() => navigateTo('/public/profile#orders')}
+                  >
+                    訂單查詢
+                  </button>
+                  <button className={styles.mobileNavItemSub} onClick={handleLogout}>
+                    登出
+                  </button>
+                </>
+              ) : (
+                <button
+                  className={styles.mobileNavItemSub}
+                  onClick={() => navigateTo('/auth/login?tab=player')}
+                >
+                  登入 / 註冊
+                </button>
+              )}
+            </nav>
+          </aside>
+        </>,
+        document.body,
+      )}
+    </>
   );
 }
