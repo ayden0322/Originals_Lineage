@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { getPublicArticles, getPublicCategories } from '@/lib/api/content';
 import { getPublicSiteConfig } from '@/lib/api/site-manage';
 import type { Article, ArticleCategory, SiteSettings } from '@/lib/types';
+import PublicFooter from '@/components/public/PublicFooter';
 import dayjs from 'dayjs';
 
 export default function NewsListPage() {
@@ -333,6 +334,8 @@ export default function NewsListPage() {
           </div>
         )}
       </div>
+
+      <PublicFooter />
     </div>
   );
 }

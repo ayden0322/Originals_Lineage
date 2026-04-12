@@ -14,6 +14,7 @@ function formatPrice(value: number | string): string {
 import { getPublicProducts, createOrder, getPublicPaymentMethods, type PublicPaymentMethod } from '@/lib/api/shop';
 import { getAccessToken } from '@/lib/api/client';
 import { useShopConfig } from '@/components/providers/ShopConfigProvider';
+import PublicFooter from '@/components/public/PublicFooter';
 import type { Product, PaymentResult, ProductCategory } from '@/lib/types';
 
 const { Title, Paragraph, Text } = Typography;
@@ -341,6 +342,8 @@ export default function ShopPage() {
           </div>
         )}
       </Modal>
+
+      <PublicFooter />
     </div>
   );
 }

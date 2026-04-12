@@ -34,6 +34,7 @@ import { getMyOrders } from '@/lib/api/shop';
 import { getAccessToken } from '@/lib/api/client';
 import type { PlayerProfile, Order } from '@/lib/types';
 import type { ColumnsType } from 'antd/es/table';
+import PublicFooter from '@/components/public/PublicFooter';
 
 const { Title, Text } = Typography;
 
@@ -432,6 +433,8 @@ export default function ProfilePage() {
       </Card>
 
       <Divider />
+
+      <PublicFooter />
     </div>
   );
 }

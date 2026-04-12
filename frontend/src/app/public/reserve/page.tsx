@@ -11,6 +11,7 @@ import {
   resendVerificationEmail,
 } from '@/lib/api/reserve';
 import type { ReservationMilestone, ReserveFieldConfig } from '@/lib/types';
+import PublicFooter from '@/components/public/PublicFooter';
 import styles from './reserve.module.css';
 
 interface CountdownValues {
@@ -494,6 +495,8 @@ export default function ReservePage() {
           </div>
         </div>
       )}
+
+      <PublicFooter />
     </div>
   );
 }
