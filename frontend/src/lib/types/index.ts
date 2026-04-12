@@ -595,6 +595,8 @@ export interface ArticleCategory {
 
 export interface SiteSettings {
   siteName: string;
+  siteSlogan?: string;
+  siteDescription?: string;
   logoUrl: string | null;
   footerText: string;
   heroEnabled: boolean;

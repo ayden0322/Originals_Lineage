@@ -16,6 +16,16 @@ export class UpdateSiteSettingsDto {
   @IsString()
   siteName?: string;
 
+  @ApiPropertyOptional({ example: '無盡傳奇再啟', description: '網站副標語（顯示在瀏覽器分頁標題）' })
+  @IsOptional()
+  @IsString()
+  siteSlogan?: string;
+
+  @ApiPropertyOptional({ example: '跨越時光，重返懷念的世界。事前預約、最新消息、線上商城一次掌握。', description: '網站描述（SEO meta description）' })
+  @IsOptional()
+  @IsString()
+  siteDescription?: string;
+
   @ApiPropertyOptional({ example: 'http://localhost:9000/originals-uploads/site/logo.png' })
   @IsOptional()
   @IsString()

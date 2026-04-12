@@ -12,6 +12,8 @@ interface SiteConfigContextType {
 const DEFAULT_CONFIG: PublicSiteConfig = {
   settings: {
     siteName: '始祖天堂',
+    siteSlogan: '無盡傳奇再啟',
+    siteDescription: '跨越時光，重返懷念的世界。事前預約、最新消息、線上商城一次掌握。',
     logoUrl: null,
     footerText: '始祖天堂 © 2026',
     heroEnabled: true,

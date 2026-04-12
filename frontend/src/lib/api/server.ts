@@ -1,4 +1,4 @@
-import type { Article, PaginatedResponse } from '@/lib/types';
+import type { Article, PaginatedResponse, PublicSiteConfig } from '@/lib/types';
 
 /**
  * SSR / generateMetadata 專用的 API fetch。
@@ -27,6 +27,10 @@ async function serverGet<T>(path: string): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+export function getPublicSiteConfigSSR() {
+  return serverGet<PublicSiteConfig>('/public/originals/site/config');
 }
 
 export function getPublicArticleBySlugSSR(slug: string) {

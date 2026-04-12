@@ -516,6 +516,12 @@ export default function SettingsPage() {
                   <Form.Item name="siteName" label="網站名稱" rules={[{ required: true }]}>
                     <Input />
                   </Form.Item>
+                  <Form.Item name="siteSlogan" label="網站副標語" tooltip="顯示在瀏覽器分頁標題，格式：網站名稱｜副標語">
+                    <Input placeholder="例如：無盡傳奇再啟" />
+                  </Form.Item>
+                  <Form.Item name="siteDescription" label="網站描述" tooltip="SEO meta description，會顯示在搜尋結果中">
+                    <Input.TextArea rows={2} placeholder="例如：跨越時光，重返懷念的世界。事前預約、最新消息、線上商城一次掌握。" />
+                  </Form.Item>
                   <Form.Item name="footerText" label="Footer 文字">
                     <Input />
                   </Form.Item>
