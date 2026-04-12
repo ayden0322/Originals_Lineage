@@ -64,6 +64,7 @@
   color: var(--text-muted);
   background: none;
   border: none;
+  text-decoration: none;
   font-size: calc(12px * var(--font-scale, 1));
   letter-spacing: 0.5px;
   cursor: pointer;
@@ -173,6 +174,8 @@
 .headerLogo {
   flex-shrink: 0;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .logo {
@@ -560,7 +563,7 @@
 
 /* ─── Footer ────────────────────────────────────────────────── */
 .footer {
-  background: var(--footer-bg-color);
+  background: var(--footer-bg-color, #0a0a0a);
   padding: 40px 32px;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -572,7 +575,7 @@
 }
 
 .footerText {
-  color: var(--footer-text-color);
+  color: var(--footer-text-color, rgba(255, 255, 255, 0.5));
   font-size: calc(13px * var(--font-scale, 1));
 }
 
