@@ -69,6 +69,8 @@ export default function ShopPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeCategory, setActiveCategory] = useState<ProductCategory>('diamond');
 
+  // 商品詳細 Modal 狀態
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   // 購買 Modal 狀態
   const [buyingProduct, setBuyingProduct] = useState<Product | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>([]);
@@ -209,7 +211,8 @@ export default function ShopPage() {
               <Col xs={24} sm={12} md={8} lg={6} key={product.id} style={{ display: 'flex' }}>
                 <Card
                   hoverable
-                  style={{ borderRadius: 12, display: 'flex', flexDirection: 'column', width: '100%' }}
+                  onClick={() => setDetailProduct(product)}
+                  style={{ borderRadius: 12, display: 'flex', flexDirection: 'column', width: '100%', cursor: 'pointer' }}
                   styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1 } }}
                   cover={
                     product.imageUrl ? (
@@ -276,7 +279,8 @@ export default function ShopPage() {
                     icon={<ShoppingCartOutlined />}
                     block
                     size="large"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (isLoggedIn) {
                         openBuyModal(product);
                       } else {
@@ -293,6 +297,110 @@ export default function ShopPage() {
         </Row>
       )}
       </div>
+
+      {/* ─── 商品詳細 Modal ──────────────────────────────────── */}
+      <Modal
+        title={null}
+        open={!!detailProduct}
+        onCancel={() => setDetailProduct(null)}
+        footer={null}
+        width={520}
+        styles={{ body: { padding: 0 } }}
+      >
+        {detailProduct && (() => {
+          const limitTags = formatLimits(detailProduct);
+          return (
+            <div>
+              {/* 商品圖片 */}
+              {detailProduct.imageUrl ? (
+                <img
+                  alt={detailProduct.name}
+                  src={detailProduct.imageUrl}
+                  style={{ width: '100%', maxHeight: 300, objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    height: 200,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <GiftOutlined style={{ fontSize: 64, color: '#fff' }} />
+                </div>
+              )}
+
+              <div style={{ padding: '24px' }}>
+                {/* 名稱 */}
+                <Title level={4} style={{ marginBottom: 8 }}>
+                  {detailProduct.name}
+                </Title>
+
+                {/* 完整描述 */}
+                {detailProduct.description && (
+                  <Paragraph
+                    type="secondary"
+                    style={{ whiteSpace: 'pre-wrap', marginBottom: 16, fontSize: 14, lineHeight: 1.8 }}
+                  >
+                    {detailProduct.description}
+                  </Paragraph>
+                )}
+
+                {/* 數量資訊 */}
+                <div style={{ marginBottom: 12 }}>
+                  {detailProduct.category === 'diamond' ? (
+                    <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                      💎 {detailProduct.diamondAmount} 鑽石
+                    </Text>
+                  ) : (
+                    <Text strong style={{ color: '#722ed1', fontSize: 15 }}>
+                      🎁 {detailProduct.gameItemName} x{detailProduct.gameItemQuantity}
+                    </Text>
+                  )}
+                </div>
+
+                {/* 限購規則 */}
+                {limitTags.length > 0 && (
+                  <Space size={[4, 6]} wrap style={{ marginBottom: 16 }}>
+                    {limitTags.map((t) => (
+                      <Tag key={t} color="orange" style={{ fontSize: 12 }}>
+                        {t}
+                      </Tag>
+                    ))}
+                  </Space>
+                )}
+
+                {/* 價格 */}
+                <div style={{ marginBottom: 20 }}>
+                  <Text strong style={{ color: '#cf1322', fontSize: 24 }}>
+                    {formatPrice(detailProduct.price)}
+                  </Text>
+                </div>
+
+                {/* 購買按鈕 */}
+                <Button
+                  type="primary"
+                  icon={<ShoppingCartOutlined />}
+                  block
+                  size="large"
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      setDetailProduct(null);
+                      openBuyModal(detailProduct);
+                    } else {
+                      router.push('/auth/login?redirect=/public/shop');
+                    }
+                  }}
+                >
+                  {isLoggedIn ? '立即購買' : '前往登入'}
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* ─── 購買確認 Modal ──────────────────────────────────── */}
       <Modal
