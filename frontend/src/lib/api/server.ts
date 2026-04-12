@@ -2,12 +2,14 @@ import type { Article, PaginatedResponse, PublicSiteConfig } from '@/lib/types';
 
 /**
  * SSR / generateMetadata 專用的 API fetch。
- * 瀏覽器走 NEXT_PUBLIC_API_URL（localhost:4000），
- * 但 Docker 內 SSR 要走 container 名 backend:4000，
- * 所以這裡獨立一支走 INTERNAL_API_URL，fallback 到 http://backend:4000/api。
+ * 優先走 INTERNAL_API_URL（Docker Compose 內部網路），
+ * 其次走 NEXT_PUBLIC_API_URL（Zeabur 等雲端部署環境的公開 API URL），
+ * 最後 fallback 到 localhost。
  */
 const SERVER_API_URL =
-  process.env.INTERNAL_API_URL || 'http://backend:4000/api';
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:4000/api';
 
 interface ApiEnvelope<T> {
   success: boolean;
