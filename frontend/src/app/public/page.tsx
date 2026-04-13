@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import SectionCarousel from '@/components/public/SectionCarousel';
 import SectionNav from '@/components/public/SectionNav';
@@ -8,8 +9,20 @@ import PublicFooter from '@/components/public/PublicFooter';
 import styles from './styles/public.module.css';
 
 export default function HomePage() {
-  const { config } = useSiteConfig();
+  const { config, loading } = useSiteConfig();
   const { settings, sections, featuredArticles } = config;
+  const snapRef = useRef<HTMLDivElement>(null);
+  const hasScrolled = useRef(false);
+
+  // 資料載入完成後，強制 scroll 回第一個 section
+  useEffect(() => {
+    if (!loading && sections.length > 0 && !hasScrolled.current) {
+      hasScrolled.current = true;
+      requestAnimationFrame(() => {
+        snapRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      });
+    }
+  }, [loading, sections.length]);
 
   return (
     <>
@@ -19,7 +32,7 @@ export default function HomePage() {
       )}
 
       {/* Snap scroll container */}
-      <div className={styles.snapContainer}>
+      <div ref={snapRef} className={styles.snapContainer}>
         {/* All sections - each one fills 100vh */}
         {sections.map((section) => (
           <section
