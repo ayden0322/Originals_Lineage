@@ -10,13 +10,15 @@ import * as bcrypt from 'bcrypt';
 import { Agent } from '../entities/agent.entity';
 import { AgentRate } from '../entities/agent-rate.entity';
 import { ReferralLink } from '../entities/referral-link.entity';
+import { AgentParentHistory } from '../entities/agent-parent-history.entity';
 import { RateService } from './rate.service';
 
 /**
  * 代理管理服務（總後台用）
  * - 新增 A / B 代理
  * - 停權前必須先轉移子代理
- * - B 轉掛父級
+ * - B 轉掛父級（轉組）
+ * - B 升格為一級代理（promote）
  * - 樹狀列表
  */
 @Injectable()
@@ -28,6 +30,8 @@ export class AgentService {
     private readonly rateRepo: Repository<AgentRate>,
     @InjectRepository(ReferralLink)
     private readonly linkRepo: Repository<ReferralLink>,
+    @InjectRepository(AgentParentHistory)
+    private readonly parentHistoryRepo: Repository<AgentParentHistory>,
     private readonly rateService: RateService,
     private readonly dataSource: DataSource,
   ) {}
@@ -159,8 +163,13 @@ export class AgentService {
     return this.agentRepo.save(agent);
   }
 
-  /** B 轉掛父級 */
-  async changeParent(id: string, newParentId: string): Promise<Agent> {
+  /** B 轉掛父級（轉組） */
+  async changeParent(
+    id: string,
+    newParentId: string,
+    operatorId?: string,
+    reason?: string,
+  ): Promise<Agent> {
     const agent = await this.findOneOrFail(id);
     if (agent.isSystem) throw new BadRequestException('SYSTEM 不可變更');
     if (!agent.parentId) {
@@ -178,8 +187,120 @@ export class AgentService {
       throw new BadRequestException('不可掛在自己底下');
     }
 
-    agent.parentId = newParentId;
-    return this.agentRepo.save(agent);
+    const fromParentId = agent.parentId;
+
+    return this.dataSource.transaction(async (trx) => {
+      const agentRepo = trx.getRepository(Agent);
+      const parentHistRepo = trx.getRepository(AgentParentHistory);
+
+      agent.parentId = newParentId;
+      const saved = await agentRepo.save(agent);
+
+      await parentHistRepo.save(
+        parentHistRepo.create({
+          agentId: id,
+          fromParentId,
+          toParentId: newParentId,
+          action: 'change_parent',
+          reason: reason ?? null,
+          changedBy: operatorId ?? null,
+        }),
+      );
+
+      return saved;
+    });
+  }
+
+  /**
+   * 將 B 升格為一級代理（A）
+   *
+   * 規則（詳見 分潤系統設計文件.md 第 8.5 章）：
+   *  - 該代理必須是 B（有 parentId）且 active
+   *  - 必須提供新 rate（原本「從 A 切下」的比例已不適用）
+   *  - 旗下玩家歸屬不變、歷史 commission_records 不變
+   *  - 寫入 agent_parent_history 留稽核軌跡（含舊/新 rate 快照）
+   *  - 升格後自動沿用「A 代理」的所有規則：
+   *      · 後續可由管理者新增子代理掛在它底下
+   *      · 由 can_set_sub_rate 控制是否能自設子代理 rate
+   */
+  async promoteToLevel1(params: {
+    agentId: string;
+    newRate: number;
+    operatorId?: string;
+    reason?: string;
+  }): Promise<Agent> {
+    if (params.newRate < 0 || params.newRate > 1) {
+      throw new BadRequestException('新比例必須介於 0 ~ 1');
+    }
+    if (!params.reason || params.reason.trim().length === 0) {
+      throw new BadRequestException('升格必須填寫原因（稽核用）');
+    }
+
+    const agent = await this.findOneOrFail(params.agentId);
+    if (agent.isSystem) throw new BadRequestException('SYSTEM 代理不可升格');
+    if (!agent.parentId) {
+      throw new BadRequestException('該代理已是一級代理（A），不需升格');
+    }
+    if (agent.status !== 'active') {
+      throw new BadRequestException('已停權的代理不可升格，請先恢復');
+    }
+
+    const fromParentId = agent.parentId;
+    const oldRate = await this.rateService.getCurrentRate(params.agentId);
+    const now = new Date();
+
+    return this.dataSource.transaction(async (trx) => {
+      const agentRepo = trx.getRepository(Agent);
+      const rateRepo = trx.getRepository(AgentRate);
+      const parentHistRepo = trx.getRepository(AgentParentHistory);
+
+      // 1. 升格：parent_id 設為 NULL
+      agent.parentId = null;
+      const saved = await agentRepo.save(agent);
+
+      // 2. 關閉舊 rate，新增新 rate（時段快照）
+      await rateRepo
+        .createQueryBuilder()
+        .update(AgentRate)
+        .set({ effectiveTo: now })
+        .where('agent_id = :agentId', { agentId: params.agentId })
+        .andWhere('effective_to IS NULL')
+        .execute();
+
+      await rateRepo.save(
+        rateRepo.create({
+          agentId: params.agentId,
+          rate: params.newRate,
+          effectiveFrom: now,
+          effectiveTo: null,
+          createdBy: params.operatorId ?? null,
+        }),
+      );
+
+      // 3. 寫稽核軌跡
+      await parentHistRepo.save(
+        parentHistRepo.create({
+          agentId: params.agentId,
+          fromParentId,
+          toParentId: null,
+          action: 'promote',
+          oldRateSnapshot: oldRate,
+          newRateSnapshot: params.newRate,
+          reason: params.reason,
+          changedBy: params.operatorId ?? null,
+        }),
+      );
+
+      return saved;
+    });
+  }
+
+  /** 取代理父級變更歷史（升格 + 轉組） */
+  async getParentHistory(agentId: string): Promise<AgentParentHistory[]> {
+    return this.parentHistoryRepo.find({
+      where: { agentId },
+      order: { changedAt: 'DESC' },
+    });
   }
 
   /** 取得代理樹（兩層） */

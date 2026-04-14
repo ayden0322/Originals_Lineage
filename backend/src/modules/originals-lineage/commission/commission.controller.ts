@@ -26,6 +26,7 @@ import {
   UpdateAgentDto,
   UpdateAgentRateDto,
   ChangeAgentParentDto,
+  PromoteAgentDto,
   CreateReferralLinkDto,
   ToggleReferralLinkDto,
   ChangeAttributionDto,
@@ -110,8 +111,38 @@ export class AdminCommissionController {
 
   @Patch('agents/:id/parent')
   @RequirePermission('module.originals.commission.manage')
-  changeParent(@Param('id') id: string, @Body() dto: ChangeAgentParentDto) {
-    return this.agentService.changeParent(id, dto.newParentId);
+  changeParent(
+    @Param('id') id: string,
+    @Body() dto: ChangeAgentParentDto,
+    @Req() req: Request,
+  ) {
+    return this.agentService.changeParent(
+      id,
+      dto.newParentId,
+      this.getOperatorId(req),
+      dto.reason,
+    );
+  }
+
+  @Post('agents/:id/promote')
+  @RequirePermission('module.originals.commission.manage')
+  promote(
+    @Param('id') id: string,
+    @Body() dto: PromoteAgentDto,
+    @Req() req: Request,
+  ) {
+    return this.agentService.promoteToLevel1({
+      agentId: id,
+      newRate: dto.newRate,
+      operatorId: this.getOperatorId(req),
+      reason: dto.reason,
+    });
+  }
+
+  @Get('agents/:id/parent-history')
+  @RequirePermission('module.originals.commission.view')
+  getParentHistory(@Param('id') id: string) {
+    return this.agentService.getParentHistory(id);
   }
 
   @Post('agents/:id/suspend')

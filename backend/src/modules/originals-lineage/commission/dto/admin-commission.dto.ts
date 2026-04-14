@@ -74,6 +74,24 @@ export class ChangeAgentParentDto {
   @ApiProperty()
   @IsUUID()
   newParentId: string;
+
+  @IsOptional() @IsString() reason?: string;
+}
+
+export class PromoteAgentDto {
+  @ApiProperty({
+    example: 0.18,
+    description: '升格後的新分潤比例（0~1，建議帶 oldA × oldB 的等價值）',
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  newRate: number;
+
+  @ApiProperty({ description: '升格原因（稽核必填）' })
+  @IsString()
+  @MinLength(1)
+  reason: string;
 }
 
 // ─────────── 推廣連結 ───────────
