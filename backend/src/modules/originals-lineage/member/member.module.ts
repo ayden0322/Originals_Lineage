@@ -5,6 +5,7 @@ import { MemberBinding } from './entities/member-binding.entity';
 import { WebsiteUser } from './entities/website-user.entity';
 import { GameDbModule } from '../game-db/game-db.module';
 import { SystemLogModule } from '../../../core/system-log/system-log.module';
+import { CommissionModule } from '../commission/commission.module';
 import { MemberService } from './member.service';
 import { MemberController, MemberPublicController } from './member.controller';
 
@@ -13,6 +14,7 @@ import { MemberController, MemberPublicController } from './member.controller';
     TypeOrmModule.forFeature([MemberBinding, WebsiteUser]),
     GameDbModule,
     SystemLogModule,
+    CommissionModule,
     JwtModule.register({}),
   ],
   controllers: [MemberController, MemberPublicController],

@@ -7,6 +7,7 @@ import { ShopModule } from './shop/shop.module';
 import { ShopManageModule } from './shop-manage/shop-manage.module';
 import { SettingsModule } from './settings/settings.module';
 import { SiteManageModule } from './site-manage/site-manage.module';
+import { CommissionModule } from './commission/commission.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SiteManageModule } from './site-manage/site-manage.module';
     ShopManageModule,
     SettingsModule,
     SiteManageModule,
+    CommissionModule,
   ],
 })
 export class OriginalsLineageModule {}

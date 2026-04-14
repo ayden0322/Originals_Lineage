@@ -3,8 +3,9 @@ import {
   MinLength,
   MaxLength,
   Matches,
+  IsOptional,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWebsiteUserDto {
   @ApiProperty({ example: 'mygame01', description: '遊戲帳號（4-13 字元）' })
@@ -34,4 +35,11 @@ export class CreateWebsiteUserDto {
   @MinLength(6)
   @MaxLength(50)
   secondPassword: string;
+
+  @ApiPropertyOptional({
+    description: '推廣連結代碼（前端從 ref_code Cookie 讀取後送來），用於綁定代理歸屬',
+  })
+  @IsOptional()
+  @IsString()
+  refCode?: string;
 }
