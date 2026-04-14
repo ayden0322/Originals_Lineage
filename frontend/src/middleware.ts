@@ -12,7 +12,8 @@ export function middleware(request: NextRequest) {
     pathname.includes('.') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/originals')
+    pathname.startsWith('/originals') ||
+    pathname.startsWith('/agent')
   ) {
     return NextResponse.next();
   }
