@@ -15,6 +15,7 @@ import { WebsiteUser } from './entities/website-user.entity';
 import { MemberBinding } from './entities/member-binding.entity';
 import { GameDbService } from '../game-db/game-db.service';
 import { SystemLogService } from '../../../core/system-log/system-log.service';
+import { AttributionService } from '../commission/services/attribution.service';
 import { CreateWebsiteUserDto } from './dto/create-website-user.dto';
 import { BindGameAccountDto } from './dto/bind-game-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -33,6 +34,7 @@ export class MemberService {
     private readonly systemLogService: SystemLogService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly attribution: AttributionService,
   ) {}
 
   // ─── Player Registration (Unified Account) ──────────────────────────
@@ -120,7 +122,14 @@ export class MemberService {
     });
     await this.bindingRepo.save(binding);
 
-    // 5. Return safe user data
+    // 5. 綁定代理歸屬（refCode 來自前端的 ref_code Cookie；無則歸 SYSTEM）
+    await this.attribution.attributeOnRegister({
+      playerId: saved.id,
+      refCode: dto.refCode,
+      source: 'cookie',
+    });
+
+    // 6. Return safe user data
     const {
       passwordHash: _ph,
       refreshTokenHash: _rt,
