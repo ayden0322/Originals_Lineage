@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   Table,
-  Tag,
   Button,
   Space,
   Modal,
@@ -22,7 +21,6 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { QRCodeCanvas } from 'qrcode.react';
 import {
   agentMyLinks,
   agentCreateMyLink,
@@ -60,6 +58,12 @@ export default function AgentLinksPage() {
     return `${window.location.origin}/api/public/originals/ref/${code}`;
   };
 
+  // 用免費的 goqr.me API 產 QR Code（無需安裝套件）
+  const buildQrUrl = (code: string, size = 320) => {
+    const target = encodeURIComponent(buildUrl(code));
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&data=${target}`;
+  };
+
   const copyLink = (code: string) => {
     const url = buildUrl(code);
     navigator.clipboard.writeText(url);
@@ -90,15 +94,20 @@ export default function AgentLinksPage() {
     }
   };
 
-  const downloadQr = () => {
+  const downloadQr = async () => {
     if (!qrTarget) return;
-    const canvas = document.querySelector<HTMLCanvasElement>('#qr-canvas canvas');
-    if (!canvas) return;
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qr_${qrTarget.code}.png`;
-    a.click();
+    try {
+      const res = await window.fetch(buildQrUrl(qrTarget.code, 600));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `qr_${qrTarget.code}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      message.error('下載失敗，請改右鍵儲存圖片');
+    }
   };
 
   const columns: ColumnsType<CommissionReferralLink> = [
@@ -200,14 +209,14 @@ export default function AgentLinksPage() {
         ]}
       >
         {qrTarget && (
-          <div id="qr-canvas" style={{ textAlign: 'center', padding: 24 }}>
-            <QRCodeCanvas
-              value={buildUrl(qrTarget.code)}
-              size={240}
-              level="M"
-              includeMargin
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={buildQrUrl(qrTarget.code, 320)}
+              alt={`QR Code for ${qrTarget.code}`}
+              style={{ width: 320, height: 320 }}
             />
-            <div style={{ marginTop: 12, fontSize: 12, color: '#888' }}>
+            <div style={{ marginTop: 12, fontSize: 12, color: '#888', wordBreak: 'break-all' }}>
               {buildUrl(qrTarget.code)}
             </div>
           </div>
