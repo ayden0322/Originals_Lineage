@@ -12,6 +12,7 @@ import { Settlement } from './entities/settlement.entity';
 import { SettlementAdjustment } from './entities/settlement-adjustment.entity';
 import { CommissionSetting } from './entities/commission-setting.entity';
 import { CommissionSettingHistory } from './entities/commission-setting-history.entity';
+import { AgentParentHistory } from './entities/agent-parent-history.entity';
 import { CommissionSeedService } from './commission.seed';
 import { RateService } from './services/rate.service';
 import { AttributionService } from './services/attribution.service';
@@ -54,6 +55,7 @@ import { PublicReferralController } from './public-referral.controller';
       SettlementAdjustment,
       CommissionSetting,
       CommissionSettingHistory,
+      AgentParentHistory,
     ]),
     ScheduleModule.forRoot(),
     JwtModule.register({}),
