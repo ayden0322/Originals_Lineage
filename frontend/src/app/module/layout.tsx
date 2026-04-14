@@ -15,6 +15,7 @@ import {
   PictureOutlined,
   AuditOutlined,
   CreditCardOutlined,
+  PartitionOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -84,6 +85,19 @@ const allMenuItems: MenuItem[] = [
     ],
   },
   { key: '/module/logs', icon: <AuditOutlined />, label: '操作日誌', permission: 'module.originals.logs.view' },
+  {
+    key: 'commission',
+    icon: <PartitionOutlined />,
+    label: '代理分潤',
+    permission: 'module.originals.commission.view',
+    children: [
+      { key: '/module/commission/agents', label: '代理管理' },
+      { key: '/module/commission/players', label: '玩家歸屬' },
+      { key: '/module/commission/settlements', label: '結算管理' },
+      { key: '/module/commission/refunds', label: '退款沖銷' },
+      { key: '/module/commission/settings', label: '分潤設定' },
+    ],
+  },
   {
     key: 'payment',
     icon: <CreditCardOutlined />,
@@ -182,7 +196,7 @@ export default function ModuleAdminLayout({
           theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
-          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment']}
+          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment', 'commission']}
           items={menuItems}
           onClick={({ key }) => {
             // Only navigate for leaf items (those with actual paths)
