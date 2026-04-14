@@ -4,18 +4,20 @@ import axios from 'axios';
 // Each role stores tokens under its own localStorage key so
 // sessions never interfere with each other.
 
-type TokenRole = 'player' | 'module-admin' | 'platform-admin';
+type TokenRole = 'player' | 'module-admin' | 'platform-admin' | 'agent';
 
 const TOKEN_KEYS: Record<TokenRole, { access: string; refresh: string }> = {
   player:           { access: 'playerAccessToken',        refresh: 'playerRefreshToken' },
   'module-admin':   { access: 'moduleAdminAccessToken',   refresh: 'moduleAdminRefreshToken' },
   'platform-admin': { access: 'platformAdminAccessToken', refresh: 'platformAdminRefreshToken' },
+  agent:            { access: 'agentAccessToken',         refresh: 'agentRefreshToken' },
 };
 
 /** Detect which role the current page belongs to by pathname. */
 function detectRoleFromPath(): TokenRole {
   if (typeof window === 'undefined') return 'platform-admin';
   const p = window.location.pathname;
+  if (p.startsWith('/agent')) return 'agent';
   if (p.startsWith('/public') || p.startsWith('/auth')) return 'player';
   if (p.startsWith('/module') || p.startsWith('/originals')) return 'module-admin';
   return 'platform-admin';
@@ -110,6 +112,15 @@ apiClient.interceptors.response.use(
       // 但要把失效的 token 清掉，讓 UI（PublicHeader 等）下一次 render 顯示為登出狀態
       if (role === 'player') {
         clearTokens('player');
+        return Promise.reject(error);
+      }
+
+      // Agent token：沒有 refresh 機制，失效就清掉導去登入頁
+      if (role === 'agent') {
+        clearTokens('agent');
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/agent/login')) {
+          window.location.href = '/agent/login';
+        }
         return Promise.reject(error);
       }
 

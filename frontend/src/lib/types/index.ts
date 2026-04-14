@@ -718,3 +718,173 @@ export interface ShopSettings {
 export interface PublicShopConfig {
   settings: ShopSettings;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Commission (代理分潤系統)
+// ═══════════════════════════════════════════════════════════════
+
+export interface CommissionAgent {
+  id: string;
+  parentId: string | null;
+  code: string;
+  name: string;
+  loginAccount: string;
+  contactInfo: Record<string, unknown> | null;
+  status: 'active' | 'suspended';
+  selfReferralAllowed: boolean;
+  canSetSubRate: boolean;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** 由 GET /agents/:id 帶回 */
+  currentRate?: number;
+}
+
+export interface CommissionAgentTreeNode extends CommissionAgent {
+  currentRate: number;
+  children: (CommissionAgent & { currentRate: number })[];
+}
+
+export interface CommissionAgentRate {
+  id: string;
+  agentId: string;
+  rate: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface CommissionReferralLink {
+  id: string;
+  agentId: string;
+  code: string;
+  label: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionPlayerAttribution {
+  playerId: string;
+  agentId: string;
+  linkId: string | null;
+  linkedSource: 'cookie' | 'register' | 'manual' | 'system';
+  linkedAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionRecord {
+  id: string;
+  transactionId: string;
+  agentId: string;
+  level: number;
+  baseAmount: number;
+  rateSnapshot: number;
+  upstreamRateSnapshot: number | null;
+  commissionAmount: number;
+  periodKey: string;
+  settlementId: string | null;
+  paidAt: string;
+  createdAt: string;
+}
+
+export interface CommissionSettlement {
+  id: string;
+  agentId: string;
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  totalCommission: number;
+  totalAdjustment: number;
+  finalAmount: number;
+  status: 'pending' | 'settled' | 'paid';
+  settledAt: string | null;
+  settledBy: string | null;
+  paidAt: string | null;
+  paidBy: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface CommissionSettlementAdjustment {
+  id: string;
+  settlementId: string;
+  amount: number;
+  reason: string;
+  sourceType: 'refund' | 'manual' | 'bonus';
+  sourceTransactionId: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface CommissionSettlementDetail {
+  settlement: CommissionSettlement;
+  adjustments: CommissionSettlementAdjustment[];
+  records: CommissionRecord[];
+}
+
+export interface CommissionAgentParentHistory {
+  id: string;
+  agentId: string;
+  fromParentId: string | null;
+  toParentId: string | null;
+  action: 'promote' | 'change_parent';
+  oldRateSnapshot: number | null;
+  newRateSnapshot: number | null;
+  reason: string | null;
+  changedBy: string | null;
+  changedAt: string;
+}
+
+export interface CommissionCurrentPeriodSummary {
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  transactionCount: number;
+  totalBaseAmount: number;
+  myCommission: number;
+}
+
+export interface CommissionSubordinateReport {
+  id: string;
+  code: string;
+  name: string;
+  status: 'active' | 'suspended';
+  bringInAmount: number;
+  bSelfCommission: number;
+  transactionCount: number;
+}
+
+export interface CommissionPlayerTransaction {
+  id: string;
+  transactionId: string;
+  playerId: string;
+  baseAmount: number;
+  commissionAmount: number;
+  paidAt: string;
+  agentId: string;
+}
+
+export interface CommissionAgentSelf {
+  id: string;
+  code: string;
+  name: string;
+  parentId: string | null;
+  level: 1 | 2;
+  status: 'active' | 'suspended';
+  canSetSubRate: boolean;
+  currentRate: number;
+}
+
+export interface AgentLoginResponse {
+  accessToken: string;
+  agent: {
+    id: string;
+    code: string;
+    name: string;
+    parentId: string | null;
+    canSetSubRate: boolean;
+    level: 1 | 2;
+  };
+}
