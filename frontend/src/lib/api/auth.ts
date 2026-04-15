@@ -32,6 +32,7 @@ export async function playerRegister(dto: {
   gameAccountName: string;
   password: string;
   secondPassword: string;
+  refCode?: string;
 }): Promise<unknown> {
   const { data } = await apiClient.post<ApiResponse<unknown>>('/public/originals/auth/register', dto);
   return data.data;

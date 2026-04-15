@@ -61,10 +61,21 @@ export default function RegisterPage() {
   }) => {
     setLoading(true);
     try {
+      // 讀取推廣連結 Cookie（由後端 /api/public/originals/ref/:code 302 時種下）
+      // 若玩家是透過代理推廣連結進站，這裡會帶上代碼做歸屬綁定
+      const refCode =
+        typeof document !== 'undefined'
+          ? document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('ref_code='))
+              ?.split('=')[1]
+          : undefined;
+
       await authApi.playerRegister({
         gameAccountName: values.gameAccountName,
         password: values.password,
         secondPassword: values.secondPassword,
+        refCode: refCode ? decodeURIComponent(refCode) : undefined,
       });
       message.success(`註冊成功！歡迎加入${siteName}`);
       router.push('/public');
