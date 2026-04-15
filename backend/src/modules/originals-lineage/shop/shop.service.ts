@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Brackets } from 'typeorm';
-import { OnEvent } from '@nestjs/event-emitter';
+import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
 import { Product } from './entities/product.entity';
 import { Order } from './entities/order.entity';
@@ -46,6 +46,7 @@ export class ShopService {
     private readonly gameDbService: GameDbService,
     private readonly dataSource: DataSource,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ─── Product Methods ──────────────────────────────────────────────────
@@ -568,6 +569,36 @@ export class ShopService {
     if (!order) {
       this.logger.warn(`Order not found for payment: ${payload.orderId}`);
       return;
+    }
+
+    // ─── Step 1.5：觸發代理分潤計算 ─────────────────────────────
+    // 分潤計算以「付款成功」為基準（設計文件第四章：分潤基準 = 玩家儲值金額）。
+    // 即使發貨失敗，分潤也已產生；CommissionEngineService 依 transactionId 冪等。
+    // 透過事件解耦：若 commission 模組未啟用或監聽失敗，不會影響發貨主流程。
+    try {
+      const binding = await this.memberBindingRepo.findOne({
+        where: { id: order.memberBindingId },
+      });
+      if (binding) {
+        this.eventEmitter.emit('commission.recharge.paid', {
+          transactionId: payload.transactionId,
+          playerId: binding.websiteAccountId,
+          amount: Number(order.totalAmount),
+          paidAt: new Date(),
+        });
+        this.logger.log(
+          `已發出 commission.recharge.paid 事件 order=${order.orderNumber} amount=${order.totalAmount}`,
+        );
+      } else {
+        this.logger.warn(
+          `Order ${order.orderNumber} 找不到 member_binding，跳過分潤事件`,
+        );
+      }
+    } catch (err) {
+      // 分潤事件發送失敗不應阻斷發貨流程；記 log 後繼續
+      this.logger.error(
+        `發出分潤事件失敗 order=${order.orderNumber}: ${(err as Error).message}`,
+      );
     }
 
     // ─── Step 2：帶重試的發貨流程 ────────────────────────────────
