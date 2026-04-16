@@ -147,6 +147,13 @@ export class AgentSelfController {
     if (sub.parentId !== me.id) {
       throw new ForbiddenException('該代理不在你旗下');
     }
+    // 檢查是否超過系統設定的子代理比例上限
+    const maxSubRate = await this.settings.get<number>('max_sub_rate', 1.0);
+    if (dto.rate > maxSubRate) {
+      throw new ForbiddenException(
+        `子代理比例不可超過 ${(maxSubRate * 100).toFixed(0)}%（系統上限）`,
+      );
+    }
     return this.rateService.setRate({
       agentId: subId,
       rate: dto.rate,

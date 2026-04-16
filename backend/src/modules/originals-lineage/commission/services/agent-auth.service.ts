@@ -26,7 +26,12 @@ export class AgentAuthService {
   ) {}
 
   async login(loginAccount: string, password: string) {
-    const agent = await this.agentRepo.findOne({ where: { loginAccount } });
+    // passwordHash 在 entity 設為 select:false，登入驗證需手動選取
+    const agent = await this.agentRepo
+      .createQueryBuilder('a')
+      .addSelect('a.passwordHash')
+      .where('a.loginAccount = :loginAccount', { loginAccount })
+      .getOne();
     if (!agent || agent.isSystem) {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }

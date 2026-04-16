@@ -76,11 +76,14 @@ export class AdminCommissionController {
 
   @Post('agents')
   @RequirePermission('module.originals.commission.manage')
-  createAgent(@Body() dto: CreateAgentDto, @Req() req: Request) {
-    return this.agentService.create({
+  async createAgent(@Body() dto: CreateAgentDto, @Req() req: Request) {
+    const agent = await this.agentService.create({
       ...dto,
       operatorId: this.getOperatorId(req),
     });
+    // save() 回傳物件仍帶有 passwordHash（entity create 時 assign 的），手動排除
+    const { passwordHash: _, ...safe } = agent as typeof agent & { passwordHash?: string };
+    return safe;
   }
 
   @Patch('agents/:id')

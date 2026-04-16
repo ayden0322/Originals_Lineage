@@ -55,11 +55,12 @@ export class CommissionEngineService {
     try {
       await this.generateCommissions(event);
     } catch (err) {
+      // 事件監聯器不 re-throw：避免影響金流 callback 回覆導致金流平台重推
+      // 錯誤只記 log，分潤缺漏可由管理者後台手動補登或重新觸發
       this.logger.error(
         `分潤計算失敗 tx=${event.transactionId}: ${(err as Error).message}`,
         (err as Error).stack,
       );
-      throw err;
     }
   }
 
