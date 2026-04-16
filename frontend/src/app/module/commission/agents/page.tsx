@@ -293,7 +293,7 @@ export default function CommissionAgentsPage() {
             setCreateOpen(true);
           }}
         >
-          新增一級代理
+          新增代理
         </Button>
       }
     >
@@ -397,12 +397,16 @@ function CreateAgentModal({
 }) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  // 追蹤表單中的 parentId，用來動態切換 A/B 模式的欄位顯示
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const isSubAgent = !!(parentId || selectedParentId);
 
   useEffect(() => {
     if (open) {
       form.resetFields();
+      setSelectedParentId(parentId);
       form.setFieldsValue({
-        parentId: parentId ?? null,
+        parentId: parentId ?? undefined,
         rate: parentId ? 0.6 : 0.3,
         selfReferralAllowed: false,
         canSetSubRate: false,
@@ -410,21 +414,28 @@ function CreateAgentModal({
     }
   }, [open, parentId, form]);
 
+  const handleParentChange = (value: string | undefined) => {
+    const newParent = value ?? null;
+    setSelectedParentId(newParent);
+    // 切換 A/B 時自動調整預設比例
+    form.setFieldsValue({
+      rate: newParent ? 0.6 : 0.3,
+    });
+  };
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      // 注意：當 parentId 由 props 帶入時，Form.Item 不會 render，
-      // Ant Design 的 validateFields 不回傳未 render 的欄位值，
-      // 所以必須用 props 的 parentId 而非 values.parentId
+      const effectiveParentId = parentId ?? values.parentId ?? null;
       await createAgent({
         name: values.name,
         loginAccount: values.loginAccount,
         password: values.password,
-        parentId: parentId ?? values.parentId ?? null,
+        parentId: effectiveParentId,
         rate: Number(values.rate),
-        selfReferralAllowed: !!values.selfReferralAllowed,
-        canSetSubRate: !!values.canSetSubRate,
+        selfReferralAllowed: effectiveParentId ? false : !!values.selfReferralAllowed,
+        canSetSubRate: effectiveParentId ? false : !!values.canSetSubRate,
       });
       message.success('代理已建立（並產生預設推廣連結）');
       onSuccess();
@@ -436,9 +447,13 @@ function CreateAgentModal({
     }
   };
 
+  const modalTitle = parentId
+    ? `新增二級代理（掛在 ${parentList.find((a) => a.id === parentId)?.code ?? ''}）`
+    : '新增代理';
+
   return (
     <Modal
-      title={parentId ? '新增二級代理（B）' : '新增一級代理（A）'}
+      title={modalTitle}
       open={open}
       onCancel={onClose}
       onOk={handleSubmit}
@@ -448,17 +463,33 @@ function CreateAgentModal({
     >
       <Form form={form} layout="vertical">
         {!parentId && (
-          <Form.Item label="父代理（選填，建立 B 時用）" name="parentId">
-            <Select allowClear placeholder="不選 = 一級代理 A">
+          <Form.Item
+            label="上層代理"
+            name="parentId"
+            extra="不選 = 建立一級代理（A）；選了 = 建立二級代理（B）掛在該 A 底下"
+          >
+            <Select
+              allowClear
+              placeholder="不選 = 一級代理（A）"
+              onChange={handleParentChange}
+            >
               {parentList
                 .filter((a) => !a.parentId)
                 .map((a) => (
                   <Select.Option key={a.id} value={a.id}>
-                    {a.code} - {a.name}
+                    {a.code} - {a.name}（{(a.currentRate * 100).toFixed(0)}%）
                   </Select.Option>
                 ))}
             </Select>
           </Form.Item>
+        )}
+        {parentId && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={`此代理將掛在 ${parentList.find((a) => a.id === parentId)?.code ?? ''} 底下（二級代理 B）`}
+          />
         )}
         <Form.Item label="名稱" name="name" rules={[{ required: true }]}>
           <Input />
@@ -474,23 +505,24 @@ function CreateAgentModal({
           <Input.Password autoComplete="new-password" />
         </Form.Item>
         <Form.Item
-          label={parentId ? '分潤比例（從上層 A 的分潤中再切）' : '分潤比例'}
+          label={isSubAgent ? '分潤比例（從上層 A 的分潤中再切）' : '分潤比例'}
           name="rate"
           rules={[{ required: true }]}
-          extra={parentId ? '0.6 = 上層 A 拿到的 60%' : '0.3 = 30%'}
+          extra={isSubAgent ? '0.6 = 上層 A 拿到的 60%' : '0.3 = 30%'}
         >
           <InputNumber min={0} max={1} step={0.05} style={{ width: '100%' }} />
         </Form.Item>
-        {!parentId && (
+        {!isSubAgent && (
           <Form.Item label="允許自推自玩" name="selfReferralAllowed" valuePropName="checked">
             <Switch />
           </Form.Item>
         )}
-        {!parentId && (
+        {!isSubAgent && (
           <Form.Item
-            label="可設定子代理比例（A 限定）"
+            label="可設定子代理比例"
             name="canSetSubRate"
             valuePropName="checked"
+            extra="開啟後，此 A 可在代理後台自行調整旗下 B 的比例"
           >
             <Switch />
           </Form.Item>
