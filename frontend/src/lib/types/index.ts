@@ -242,21 +242,17 @@ export interface CreateAnnouncementDto {
 
 export interface Reservation {
   id: string;
-  email: string;
-  displayName: string;
-  phone: string | null;
-  lineId: string | null;
-  emailVerified: boolean;
-  status: 'registered' | 'confirmed' | 'converted';
+  websiteUserId: string;
+  gameAccountName: string;
   ipAddress: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ReservationMilestone {
   id: string;
   threshold: number;
   rewardName: string;
+  rewardDescription: string | null;
   imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
@@ -265,12 +261,12 @@ export interface ReservationMilestone {
 }
 
 export interface ReservationStats {
-  total: number;
-  registered: number;
-  confirmed: number;
-  converted: number;
+  actualCount: number;
+  countBase: number;
+  displayCount: number;
 }
 
+/** @deprecated 舊版預約欄位設定，新版不使用。保留供 reserve-design 頁面編譯用，P2 時移除 */
 export interface ReserveFieldConfig {
   [key: string]: { visible: boolean; required: boolean };
 }

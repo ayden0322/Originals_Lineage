@@ -3,61 +3,51 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Table,
-  Tag,
   Card,
   Row,
   Col,
   Statistic,
-  Dropdown,
   Button,
-  Space,
+  Input,
   message,
 } from 'antd';
 import {
-  DownOutlined,
   DownloadOutlined,
   TeamOutlined,
-  UserAddOutlined,
-  CheckCircleOutlined,
-  SwapOutlined,
+  PlusCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
   getReservations,
   getReservationStats,
-  updateReservationStatus,
   exportReservations,
+  type ReservationRecord,
+  type ReservationStats,
 } from '@/lib/api/reserve';
-import type { Reservation, ReservationStats } from '@/lib/types';
-
-const statusMap: Record<string, { label: string; color: string }> = {
-  registered: { label: '已登記', color: 'blue' },
-  confirmed: { label: '已確認', color: 'green' },
-  converted: { label: '已轉換', color: 'purple' },
-};
 
 export default function ReservationsPage() {
-  const [data, setData] = useState<Reservation[]>([]);
+  const [data, setData] = useState<ReservationRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ReservationStats>({
-    total: 0,
-    registered: 0,
-    confirmed: 0,
-    converted: 0,
+    actualCount: 0,
+    countBase: 0,
+    displayCount: 0,
   });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [res, statsRes] = await Promise.all([
-        getReservations(page, pageSize),
+        getReservations(page, pageSize, keyword || undefined),
         getReservationStats(),
       ]);
-      setData(res.items);
+      setData((res as any).data || res.items || []);
       setTotal(res.total);
       setStats(statsRes);
     } catch {
@@ -65,21 +55,11 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, keyword]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleStatusChange = async (id: string, status: string) => {
-    try {
-      await updateReservationStatus(id, status);
-      message.success('狀態更新成功');
-      fetchData();
-    } catch {
-      message.error('狀態更新失敗');
-    }
-  };
 
   const handleExport = async () => {
     try {
@@ -98,88 +78,35 @@ export default function ReservationsPage() {
     }
   };
 
-  const columns: ColumnsType<Reservation> = [
+  const columns: ColumnsType<ReservationRecord> = [
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      width: 220,
+      title: '遊戲帳號',
+      dataIndex: 'gameAccountName',
+      key: 'gameAccountName',
+      width: 180,
     },
     {
-      title: '暱稱',
-      dataIndex: 'displayName',
-      key: 'displayName',
-      width: 120,
-    },
-    {
-      title: '手機',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 130,
-      render: (val: string | null) => val || '-',
-    },
-    {
-      title: 'LINE ID',
-      dataIndex: 'lineId',
-      key: 'lineId',
-      width: 120,
-      render: (val: string | null) => val || '-',
-    },
-    {
-      title: 'Email 驗證',
-      dataIndex: 'emailVerified',
-      key: 'emailVerified',
-      width: 100,
-      align: 'center' as const,
-      render: (val: boolean) => (
-        <Tag color={val ? 'green' : 'default'}>{val ? '已驗證' : '未驗證'}</Tag>
+      title: '網站帳號 ID',
+      dataIndex: 'websiteUserId',
+      key: 'websiteUserId',
+      width: 280,
+      render: (val: string) => (
+        <span style={{ fontSize: 12, opacity: 0.7 }}>{val}</span>
       ),
     },
     {
-      title: '狀態',
-      dataIndex: 'status',
-      key: 'status',
-      width: 90,
-      align: 'center',
-      render: (status: string) => {
-        const s = statusMap[status] || { label: status, color: 'default' };
-        return <Tag color={s.color}>{s.label}</Tag>;
-      },
+      title: 'IP 位址',
+      dataIndex: 'ipAddress',
+      key: 'ipAddress',
+      width: 140,
+      render: (val: string | null) => val || '-',
     },
     {
-      title: '時間',
+      title: '預約時間',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
       render: (val: string) => dayjs(val).format('YYYY-MM-DD HH:mm'),
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 120,
-      render: (_, record) => {
-        const items = [
-          { key: 'registered', label: '已登記' },
-          { key: 'confirmed', label: '已確認' },
-          { key: 'converted', label: '已轉換' },
-        ].filter((item) => item.key !== record.status);
-
-        return (
-          <Dropdown
-            menu={{
-              items,
-              onClick: ({ key }) => handleStatusChange(record.id, key),
-            }}
-          >
-            <Button size="small">
-              <Space>
-                變更狀態
-                <DownOutlined />
-              </Space>
-            </Button>
-          </Dropdown>
-        );
-      },
     },
   ];
 
@@ -193,27 +120,47 @@ export default function ReservationsPage() {
       </div>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
-            <Statistic title="總預約數" value={stats.total} prefix={<TeamOutlined />} />
+            <Statistic
+              title="實際預約人數"
+              value={stats.actualCount}
+              prefix={<TeamOutlined />}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
-            <Statistic title="已登記" value={stats.registered} prefix={<UserAddOutlined />} />
+            <Statistic
+              title="種子基數"
+              value={stats.countBase}
+              prefix={<PlusCircleOutlined />}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card>
-            <Statistic title="已確認" value={stats.confirmed} prefix={<CheckCircleOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic title="已轉換" value={stats.converted} prefix={<SwapOutlined />} />
+            <Statistic
+              title="顯示人數"
+              value={stats.displayCount}
+              prefix={<EyeOutlined />}
+              valueStyle={{ color: '#c4a24e' }}
+            />
           </Card>
         </Col>
       </Row>
+
+      <div style={{ marginTop: 16, marginBottom: 16 }}>
+        <Input.Search
+          placeholder="搜尋遊戲帳號"
+          allowClear
+          onSearch={(val) => {
+            setKeyword(val);
+            setPage(1);
+          }}
+          style={{ maxWidth: 300 }}
+        />
+      </div>
 
       <Table
         rowKey="id"
@@ -231,7 +178,6 @@ export default function ReservationsPage() {
             setPageSize(ps);
           },
         }}
-        style={{ marginTop: 16 }}
       />
     </div>
   );

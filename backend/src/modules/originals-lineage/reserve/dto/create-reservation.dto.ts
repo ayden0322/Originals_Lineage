@@ -1,23 +1,3 @@
-import { IsEmail, IsString, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export class CreateReservationDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail()
-  email: string;
-
-  @ApiPropertyOptional({ example: 'Player1' })
-  @IsOptional()
-  @IsString()
-  displayName?: string;
-
-  @ApiPropertyOptional({ example: '0912345678' })
-  @IsOptional()
-  @IsString()
-  phone?: string;
-
-  @ApiPropertyOptional({ example: 'line_user_id' })
-  @IsOptional()
-  @IsString()
-  lineId?: string;
-}
+// 新版預約不需要前端傳資料（從 JWT 取 websiteUserId，從 MemberBinding 取 gameAccountName）
+// 保留此檔案作為空 DTO，未來可擴充（例如同意條款 checkbox）
+export class CreateReservationDto {}

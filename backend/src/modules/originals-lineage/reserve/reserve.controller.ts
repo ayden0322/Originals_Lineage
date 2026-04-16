@@ -14,9 +14,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ReserveService } from './reserve.service';
-import { CreateReservationDto } from './dto/create-reservation.dto';
-import { UpdateReservationStatusDto } from './dto/update-reservation-status.dto';
-import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
+import { UpdatePageSettingsDto } from './dto/update-page-settings.dto';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
@@ -24,7 +22,7 @@ import { PermissionGuard } from '../../../common/guards/permission.guard';
 import { RequirePermission } from '../../../core/permission/decorators/require-permission.decorator';
 
 // ──────────────────────────────────────────────
-// Public endpoints (no auth)
+// Public endpoints
 // ──────────────────────────────────────────────
 
 @ApiTags('Public - Reservations')
@@ -32,34 +30,46 @@ import { RequirePermission } from '../../../core/permission/decorators/require-p
 export class ReservePublicController {
   constructor(private readonly reserveService: ReserveService) {}
 
+  /**
+   * 取得預約頁狀態（人數、里程碑、頁面設定、我是否已預約）
+   * 未登入也能看，只是 myReservation.reserved 永遠為 false
+   */
+  @Get('status')
+  async getStatus(@Req() req: Request) {
+    // 嘗試從 Authorization header 取得 user id（可選，不強制登入）
+    const websiteUserId = this.extractUserIdFromToken(req);
+    return this.reserveService.getPublicStatus(websiteUserId);
+  }
+
+  /**
+   * 建立預約（必須登入 + 已綁定遊戲帳號）
+   */
   @Post()
-  async create(@Body() dto: CreateReservationDto, @Req() req: Request) {
+  @UseGuards(JwtAuthGuard)
+  async create(@Req() req: Request) {
+    const websiteUserId = (req as any).user?.sub;
     const ipAddress =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.ip ||
       null;
-    return this.reserveService.create(dto, ipAddress);
+    return this.reserveService.create(websiteUserId, ipAddress);
   }
 
-  @Get('count')
-  async getCount() {
-    const count = await this.reserveService.getPublicCount();
-    return { count };
-  }
+  // ─── Private helper: 從 token 取 userId（不拋錯）────────────────
 
-  @Get('milestones')
-  async getPublicMilestones() {
-    return this.reserveService.getPublicMilestones();
-  }
+  private extractUserIdFromToken(req: Request): string | undefined {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) return undefined;
 
-  @Post('verify')
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.reserveService.verifyEmail(dto.email, dto.code);
-  }
-
-  @Post('resend')
-  async resendVerification(@Body() dto: ResendVerificationDto) {
-    return this.reserveService.resendVerification(dto.email);
+    try {
+      const token = authHeader.substring(7);
+      const payload = JSON.parse(
+        Buffer.from(token.split('.')[1], 'base64').toString(),
+      );
+      return payload.sub;
+    } catch {
+      return undefined;
+    }
   }
 }
 
@@ -81,24 +91,15 @@ export class ReserveAdminController {
   findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
-    @Query('status') status?: string,
+    @Query('keyword') keyword?: string,
   ) {
-    return this.reserveService.findAll(+page, +limit, status);
+    return this.reserveService.findAll(+page, +limit, keyword);
   }
 
   @Get('stats')
   @RequirePermission('module.originals.reserve.view')
   getStats() {
     return this.reserveService.getStats();
-  }
-
-  @Patch(':id/status')
-  @RequirePermission('module.originals.reserve.manage')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateReservationStatusDto,
-  ) {
-    return this.reserveService.updateStatus(id, dto.status);
   }
 
   @Post('export')
@@ -111,6 +112,20 @@ export class ReserveAdminController {
       'Content-Disposition': 'attachment; filename="reservations.csv"',
     });
     res.send(csv);
+  }
+
+  // ─── 頁面設定 ──────────────────────────────────────────────────
+
+  @Get('page-settings')
+  @RequirePermission('module.originals.settings.manage')
+  getPageSettings() {
+    return this.reserveService.getPageSettings();
+  }
+
+  @Patch('page-settings')
+  @RequirePermission('module.originals.settings.manage')
+  updatePageSettings(@Body() dto: UpdatePageSettingsDto) {
+    return this.reserveService.updatePageSettings(dto);
   }
 
   // ─── 里程碑管理 ────────────────────────────────────────────────

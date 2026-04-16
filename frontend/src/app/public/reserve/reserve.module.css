@@ -10,7 +10,7 @@
 
 .hero {
   position: relative;
-  min-height: 70vh;
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,32 +20,26 @@
   overflow: hidden;
 }
 
-.heroBg {
+.heroGradient {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  z-index: 0;
-}
-
-.heroBg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(0, 0, 0, 0.7) 100%
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    rgba(196, 162, 78, 0.08) 0%,
+    transparent 60%
   );
+  z-index: 0;
 }
 
 .heroContent {
   position: relative;
   z-index: 1;
   max-width: 700px;
+  width: 100%;
 }
 
 .heroTitle {
+  font-family: var(--font-heading, Georgia, serif);
   font-size: 48px;
   font-weight: 800;
   letter-spacing: 2px;
@@ -55,13 +49,13 @@
 
 .heroSubtitle {
   font-size: 20px;
-  opacity: 0.85;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 .heroDesc {
   font-size: 15px;
-  opacity: 0.65;
+  color: var(--text-muted);
   margin-bottom: 32px;
   line-height: 1.7;
 }
@@ -72,7 +66,7 @@
   display: flex;
   gap: 16px;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .countdownItem {
@@ -87,12 +81,13 @@
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: var(--accent-gold);
 }
 
 .countdownLabel {
   font-size: 12px;
   text-transform: uppercase;
-  opacity: 0.6;
+  color: var(--text-muted);
   margin-top: 6px;
   letter-spacing: 1px;
 }
@@ -105,302 +100,401 @@
   justify-content: center;
   gap: 10px;
   font-size: 18px;
-  opacity: 0.85;
-  margin-bottom: 8px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
 }
 
 .counterNumber {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--accent-gold);
 }
 
-/* ─── Milestones Section ───────────────────────────────────── */
+/* ─── Action Area ──────────────────────────────────────────── */
 
-.milestones {
-  padding: 60px 24px;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.milestonesTitle {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 40px;
-}
-
-.milestoneTrack {
-  position: relative;
+.actionArea {
   display: flex;
   flex-direction: column;
-  gap: 0;
-}
-
-.milestoneItem {
-  display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px 0;
-  position: relative;
+  gap: 12px;
 }
 
-.milestoneIcon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 20px;
-  font-weight: 700;
-  border: 3px solid;
-  transition: all 0.3s;
-}
-
-.milestoneReached {
-  opacity: 1;
-}
-
-.milestonePending {
-  opacity: 0.5;
-}
-
-.milestoneInfo {
-  flex: 1;
-}
-
-.milestoneThreshold {
-  font-size: 13px;
-  opacity: 0.6;
-  margin-bottom: 4px;
-}
-
-.milestoneReward {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.milestoneImage {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-/* ─── Form Section ─────────────────────────────────────────── */
-
-.formSection {
-  padding: 60px 24px 80px;
-  max-width: 520px;
-  margin: 0 auto;
-}
-
-.formCard {
-  background: var(--bg-secondary, #111);
-  border-radius: 16px;
-  padding: 40px 32px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.formTitle {
-  text-align: center;
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 24px;
-}
-
-.formLabel {
-  display: block;
+.loginHint {
   font-size: 14px;
-  margin-bottom: 6px;
-  opacity: 0.85;
+  color: var(--text-muted);
+  margin: 0;
 }
 
-.formInput {
-  width: 100%;
-  padding: 12px 16px;
+.btnOutlined {
+  padding: 14px 48px;
+  border: 2px solid var(--accent-gold);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  font-size: 15px;
-  outline: none;
-  transition: border-color 0.2s;
+  background: transparent;
+  color: var(--accent-gold);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.formInput:focus {
-  border-color: var(--reserve-accent, #c4a24e);
+.btnOutlined:hover {
+  background: rgba(196, 162, 78, 0.1);
 }
 
-.formInput::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.formGroup {
-  margin-bottom: 20px;
-}
-
-.formRequired::after {
-  content: ' *';
-  color: #ff4d4f;
-}
-
-.formButton {
-  width: 100%;
-  padding: 14px;
+.btnPrimary {
+  padding: 14px 48px;
   border: none;
   border-radius: 8px;
+  background: var(--accent-gold);
+  color: #000;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
-  color: #000;
 }
 
-.formButton:hover {
+.btnPrimary:hover {
   opacity: 0.9;
 }
 
-.formButton:active {
+.btnPrimary:active {
   transform: scale(0.98);
 }
 
-.formButton:disabled {
-  opacity: 0.5;
+.btnPrimary:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.formError {
+.agreeLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.agreeCheckbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-gold);
+}
+
+.errorMsg {
   color: #ff4d4f;
   font-size: 13px;
-  margin-top: 4px;
 }
 
-/* ─── Success State ────────────────────────────────────────── */
+/* ─── Reserved Badge ───────────────────────────────────────── */
 
-.successOverlay {
+.reservedBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 32px;
+  border: 2px solid var(--accent-gold);
+  border-radius: 12px;
+  background: rgba(196, 162, 78, 0.08);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent-gold);
+}
+
+.reservedIcon {
+  font-size: 32px;
+}
+
+.reservedAccount {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.closedBadge {
+  padding: 14px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+/* ─── Section Common ───────────────────────────────────────── */
+
+.sectionTitle {
   text-align: center;
-  padding: 60px 24px;
-}
-
-.successIcon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.successTitle {
+  font-family: var(--font-heading, Georgia, serif);
   font-size: 28px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 40px;
 }
 
-.successDesc {
-  font-size: 16px;
-  opacity: 0.7;
-  margin-bottom: 32px;
+/* ─── Rewards Grid ─────────────────────────────────────────── */
+
+.rewardsSection {
+  padding: 60px 24px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
-.successButton {
-  display: inline-block;
-  padding: 12px 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 15px;
-  cursor: pointer;
-  transition: background 0.2s;
+.rewardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
 }
 
-.successButton:hover {
-  background: rgba(255, 255, 255, 0.05);
+.rewardCard {
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-/* ─── Verification Modal ───────────────────────────────────── */
+.rewardCard:hover {
+  border-color: rgba(196, 162, 78, 0.2);
+}
 
-.verifyOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 2000;
+.rewardReached {
+  border-color: rgba(196, 162, 78, 0.3);
+  box-shadow: 0 0 20px rgba(196, 162, 78, 0.08);
+}
+
+.rewardImageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rewardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rewardReachedOverlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-}
-
-.verifyModal {
-  background: var(--bg-secondary, #111);
-  border-radius: 16px;
-  padding: 40px 32px;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.verifyTitle {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
+  box-shadow: 0 0 12px rgba(196, 162, 78, 0.5);
+}
+
+.rewardInfo {
+  padding: 20px;
+}
+
+.rewardName {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.rewardThreshold {
+  font-size: 13px;
+  color: var(--accent-gold);
   margin-bottom: 8px;
 }
 
-.verifyDesc {
+.rewardDesc {
   font-size: 14px;
-  opacity: 0.65;
-  margin-bottom: 24px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
-.verifyCodeInput {
-  width: 100%;
-  padding: 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  font-size: 24px;
-  text-align: center;
-  letter-spacing: 8px;
-  outline: none;
-  margin-bottom: 16px;
+/* ─── Milestone Progress Track ─────────────────────────────── */
+
+.milestoneSection {
+  padding: 60px 24px 80px;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-.verifyCodeInput:focus {
-  border-color: var(--reserve-accent, #c4a24e);
-}
-
-.verifyActions {
+.milestoneTrack {
   display: flex;
-  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+  padding: 40px 0;
+}
+
+.milestoneNode {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* 軌道 */
+
+.milestoneRail {
+  position: absolute;
+  top: 18px;
+  right: 50%;
+  left: calc(-50% + 18px);
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.milestoneRailFill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
+  transition: width 0.8s ease-out;
+}
+
+.railReached {
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
+  }
+  50% {
+    background: linear-gradient(90deg, var(--accent-gold-light), var(--accent-gold));
+  }
+  100% {
+    background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
+  }
+}
+
+/* 節點圓形 */
+
+.milestoneCircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: all 0.3s;
 }
 
-.verifyButton {
-  padding: 10px 24px;
-  border-radius: 8px;
-  border: none;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+.circleReached {
+  background: var(--accent-gold);
   color: #000;
+  box-shadow: 0 0 16px rgba(196, 162, 78, 0.5);
+  animation: glow 2s ease-in-out infinite;
 }
 
-.verifyResend {
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(196, 162, 78, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(196, 162, 78, 0.7);
+  }
+}
+
+.circleCurrent {
+  border: 3px solid var(--accent-gold);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--text-primary);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
+  color: var(--accent-gold);
+  animation: pulse 2s ease-in-out infinite;
 }
 
-.verifyResend:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.circlePending {
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* 目前進度浮標 */
+
+.progressFloater {
+  position: absolute;
+  top: -28px;
+  background: var(--accent-gold);
+  color: #000;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.progressFloater::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--accent-gold);
+}
+
+/* 節點資訊 */
+
+.milestoneLabel {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.milestoneThreshold {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.milestoneName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ─── Celebrate Overlay ────────────────────────────────────── */
+
+.celebrateOverlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(196, 162, 78, 0.15) 0%,
+    transparent 60%
+  );
+  animation: celebrateFade 1.5s ease-out forwards;
+}
+
+@keyframes celebrateFade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ─── Responsive ───────────────────────────────────────────── */
@@ -426,11 +520,63 @@
     min-width: 55px;
   }
 
-  .formCard {
-    padding: 28px 20px;
+  .counterNumber {
+    font-size: 28px;
   }
 
-  .milestoneItem {
-    gap: 14px;
+  .rewardsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* 手機版：里程碑改為垂直軌道 */
+  .milestoneTrack {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 0 20px 40px;
+  }
+
+  .milestoneNode {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .milestoneRail {
+    position: absolute;
+    top: auto;
+    left: 18px;
+    right: auto;
+    bottom: 100%;
+    width: 4px;
+    height: 40px;
+  }
+
+  .milestoneRailFill {
+    width: 100%;
+    height: 100%;
+  }
+
+  .milestoneCircle {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .milestoneLabel {
+    margin-top: 0;
+    text-align: left;
+  }
+
+  .progressFloater {
+    top: auto;
+    left: 50px;
+    right: auto;
+    bottom: auto;
+  }
+
+  .progressFloater::after {
+    display: none;
   }
 }
