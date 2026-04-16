@@ -17,6 +17,9 @@ export class ReservationMilestone {
   @Column({ name: 'reward_name' })
   rewardName: string;
 
+  @Column({ name: 'reward_description', type: 'text', nullable: true })
+  rewardDescription: string | null;
+
   @Column({ name: 'image_url', type: 'varchar', nullable: true })
   imageUrl: string | null;
 

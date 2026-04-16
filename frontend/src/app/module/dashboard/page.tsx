@@ -34,7 +34,7 @@ const statCards: StatCard[] = [
     title: '預約人數',
     permission: 'module.originals.reserve.view',
     icon: <CalendarOutlined />,
-    fetch: async () => (await getReservationStats()).total,
+    fetch: async () => (await getReservationStats()).displayCount,
   },
   {
     key: 'orders',

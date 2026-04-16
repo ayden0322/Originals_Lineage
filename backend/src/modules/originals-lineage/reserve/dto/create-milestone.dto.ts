@@ -10,6 +10,11 @@ export class CreateMilestoneDto {
   @IsString()
   rewardName: string;
 
+  @ApiPropertyOptional({ example: '<p>達標即可獲得限定坐騎一匹</p>' })
+  @IsOptional()
+  @IsString()
+  rewardDescription?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
