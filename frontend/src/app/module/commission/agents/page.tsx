@@ -269,19 +269,28 @@ export default function CommissionAgentsPage() {
     expandedRowRender: (row) => {
       const children = ('children' in row ? row.children : []) as AnyAgent[];
       return (
-        <Table
-          rowKey="id"
-          size="small"
-          pagination={false}
-          columns={columns}
-          dataSource={children}
-          showHeader={false}
-        />
+        <div style={{ background: '#f6f8fa', borderRadius: 8, padding: '8px 0', margin: '-8px 0' }}>
+          <Table
+            rowKey="id"
+            size="small"
+            pagination={false}
+            columns={columns}
+            dataSource={children}
+            showHeader={false}
+            style={{ background: 'transparent' }}
+            rowClassName={() => 'sub-agent-row'}
+          />
+        </div>
       );
     },
   };
 
   return (
+    <>
+    <style>{`
+      .sub-agent-row td { background: #f6f8fa !important; }
+      .sub-agent-row:hover td { background: #eef1f5 !important; }
+    `}</style>
     <Card
       title="代理管理"
       extra={
@@ -375,6 +384,7 @@ export default function CommissionAgentsPage() {
         }}
       />
     </Card>
+    </>
   );
 }
 
