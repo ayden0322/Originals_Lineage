@@ -32,7 +32,7 @@ export class Agent {
   @Column({ name: 'login_account', type: 'varchar', length: 64, unique: true })
   loginAccount: string;
 
-  @Column({ name: 'password_hash', type: 'varchar' })
+  @Column({ name: 'password_hash', type: 'varchar', select: false })
   passwordHash: string;
 
   @Column({ name: 'contact_info', type: 'jsonb', nullable: true })

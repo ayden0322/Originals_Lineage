@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Agent } from '../entities/agent.entity';
 import { AgentRate } from '../entities/agent-rate.entity';
 
@@ -16,6 +16,7 @@ export class RateService {
     private readonly agentRepo: Repository<Agent>,
     @InjectRepository(AgentRate)
     private readonly rateRepo: Repository<AgentRate>,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -57,26 +58,30 @@ export class RateService {
     if (!agent) throw new NotFoundException('代理不存在');
     if (agent.isSystem) throw new BadRequestException('SYSTEM 虛擬代理不可設定比例');
 
-    const now = new Date();
+    // 關閉舊 + 新增新必須在同一 transaction，避免中途 crash 導致代理無有效比例
+    return this.dataSource.transaction(async (trx) => {
+      const rateRepo = trx.getRepository(AgentRate);
+      const now = new Date();
 
-    // 關閉當前生效紀錄
-    await this.rateRepo
-      .createQueryBuilder()
-      .update(AgentRate)
-      .set({ effectiveTo: now })
-      .where('agent_id = :agentId', { agentId: params.agentId })
-      .andWhere('effective_to IS NULL')
-      .execute();
+      // 關閉當前生效紀錄
+      await rateRepo
+        .createQueryBuilder()
+        .update(AgentRate)
+        .set({ effectiveTo: now })
+        .where('agent_id = :agentId', { agentId: params.agentId })
+        .andWhere('effective_to IS NULL')
+        .execute();
 
-    // 新增新紀錄
-    const newRate = this.rateRepo.create({
-      agentId: params.agentId,
-      rate: params.rate,
-      effectiveFrom: now,
-      effectiveTo: null,
-      createdBy: params.operatorId ?? null,
+      // 新增新紀錄
+      const newRate = rateRepo.create({
+        agentId: params.agentId,
+        rate: params.rate,
+        effectiveFrom: now,
+        effectiveTo: null,
+        createdBy: params.operatorId ?? null,
+      });
+      return rateRepo.save(newRate);
     });
-    return this.rateRepo.save(newRate);
   }
 
   /** 取得代理的 rate 變更歷史（新到舊） */

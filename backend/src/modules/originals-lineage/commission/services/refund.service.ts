@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommissionRecord } from '../entities/commission-record.entity';
+import { SettlementAdjustment } from '../entities/settlement-adjustment.entity';
 import { SettlementService } from './settlement.service';
 import { CommissionSettingsService } from './commission-settings.service';
 import { getCurrentPeriod } from '../utils/period.util';
@@ -24,6 +25,8 @@ export class RefundService {
   constructor(
     @InjectRepository(CommissionRecord)
     private readonly recordRepo: Repository<CommissionRecord>,
+    @InjectRepository(SettlementAdjustment)
+    private readonly adjustmentRepo: Repository<SettlementAdjustment>,
     private readonly settlementService: SettlementService,
     private readonly settings: CommissionSettingsService,
   ) {}
@@ -33,6 +36,19 @@ export class RefundService {
     operatorId?: string;
     reason?: string;
   }): Promise<{ adjustmentsCreated: number }> {
+    // 冪等檢查：同一筆交易不可重複沖銷
+    const alreadyRefunded = await this.adjustmentRepo.findOne({
+      where: {
+        sourceTransactionId: params.transactionId,
+        sourceType: 'refund',
+      },
+    });
+    if (alreadyRefunded) {
+      throw new ConflictException(
+        `交易 ${params.transactionId} 已沖銷過，不可重複操作`,
+      );
+    }
+
     const records = await this.recordRepo.find({
       where: { transactionId: params.transactionId },
     });

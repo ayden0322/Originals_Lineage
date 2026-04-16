@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommissionSetting } from '../entities/commission-setting.entity';
@@ -61,7 +61,45 @@ export class CommissionSettingsService {
    * - settlement_day 走預約下期：寫 history（effective_from_period = next period_key），settings 表也立即更新
    * - 其他 key：直接更新 settings 表 + 寫 history
    */
+  /** 設定值型別驗證（防止設入不合法的值導致系統異常） */
+  private validateValue(key: string, value: unknown): void {
+    const rules: Record<string, (v: unknown) => string | null> = {
+      settlement_day: (v) => {
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 1 || n > 31)
+          return '結算日必須是 1~31 的整數';
+        return null;
+      },
+      cookie_days: (v) => {
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 1 || n > 365)
+          return 'Cookie 天數必須是 1~365 的整數';
+        return null;
+      },
+      max_sub_rate: (v) => {
+        const n = Number(v);
+        if (isNaN(n) || n < 0 || n > 1)
+          return '子代理比例上限必須是 0~1';
+        return null;
+      },
+      mask_player_id_for_agents: (v) => {
+        if (typeof v !== 'boolean') return '必須是布林值';
+        return null;
+      },
+      self_referral_default: (v) => {
+        if (typeof v !== 'boolean') return '必須是布林值';
+        return null;
+      },
+    };
+    const check = rules[key];
+    if (check) {
+      const err = check(value);
+      if (err) throw new BadRequestException(`設定 ${key} 驗證失敗：${err}`);
+    }
+  }
+
   async set(key: string, value: unknown, operatorId?: string): Promise<void> {
+    this.validateValue(key, value);
     const existing = await this.settingRepo.findOne({ where: { key } });
     const oldValue = existing?.value ?? null;
 
