@@ -37,15 +37,23 @@ export class AttributionService {
     const existing = await this.attrRepo.findOne({ where: { playerId } });
     if (existing) return existing;
 
-    // 沒有歸屬 → 立即寫入 SYSTEM 並回傳（保證 commission 一定有對象）
+    // 沒有歸屬 → 寫入 SYSTEM（用 ON CONFLICT DO NOTHING 防併發）
     const systemId = await this.getSystemAgentId();
-    const attr = this.attrRepo.create({
-      playerId,
-      agentId: systemId,
-      linkId: null,
-      linkedSource: 'system',
-    });
-    return this.attrRepo.save(attr);
+    await this.dataSource
+      .createQueryBuilder()
+      .insert()
+      .into(PlayerAttribution)
+      .values({
+        playerId,
+        agentId: systemId,
+        linkId: null,
+        linkedSource: 'system',
+      })
+      .orIgnore()  // INSERT ... ON CONFLICT DO NOTHING
+      .execute();
+
+    // 重新查一次（可能是併發先寫的那筆，也可能是我們剛寫的）
+    return this.attrRepo.findOneOrFail({ where: { playerId } });
   }
 
   /**
@@ -92,13 +100,21 @@ export class AttributionService {
       }
     }
 
-    const attr = this.attrRepo.create({
-      playerId: params.playerId,
-      agentId,
-      linkId,
-      linkedSource: source,
-    });
-    return this.attrRepo.save(attr);
+    // 用 ON CONFLICT DO NOTHING 防併發：若其他 request 已搶先寫入就不覆蓋
+    await this.dataSource
+      .createQueryBuilder()
+      .insert()
+      .into(PlayerAttribution)
+      .values({
+        playerId: params.playerId,
+        agentId,
+        linkId,
+        linkedSource: source,
+      })
+      .orIgnore()
+      .execute();
+
+    return this.attrRepo.findOneOrFail({ where: { playerId: params.playerId } });
   }
 
   /**
