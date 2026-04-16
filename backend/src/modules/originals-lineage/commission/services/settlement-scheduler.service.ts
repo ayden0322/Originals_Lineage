@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { SettlementService } from './settlement.service';
 import { CommissionSettingsService } from './commission-settings.service';
 import {
@@ -26,7 +26,8 @@ export class SettlementSchedulerService {
     private readonly settings: CommissionSettingsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // 指定台北時區，確保不論伺服器 TZ 設定如何，都在台灣凌晨 00:00 執行
+  @Cron('0 0 * * *', { timeZone: 'Asia/Taipei' })
   async handleDailyCheck() {
     const now = new Date();
     const currentSettlementDay = await this.settings.get<number>('settlement_day', 5);

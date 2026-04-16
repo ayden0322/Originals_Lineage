@@ -6,6 +6,8 @@ import { Agent } from '../entities/agent.entity';
 import { CommissionRecord } from '../entities/commission-record.entity';
 import { RateService } from './rate.service';
 import { AttributionService } from './attribution.service';
+import { CommissionSettingsService } from './commission-settings.service';
+import { getCurrentPeriod } from '../utils/period.util';
 
 /**
  * 儲值成功事件 payload（由外部儲值模組發出）
@@ -43,6 +45,7 @@ export class CommissionEngineService {
     private readonly recordRepo: Repository<CommissionRecord>,
     private readonly rateService: RateService,
     private readonly attribution: AttributionService,
+    private readonly settings: CommissionSettingsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -85,7 +88,9 @@ export class CommissionEngineService {
       return;
     }
 
-    const periodKey = this.formatPeriodKey(event.paidAt);
+    // periodKey 以結算切點為準（而非單純月份），確保與 settlement 歸期一致
+    const settlementDay = await this.settings.get<number>('settlement_day', 5);
+    const periodKey = getCurrentPeriod(event.paidAt, settlementDay).periodKey;
 
     // ─── Case 3: 歸屬 SYSTEM（無歸屬） ─────────────────
     if (owner.isSystem) {
@@ -194,13 +199,6 @@ export class CommissionEngineService {
       paidAt: event.paidAt,
     });
     this.logger.log(`分潤 tx=${event.transactionId} amount=${event.amount} → SYSTEM`);
-  }
-
-  /** 格式化期別 key：'YYYY-MM'（以 paidAt 的年月為準，實際結算歸期由結算排程決定） */
-  private formatPeriodKey(paidAt: Date): string {
-    const y = paidAt.getFullYear();
-    const m = String(paidAt.getMonth() + 1).padStart(2, '0');
-    return `${y}-${m}`;
   }
 
   /** 金額四捨五入到小數點兩位（金錢標準） */

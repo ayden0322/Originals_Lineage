@@ -344,15 +344,26 @@ export class AgentService {
     return a;
   }
 
-  /** 產生代理代碼 A001/B001 */
+  /**
+   * 產生代理代碼 A001/B001
+   * 改用 MAX(code) 取最大值 +1，避免 count 在併發或刪除後不準的問題。
+   * 在 transaction 中執行，由外層 caller 保證已拿到 trx。
+   */
   private async generateCode(prefix: 'A' | 'B', trx: EntityManager) {
-    const repo = trx.getRepository(Agent);
-    const count = await repo
+    const result = await trx
+      .getRepository(Agent)
       .createQueryBuilder('a')
+      .select('MAX(a.code)', 'maxCode')
       .where('a.code LIKE :prefix', { prefix: `${prefix}%` })
       .andWhere('a.is_system = false')
-      .getCount();
-    return `${prefix}${String(count + 1).padStart(3, '0')}`;
+      .getRawOne<{ maxCode: string | null }>();
+
+    let nextNum = 1;
+    if (result?.maxCode) {
+      const numPart = parseInt(result.maxCode.replace(prefix, ''), 10);
+      if (!isNaN(numPart)) nextNum = numPart + 1;
+    }
+    return `${prefix}${String(nextNum).padStart(3, '0')}`;
   }
 
   /** 產生隨機推廣連結短碼（6 碼大寫英數） */
