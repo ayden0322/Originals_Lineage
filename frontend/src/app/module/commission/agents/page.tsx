@@ -403,7 +403,7 @@ function CreateAgentModal({
       form.resetFields();
       form.setFieldsValue({
         parentId: parentId ?? null,
-        rate: 0.3,
+        rate: parentId ? 0.6 : 0.3,
         selfReferralAllowed: false,
         canSetSubRate: false,
       });
@@ -414,11 +414,14 @@ function CreateAgentModal({
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      // 注意：當 parentId 由 props 帶入時，Form.Item 不會 render，
+      // Ant Design 的 validateFields 不回傳未 render 的欄位值，
+      // 所以必須用 props 的 parentId 而非 values.parentId
       await createAgent({
         name: values.name,
         loginAccount: values.loginAccount,
         password: values.password,
-        parentId: values.parentId || null,
+        parentId: parentId ?? values.parentId ?? null,
         rate: Number(values.rate),
         selfReferralAllowed: !!values.selfReferralAllowed,
         canSetSubRate: !!values.canSetSubRate,
@@ -471,23 +474,27 @@ function CreateAgentModal({
           <Input.Password autoComplete="new-password" />
         </Form.Item>
         <Form.Item
-          label="分潤比例"
+          label={parentId ? '分潤比例（從上層 A 的分潤中再切）' : '分潤比例'}
           name="rate"
           rules={[{ required: true }]}
-          extra="0.3 = 30%"
+          extra={parentId ? '0.6 = 上層 A 拿到的 60%' : '0.3 = 30%'}
         >
           <InputNumber min={0} max={1} step={0.05} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item label="允許自推自玩" name="selfReferralAllowed" valuePropName="checked">
-          <Switch />
-        </Form.Item>
-        <Form.Item
-          label="可設定子代理比例（A 限定）"
-          name="canSetSubRate"
-          valuePropName="checked"
-        >
-          <Switch />
-        </Form.Item>
+        {!parentId && (
+          <Form.Item label="允許自推自玩" name="selfReferralAllowed" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        )}
+        {!parentId && (
+          <Form.Item
+            label="可設定子代理比例（A 限定）"
+            name="canSetSubRate"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );
