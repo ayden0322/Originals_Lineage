@@ -5,6 +5,11 @@
  * - settlementDay > 當月天數 → 抓當月最後一天
  * - 採左閉右開區間 [start, end)，結算日當天 00:00 算下一期
  * - period_key 以「該期起始月份」為準（例如 [2026-04-05, 2026-05-05) → '2026-04'）
+ *
+ * ⚠️ 時區注意：所有 Date 計算均使用 Node.js process 的本地時區。
+ * 部署時請確保 TZ=Asia/Taipei（Docker compose 或 Zeabur 環境變數）。
+ * 結算排程已在 cron decorator 指定 timeZone: 'Asia/Taipei'，
+ * 但 period 計算使用 Date 原生方法（getMonth/getDate），受 process TZ 影響。
  */
 
 export interface PeriodRange {

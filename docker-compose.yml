@@ -22,6 +22,7 @@ services:
       - .env
     environment:
       - NODE_ENV=development
+      - TZ=Asia/Taipei
     depends_on:
       postgres:
         condition: service_healthy

@@ -15,6 +15,12 @@ import {
 @Entity('commission_settlement_adjustments')
 @Index('idx_commission_settlement_adj_settlement', ['settlementId'])
 @Index('idx_commission_settlement_adj_source_tx', ['sourceTransactionId'])
+// 退款沖銷冪等：同一筆交易只能有一組 refund adjustments（per agent）
+// partial unique index: 只在 source_type='refund' 且 source_transaction_id IS NOT NULL 時生效
+@Index('uq_commission_adj_refund_tx_agent', ['sourceTransactionId', 'settlementId'], {
+  unique: true,
+  where: `"source_type" = 'refund' AND "source_transaction_id" IS NOT NULL`,
+})
 export class SettlementAdjustment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
