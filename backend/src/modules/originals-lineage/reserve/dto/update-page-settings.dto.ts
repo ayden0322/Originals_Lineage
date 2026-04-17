@@ -11,7 +11,7 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdatePageSettingsDto {
-  @ApiPropertyOptional({ example: '事前預約活動' })
+  @ApiPropertyOptional({ example: '新兵報到活動' })
   @IsOptional()
   @IsString()
   pageTitle?: string;

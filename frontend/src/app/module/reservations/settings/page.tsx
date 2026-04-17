@@ -91,7 +91,7 @@ export default function ReserveSettingsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>事前預約 — 頁面設定</Title>
+        <Title level={4} style={{ margin: 0 }}>新兵報到 — 頁面設定</Title>
         <Button type="primary" onClick={handleSave} loading={saving}>
           儲存設定
         </Button>
@@ -111,7 +111,7 @@ export default function ReserveSettingsPage() {
             label="頁面標題"
             rules={[{ required: true, message: '請輸入頁面標題' }]}
           >
-            <Input placeholder="事前預約" />
+            <Input placeholder="新兵報到" />
           </Form.Item>
 
           <Form.Item name="pageSubtitle" label="副標題">

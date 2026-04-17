@@ -196,7 +196,7 @@ export default function ReserveMilestonesPage() {
         }}
       >
         <Title level={4} style={{ margin: 0 }}>
-          事前預約 — 里程碑管理
+          新兵報到 — 里程碑管理
         </Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
           新增里程碑

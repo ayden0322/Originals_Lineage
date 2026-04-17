@@ -305,7 +305,7 @@ function FontPreview({ form }: { form: ReturnType<typeof Form.useForm>[0] }) {
 const PAGE_ROUTES = [
   { path: '/public', label: '首頁' },
   { path: '/public/news', label: '最新消息' },
-  { path: '/public/shop', label: '線上商城' },
+  { path: '/public/shop', label: '禮包內容' },
   { path: '/public/sponsor', label: '贊助專區' },
   { path: '/public/events', label: '活動內容' },
   { path: '/public/drops', label: '掉落查詢' },

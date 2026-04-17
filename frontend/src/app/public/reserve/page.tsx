@@ -152,7 +152,7 @@ export default function ReservePage() {
       return;
     }
     if (!agreed) {
-      setError('請先勾選同意參加事前預約');
+      setError('請先勾選同意參加新兵報到');
       return;
     }
 
@@ -196,7 +196,7 @@ export default function ReservePage() {
         />
         <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>
-            {ps?.pageTitle || '事前預約'}
+            {ps?.pageTitle || '新兵報到'}
           </h1>
           {ps?.pageSubtitle && (
             <p className={styles.heroSubtitle}>{ps.pageSubtitle}</p>
@@ -241,7 +241,7 @@ export default function ReservePage() {
             {isReserved || justReserved ? (
               <div className={styles.reservedBadge}>
                 <span className={styles.reservedIcon}>✓</span>
-                <span>已完成事前預約</span>
+                <span>已完成新兵報到</span>
                 {statusData?.myReservation?.gameAccountName && (
                   <span className={styles.reservedAccount}>
                     {statusData.myReservation.gameAccountName}
@@ -269,7 +269,7 @@ export default function ReservePage() {
                     onChange={(e) => setAgreed(e.target.checked)}
                     className={styles.agreeCheckbox}
                   />
-                  <span>我同意參加事前預約</span>
+                  <span>我同意參加新兵報到</span>
                 </label>
                 {error && <div className={styles.errorMsg}>{error}</div>}
                 <button

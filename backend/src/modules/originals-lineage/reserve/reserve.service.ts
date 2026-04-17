@@ -100,7 +100,7 @@ export class ReserveService {
       where: { websiteUserId },
     });
     if (existing) {
-      throw new ConflictException('您已完成事前預約');
+      throw new ConflictException('您已完成新兵報到');
     }
 
     // 檢查 deadline
@@ -273,7 +273,7 @@ export class ReserveService {
 
     // 自動建立預設設定（單筆）
     const settings = this.pageSettingsRepo.create({
-      pageTitle: '事前預約活動',
+      pageTitle: '新兵報到活動',
       countBase: 0,
       isDistributionLocked: false,
     });

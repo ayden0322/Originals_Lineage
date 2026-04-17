@@ -145,8 +145,8 @@ export default function PublicHeader() {
   const mainNav = [
     { label: '首頁', path: '/public' },
     { label: '最新消息', path: '/public/news' },
-    ...(reserveEnabled ? [{ label: '事前預約', path: '/public/reserve' }] : []),
-    { label: '線上商城', path: '/public/shop' },
+    ...(reserveEnabled ? [{ label: '新兵報到', path: '/public/reserve' }] : []),
+    { label: '禮包內容', path: '/public/shop' },
     { label: '掉落查詢', path: '/public/drops' },
   ];
 

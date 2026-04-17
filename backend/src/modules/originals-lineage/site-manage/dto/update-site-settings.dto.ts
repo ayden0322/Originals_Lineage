@@ -256,7 +256,7 @@ export class UpdateSiteSettingsDto {
   gameDownloadUrl?: string;
 
   // ─── Reserve Page Settings ────────────────────────────────
-  @ApiPropertyOptional({ description: '啟用事前預約頁面' })
+  @ApiPropertyOptional({ description: '啟用新兵報到頁面' })
   @IsOptional()
   @IsBoolean()
   reserveEnabled?: boolean;
@@ -276,7 +276,7 @@ export class UpdateSiteSettingsDto {
   @IsString()
   reserveBgImageUrl?: string;
 
-  @ApiPropertyOptional({ example: '事前預約', description: '預約頁標題' })
+  @ApiPropertyOptional({ example: '新兵報到', description: '預約頁標題' })
   @IsOptional()
   @IsString()
   reserveTitle?: string;

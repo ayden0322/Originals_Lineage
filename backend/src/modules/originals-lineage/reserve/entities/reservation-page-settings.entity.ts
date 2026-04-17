@@ -10,7 +10,7 @@ export class ReservationPageSettings {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'page_title', type: 'varchar', default: '事前預約活動' })
+  @Column({ name: 'page_title', type: 'varchar', default: '新兵報到活動' })
   pageTitle: string;
 
   @Column({ name: 'page_subtitle', type: 'varchar', nullable: true })

@@ -277,7 +277,7 @@ export default function DistributionsPage() {
         }}
       >
         <Title level={4} style={{ margin: 0 }}>
-          事前預約 — 發獎管理
+          新兵報到 — 發獎管理
         </Title>
         <Button icon={<ReloadOutlined />} onClick={fetchData} loading={loading}>
           重新整理
