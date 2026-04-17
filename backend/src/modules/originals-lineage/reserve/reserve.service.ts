@@ -82,6 +82,8 @@ export class ReserveService {
         pageDescription: settings.pageDescription,
         deadlineAt: settings.deadlineAt,
         isDistributionLocked: settings.isDistributionLocked,
+        heroBackgroundUrl: settings.heroBackgroundUrl,
+        heroOverlayOpacity: settings.heroOverlayOpacity,
       },
       myReservation,
     };
