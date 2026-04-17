@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Originals Lineage Infra
+spec:
+  description: |
+    Infrastructure services for Originals Lineage platform (PostgreSQL, Redis, MinIO).
+  tags:
+    - Database
+  variables: []
+  readme: |
+    # Originals Lineage Infrastructure
+    PostgreSQL + Redis + MinIO for the Originals Lineage platform.
+  services:
+    # PostgreSQL
+    - name: postgresql
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: postgres:16-alpine
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        env:
+          POSTGRES_USER:
+            default: platform_admin
+            expose: true
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_DB:
+            default: platform_db
+            expose: true
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+          POSTGRES_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+            readonly: true
+
+    # Redis
+    - name: redis
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/redis.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: redis:7-alpine
+        ports:
+          - id: database
+            port: 6379
+            type: TCP
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          REDIS_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+          REDIS_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+            readonly: true
+
+    # MinIO
+    - name: minio
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/minio.svg
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+          command:
+            - minio
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+        ports:
+          - id: web
+            port: 9000
+            type: HTTP
+          - id: console
+            port: 9001
+            type: HTTP
+        volumes:
+          - id: data
+            dir: /data
+        env:
+          MINIO_ROOT_USER:
+            default: minioadmin
+            expose: true
+          MINIO_ROOT_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          MINIO_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true

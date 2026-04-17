@@ -62,6 +62,13 @@ export class UpdateAgentDto {
   @IsOptional() @IsBoolean() canSetSubRate?: boolean;
 }
 
+export class ResetAgentPasswordDto {
+  @ApiProperty({ example: 'NewP@ss123' })
+  @IsString()
+  @MinLength(6)
+  newPassword: string;
+}
+
 export class UpdateAgentRateDto {
   @ApiProperty({ example: 0.35 })
   @IsNumber()

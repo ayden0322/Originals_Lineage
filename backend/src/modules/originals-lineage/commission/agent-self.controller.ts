@@ -27,6 +27,7 @@ import {
   AgentSetSubRateDto,
   AgentCreateLinkDto,
   AgentToggleLinkDto,
+  AgentChangePasswordDto,
 } from './dto/agent.dto';
 
 /**
@@ -82,6 +83,15 @@ export class AgentSelfController {
   @Get('me/rate-history')
   rateHistory(@Req() req: Request) {
     return this.rateService.getRateHistory(this.getMe(req).id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AgentJwtGuard)
+  @Patch('me/password')
+  async changePassword(@Req() req: Request, @Body() dto: AgentChangePasswordDto) {
+    const me = this.getMe(req);
+    await this.agentService.changePassword(me.id, dto.oldPassword, dto.newPassword);
+    return { message: '密碼已變更' };
   }
 
   // ──────────── 推廣連結 ────────────

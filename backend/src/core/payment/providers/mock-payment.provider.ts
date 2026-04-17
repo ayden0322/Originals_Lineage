@@ -41,9 +41,12 @@ export class MockPaymentProvider implements PaymentProvider {
       void this.simulateCallback(params, transactionId);
     }, 500);
 
+    // 注意：mock 金流「故意不回傳 paymentUrl」。
+    // 原因：前端 shop 頁面收到 paymentUrl 會 window.location.href 過去，
+    // 但 mock 沒有真的付款頁，若給假網址（mock-payment.local）玩家會看到 DNS 錯誤。
+    // 改為不回 URL，前端走「訂單建立成功」分支，500ms 後我們自己打 webhook 完成付款模擬。
     return {
       transactionId,
-      paymentUrl: `https://mock-payment.local/pay/${transactionId}?amount=${params.amount}`,
       status: 'pending',
     };
   }

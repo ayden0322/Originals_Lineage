@@ -9,7 +9,8 @@ import {
 /**
  * 分潤明細
  * - 一筆儲值交易會展開成 1~2 筆 commission_records（A 一筆、B 一筆；若只有 A 則一筆）
- * - transaction_id 對應 payment_transactions.id
+ * - transaction_id 對應金流商回傳的外部 transactionId（payment_transactions.provider_transaction_id）
+ *   ※ 不是 payment_transactions.id（UUID），因為 mock / ECPay / SmilePay 的 tx id 是字串格式
  * - rate_snapshot / upstream_rate_snapshot 是為了保證歷史分潤永不重算
  * - period_key: 結算期標識，格式 'YYYY-MM'（以結算週期歸期為準，不一定等於交易月份）
  * - settlement_id: 結算後填入，NULL 表示尚未結算
@@ -17,6 +18,7 @@ import {
 @Entity('commission_records')
 @Index('idx_commission_records_tx', ['transactionId'])
 @Index('idx_commission_records_agent', ['agentId'])
+@Index('idx_commission_records_player', ['playerId'])
 @Index('idx_commission_records_settlement', ['settlementId'])
 @Index('idx_commission_records_period', ['periodKey'])
 @Index('idx_commission_records_agent_settlement', ['agentId', 'settlementId'])
@@ -24,11 +26,20 @@ export class CommissionRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'transaction_id', type: 'uuid' })
+  @Column({ name: 'transaction_id', type: 'varchar', length: 64 })
   transactionId: string;
 
   @Column({ name: 'agent_id', type: 'uuid' })
   agentId: string;
+
+  /**
+   * 該筆交易付款的玩家 ID（website_users.id）
+   * 存在 commission_records 是為了：
+   *  1. 報表 join 不會發生 agent→players 一對多的 Cartesian 爆行
+   *  2. 歷史分潤紀錄永遠知道是「哪個玩家貢獻的」，不受後續改綁影響
+   */
+  @Column({ name: 'player_id', type: 'uuid' })
+  playerId: string;
 
   @Column({ type: 'smallint' })
   level: number;

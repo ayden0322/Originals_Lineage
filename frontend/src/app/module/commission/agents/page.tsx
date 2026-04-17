@@ -14,10 +14,10 @@ import {
   Switch,
   Select,
   message,
-  Tooltip,
   Popconfirm,
   Alert,
   Typography,
+  Dropdown,
 } from 'antd';
 import {
   PlusOutlined,
@@ -26,9 +26,10 @@ import {
   PlayCircleOutlined,
   ArrowUpOutlined,
   SwapOutlined,
-  LinkOutlined,
-  HistoryOutlined,
+  MoreOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import type { ColumnsType, ExpandableConfig } from 'antd/es/table/interface';
 import {
   getAgentTree,
@@ -39,6 +40,7 @@ import {
   resumeAgent,
   promoteAgent,
   changeAgentParent,
+  resetAgentPassword,
 } from '@/lib/api/commission';
 import type { CommissionAgent, CommissionAgentTreeNode } from '@/lib/types';
 
@@ -65,6 +67,8 @@ export default function CommissionAgentsPage() {
   } | null>(null);
   const [parentChangeOpen, setParentChangeOpen] = useState(false);
   const [parentChangeTarget, setParentChangeTarget] = useState<AnyAgent | null>(null);
+  const [pwdResetOpen, setPwdResetOpen] = useState(false);
+  const [pwdResetTarget, setPwdResetTarget] = useState<AnyAgent | null>(null);
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -116,7 +120,103 @@ export default function CommissionAgentsPage() {
     setPromoteOpen(true);
   };
 
-  // ─── 表格欄位 ──────────────────────────
+  // ─── 操作按鈕 helpers ──────────────────────────
+
+  /** 產生主要操作（比例、編輯）+ 更多下拉選單 */
+  const renderActions = (row: AnyAgent) => {
+    const moreItems: MenuProps['items'] = [];
+
+    if (!row.parentId) {
+      moreItems.push({
+        key: 'add-sub',
+        icon: <PlusOutlined />,
+        label: '新增子代理',
+        onClick: () => {
+          setCreateParentId(row.id);
+          setCreateOpen(true);
+        },
+      });
+    }
+    if (row.parentId) {
+      moreItems.push(
+        {
+          key: 'promote',
+          icon: <ArrowUpOutlined />,
+          label: '升格為 A',
+          onClick: () => openPromote(row),
+        },
+        {
+          key: 'change-parent',
+          icon: <SwapOutlined />,
+          label: '轉組',
+          onClick: () => {
+            setParentChangeTarget(row);
+            setParentChangeOpen(true);
+          },
+        },
+      );
+    }
+    moreItems.push({
+      key: 'reset-pwd',
+      icon: <KeyOutlined />,
+      label: '重設密碼',
+      onClick: () => {
+        setPwdResetTarget(row);
+        setPwdResetOpen(true);
+      },
+    });
+    moreItems.push({ type: 'divider' });
+    if (row.status === 'active') {
+      moreItems.push({
+        key: 'suspend',
+        icon: <StopOutlined />,
+        label: '停權',
+        danger: true,
+        onClick: () => {
+          Modal.confirm({
+            title: `確定停權 ${row.code}？`,
+            onOk: () => handleSuspend(row),
+          });
+        },
+      });
+    } else {
+      moreItems.push({
+        key: 'resume',
+        icon: <PlayCircleOutlined />,
+        label: '恢復啟用',
+        onClick: () => handleResume(row),
+      });
+    }
+
+    return (
+      <Space size={4}>
+        <Button
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => {
+            setRateTarget(row);
+            setRateOpen(true);
+          }}
+        >
+          比例
+        </Button>
+        <Button
+          size="small"
+          onClick={() => {
+            setEditTarget(row);
+            setEditOpen(true);
+          }}
+        >
+          編輯
+        </Button>
+        <Dropdown menu={{ items: moreItems }} trigger={['click']}>
+          <Button size="small" icon={<MoreOutlined />} />
+        </Dropdown>
+      </Space>
+    );
+  };
+
+  // ─── 一級代理（A）表格欄位 ──────────────────────────
 
   const columns: ColumnsType<AnyAgent> = [
     {
@@ -126,141 +226,95 @@ export default function CommissionAgentsPage() {
       width: 100,
       render: (code: string, row) => (
         <Space>
+          <Tag color="purple" style={{ margin: 0 }}>A</Tag>
           <strong>{code}</strong>
           {row.parentId === null && row.code.startsWith('B') && (
-            <Tag color="blue">升格</Tag>
+            <Tag color="blue" style={{ margin: 0 }}>升格</Tag>
           )}
         </Space>
       ),
     },
-    { title: '名稱', dataIndex: 'name', key: 'name' },
-    { title: '登入帳號', dataIndex: 'loginAccount', key: 'loginAccount' },
+    { title: '名稱', dataIndex: 'name', key: 'name', width: 120 },
+    { title: '登入帳號', dataIndex: 'loginAccount', key: 'loginAccount', width: 140 },
     {
       title: '分潤比例',
       dataIndex: 'currentRate',
       key: 'currentRate',
-      width: 110,
+      width: 100,
       render: (v: number) => (
         <Tag color="gold">{(Number(v) * 100).toFixed(2)}%</Tag>
       ),
     },
     {
-      title: '層級',
-      key: 'level',
+      title: '狀態',
+      dataIndex: 'status',
+      key: 'status',
       width: 80,
-      render: (_, row) => (row.parentId ? <Tag>B</Tag> : <Tag color="purple">A</Tag>),
+      render: (s: string) =>
+        s === 'active' ? <Tag color="green">啟用</Tag> : <Tag color="red">停權</Tag>,
+    },
+    {
+      title: '自推',
+      dataIndex: 'selfReferralAllowed',
+      key: 'selfReferralAllowed',
+      width: 70,
+      render: (v: boolean) => (v ? <Tag color="green">允許</Tag> : <Tag>禁止</Tag>),
+    },
+    {
+      title: '設子%',
+      dataIndex: 'canSetSubRate',
+      key: 'canSetSubRate',
+      width: 70,
+      render: (v: boolean) => v ? <Tag color="green">允許</Tag> : <Tag>禁止</Tag>,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 200,
+      fixed: 'right',
+      render: (_, row) => renderActions(row),
+    },
+  ];
+
+  // ─── 二級代理（B）子表格欄位 ──────────────────────────
+
+  const subColumns: ColumnsType<AnyAgent> = [
+    {
+      title: '代碼',
+      dataIndex: 'code',
+      key: 'code',
+      width: 100,
+      render: (code: string) => (
+        <Space>
+          <Tag style={{ margin: 0, color: '#8c8c8c', borderColor: '#d9d9d9' }}>B</Tag>
+          <span>{code}</span>
+        </Space>
+      ),
+    },
+    { title: '名稱', dataIndex: 'name', key: 'name', width: 120 },
+    { title: '登入帳號', dataIndex: 'loginAccount', key: 'loginAccount', width: 140 },
+    {
+      title: '分潤比例',
+      dataIndex: 'currentRate',
+      key: 'currentRate',
+      width: 100,
+      render: (v: number) => (
+        <Tag color="gold">{(Number(v) * 100).toFixed(2)}%</Tag>
+      ),
     },
     {
       title: '狀態',
       dataIndex: 'status',
       key: 'status',
-      width: 90,
+      width: 80,
       render: (s: string) =>
         s === 'active' ? <Tag color="green">啟用</Tag> : <Tag color="red">停權</Tag>,
     },
     {
-      title: '自推開關',
-      dataIndex: 'selfReferralAllowed',
-      key: 'selfReferralAllowed',
-      width: 100,
-      render: (v: boolean) => (v ? <Tag color="green">允許</Tag> : <Tag>禁止</Tag>),
-    },
-    {
-      title: '可設子%',
-      dataIndex: 'canSetSubRate',
-      key: 'canSetSubRate',
-      width: 100,
-      render: (v: boolean, row) =>
-        row.parentId ? (
-          <Text type="secondary">-</Text>
-        ) : v ? (
-          <Tag color="green">允許</Tag>
-        ) : (
-          <Tag>禁止</Tag>
-        ),
-    },
-    {
       title: '操作',
       key: 'actions',
-      width: 380,
-      fixed: 'right',
-      render: (_, row) => (
-        <Space size="small" wrap>
-          <Tooltip title="調整比例">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => {
-                setRateTarget(row);
-                setRateOpen(true);
-              }}
-            >
-              比例
-            </Button>
-          </Tooltip>
-          <Button
-            size="small"
-            onClick={() => {
-              setEditTarget(row);
-              setEditOpen(true);
-            }}
-          >
-            編輯
-          </Button>
-          {!row.parentId && (
-            <Button
-              size="small"
-              icon={<PlusOutlined />}
-              type="dashed"
-              onClick={() => {
-                setCreateParentId(row.id);
-                setCreateOpen(true);
-              }}
-            >
-              新增子代理
-            </Button>
-          )}
-          {row.parentId && (
-            <>
-              <Button
-                size="small"
-                icon={<ArrowUpOutlined />}
-                onClick={() => openPromote(row)}
-              >
-                升格
-              </Button>
-              <Button
-                size="small"
-                icon={<SwapOutlined />}
-                onClick={() => {
-                  setParentChangeTarget(row);
-                  setParentChangeOpen(true);
-                }}
-              >
-                轉組
-              </Button>
-            </>
-          )}
-          {row.status === 'active' ? (
-            <Popconfirm
-              title={`確定停權 ${row.code}？`}
-              onConfirm={() => handleSuspend(row)}
-            >
-              <Button size="small" danger icon={<StopOutlined />}>
-                停權
-              </Button>
-            </Popconfirm>
-          ) : (
-            <Button
-              size="small"
-              icon={<PlayCircleOutlined />}
-              onClick={() => handleResume(row)}
-            >
-              恢復
-            </Button>
-          )}
-        </Space>
-      ),
+      width: 200,
+      render: (_, row) => renderActions(row),
     },
   ];
 
@@ -269,12 +323,12 @@ export default function CommissionAgentsPage() {
     expandedRowRender: (row) => {
       const children = ('children' in row ? row.children : []) as AnyAgent[];
       return (
-        <div style={{ background: '#f6f8fa', borderRadius: 8, padding: '8px 0', margin: '-8px 0' }}>
+        <div className="sub-agent-wrapper">
           <Table
             rowKey="id"
             size="small"
             pagination={false}
-            columns={columns}
+            columns={subColumns}
             dataSource={children}
             showHeader={false}
             style={{ background: 'transparent' }}
@@ -288,8 +342,24 @@ export default function CommissionAgentsPage() {
   return (
     <>
     <style>{`
-      .sub-agent-row td { background: #f6f8fa !important; }
-      .sub-agent-row:hover td { background: #eef1f5 !important; }
+      .sub-agent-wrapper {
+        background: #f8f9fb;
+        border-left: 3px solid #597ef7;
+        border-radius: 0 8px 8px 0;
+        padding: 6px 0;
+        margin: -8px 0 -8px 24px;
+      }
+      .sub-agent-row td {
+        background: transparent !important;
+        color: rgba(0, 0, 0, 0.55) !important;
+        font-size: 13px;
+      }
+      .sub-agent-row:hover td {
+        background: rgba(89, 126, 247, 0.06) !important;
+      }
+      .sub-agent-row .ant-tag {
+        opacity: 0.85;
+      }
     `}</style>
     <Card
       title="代理管理"
@@ -320,7 +390,7 @@ export default function CommissionAgentsPage() {
         dataSource={tree}
         expandable={expandable}
         pagination={false}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 960 }}
       />
 
       {/* ─── 新增代理 Modal ─── */}
@@ -367,6 +437,16 @@ export default function CommissionAgentsPage() {
         onSuccess={() => {
           setPromoteOpen(false);
           fetch();
+        }}
+      />
+
+      {/* ─── 重設密碼 Modal ─── */}
+      <ResetPasswordModal
+        open={pwdResetOpen}
+        agent={pwdResetTarget}
+        onClose={() => setPwdResetOpen(false)}
+        onSuccess={() => {
+          setPwdResetOpen(false);
         }}
       />
 
@@ -936,6 +1016,91 @@ function ChangeParentModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+function ResetPasswordModal({
+  open,
+  agent,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  agent: AnyAgent | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form] = Form.useForm();
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) form.resetFields();
+  }, [open, form]);
+
+  if (!agent) return null;
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setSubmitting(true);
+      await resetAgentPassword(agent.id, values.newPassword);
+      message.success(`${agent.code} 密碼已重設`);
+      onSuccess();
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } }).response?.data?.message;
+      if (msg) message.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={`重設密碼 - ${agent.code} ${agent.name}`}
+      open={open}
+      onCancel={onClose}
+      onOk={handleSubmit}
+      confirmLoading={submitting}
+      okText="確認重設"
+      cancelText="取消"
+    >
+      <Alert
+        type="warning"
+        showIcon
+        message="此操作將直接覆蓋代理的登入密碼"
+        style={{ marginBottom: 16 }}
+      />
+      <Form form={form} layout="vertical">
+        <Form.Item
+          label="新密碼"
+          name="newPassword"
+          rules={[
+            { required: true, message: '請輸入新密碼' },
+            { min: 6, message: '密碼至少 6 位' },
+          ]}
+        >
+          <Input.Password placeholder="輸入新密碼" autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item
+          label="確認新密碼"
+          name="confirmPassword"
+          dependencies={['newPassword']}
+          rules={[
+            { required: true, message: '請再次輸入新密碼' },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                if (!value || getFieldValue('newPassword') === value) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('兩次密碼不一致'));
+              },
+            }),
+          ]}
+        >
+          <Input.Password placeholder="再次輸入新密碼" autoComplete="new-password" />
         </Form.Item>
       </Form>
     </Modal>

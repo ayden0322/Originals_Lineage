@@ -338,6 +338,38 @@ export class AgentService {
     return result;
   }
 
+  /** 管理員重設代理密碼（不需舊密碼） */
+  async resetPassword(id: string, newPassword: string): Promise<void> {
+    if (newPassword.length < 6) {
+      throw new BadRequestException('密碼至少 6 位');
+    }
+    const agent = await this.findOneOrFail(id);
+    if (agent.isSystem) throw new BadRequestException('SYSTEM 代理不可變更密碼');
+    const hash = await bcrypt.hash(newPassword, 10);
+    await this.agentRepo.update(id, { passwordHash: hash });
+  }
+
+  /** 代理自己改密碼（需驗舊密碼） */
+  async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
+    if (newPassword.length < 6) {
+      throw new BadRequestException('新密碼至少 6 位');
+    }
+    // 因為 passwordHash 是 select: false，需要手動選取
+    const agent = await this.agentRepo
+      .createQueryBuilder('a')
+      .addSelect('a.passwordHash')
+      .where('a.id = :id', { id })
+      .getOne();
+    if (!agent) throw new NotFoundException('代理不存在');
+    if (agent.isSystem) throw new BadRequestException('SYSTEM 代理不可變更密碼');
+
+    const ok = await bcrypt.compare(oldPassword, agent.passwordHash);
+    if (!ok) throw new BadRequestException('舊密碼錯誤');
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await this.agentRepo.update(id, { passwordHash: hash });
+  }
+
   async findOneOrFail(id: string): Promise<Agent> {
     const a = await this.agentRepo.findOne({ where: { id } });
     if (!a) throw new NotFoundException('代理不存在');

@@ -24,6 +24,7 @@ import { CommissionSettingsService } from './services/commission-settings.servic
 import {
   CreateAgentDto,
   UpdateAgentDto,
+  ResetAgentPasswordDto,
   UpdateAgentRateDto,
   ChangeAgentParentDto,
   PromoteAgentDto,
@@ -158,6 +159,13 @@ export class AdminCommissionController {
   @RequirePermission('module.originals.commission.manage')
   resume(@Param('id') id: string) {
     return this.agentService.resume(id);
+  }
+
+  @Patch('agents/:id/password')
+  @RequirePermission('module.originals.commission.manage')
+  async resetPassword(@Param('id') id: string, @Body() dto: ResetAgentPasswordDto) {
+    await this.agentService.resetPassword(id, dto.newPassword);
+    return { message: '密碼已重設' };
   }
 
   // ──────────── 推廣連結 ────────────

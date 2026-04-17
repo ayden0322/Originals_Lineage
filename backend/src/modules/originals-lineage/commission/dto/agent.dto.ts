@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID, Min, Max } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean, IsUUID, Min, Max, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AgentLoginDto {
@@ -25,4 +25,15 @@ export class AgentCreateLinkDto {
 
 export class AgentToggleLinkDto {
   @IsBoolean() active: boolean;
+}
+
+export class AgentChangePasswordDto {
+  @ApiProperty({ example: 'OldP@ss' })
+  @IsString()
+  oldPassword: string;
+
+  @ApiProperty({ example: 'NewP@ss123' })
+  @IsString()
+  @MinLength(6)
+  newPassword: string;
 }
