@@ -14,9 +14,12 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ReserveService } from './reserve.service';
+import { RewardClaimService } from './reward-claim.service';
 import { UpdatePageSettingsDto } from './dto/update-page-settings.dto';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
+import { MarkClaimStatusDto } from './dto/mark-claim-status.dto';
+import type { RewardClaimStatus } from './entities/reward-claim.entity';
 import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../../common/guards/permission.guard';
 import { RequirePermission } from '../../../core/permission/decorators/require-permission.decorator';
@@ -28,7 +31,10 @@ import { RequirePermission } from '../../../core/permission/decorators/require-p
 @ApiTags('Public - Reservations')
 @Controller('public/originals/reserve')
 export class ReservePublicController {
-  constructor(private readonly reserveService: ReserveService) {}
+  constructor(
+    private readonly reserveService: ReserveService,
+    private readonly claimService: RewardClaimService,
+  ) {}
 
   /**
    * 取得預約頁狀態（人數、里程碑、頁面設定、我是否已預約）
@@ -53,6 +59,16 @@ export class ReservePublicController {
       req.ip ||
       null;
     return this.reserveService.create(websiteUserId, ipAddress);
+  }
+
+  /**
+   * 取得目前使用者的獎勵清單
+   */
+  @Get('my-rewards')
+  @UseGuards(JwtAuthGuard)
+  async myRewards(@Req() req: Request) {
+    const websiteUserId = (req as any).user?.sub;
+    return this.claimService.findMyClaims(websiteUserId);
   }
 
   // ─── Private helper: 從 token 取 userId（不拋錯）────────────────
@@ -82,7 +98,10 @@ export class ReservePublicController {
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('modules/originals/reservations')
 export class ReserveAdminController {
-  constructor(private readonly reserveService: ReserveService) {}
+  constructor(
+    private readonly reserveService: ReserveService,
+    private readonly claimService: RewardClaimService,
+  ) {}
 
   // ─── 預約管理 ──────────────────────────────────────────────────
 
@@ -155,5 +174,54 @@ export class ReserveAdminController {
   @RequirePermission('module.originals.settings.manage')
   deleteMilestone(@Param('id') id: string) {
     return this.reserveService.deleteMilestone(id);
+  }
+
+  // ─── 發獎批次 ─────────────────────────────────────────────────
+
+  /**
+   * 建立某里程碑的發放批次（為所有實際預約者建立 pending claim，可重複執行）
+   */
+  @Post('milestones/:id/distribute')
+  @RequirePermission('module.originals.reserve.manage')
+  distributeMilestone(@Param('id') id: string) {
+    return this.claimService.distributeMilestone(id);
+  }
+
+  /**
+   * 發放總覽：各里程碑的 pending / sent / failed 人數
+   */
+  @Get('distributions')
+  @RequirePermission('module.originals.reserve.view')
+  getDistributionSummary() {
+    return this.claimService.getDistributionSummary();
+  }
+
+  /**
+   * 查詢某里程碑底下的 claim 清單
+   */
+  @Get('milestones/:id/claims')
+  @RequirePermission('module.originals.reserve.view')
+  findClaimsByMilestone(
+    @Param('id') id: string,
+    @Query('status') status?: RewardClaimStatus,
+    @Query('page') page = 1,
+    @Query('limit') limit = 50,
+  ) {
+    return this.claimService.findClaimsByMilestone(id, status, +page, +limit);
+  }
+
+  /**
+   * 批次更新 claim 狀態（人工寄完信後標 sent）
+   */
+  @Patch('claims/status')
+  @RequirePermission('module.originals.reserve.manage')
+  markClaimsStatus(@Body() dto: MarkClaimStatusDto, @Req() req: Request) {
+    const operatorId = (req as any).user?.sub;
+    return this.claimService.markClaimsStatus(
+      dto.claimIds,
+      dto.status,
+      operatorId,
+      dto.note,
+    );
   }
 }

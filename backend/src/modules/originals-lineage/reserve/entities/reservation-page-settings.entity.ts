@@ -28,6 +28,18 @@ export class ReservationPageSettings {
   @Column({ name: 'is_distribution_locked', type: 'boolean', default: false })
   isDistributionLocked: boolean;
 
+  /** 全畫面 hero 背景圖 URL */
+  @Column({ name: 'hero_background_url', type: 'varchar', nullable: true })
+  heroBackgroundUrl: string | null;
+
+  /** 背景遮罩透明度（0-1），預設 0.55 讓文字好閱讀 */
+  @Column({
+    name: 'hero_overlay_opacity',
+    type: 'float',
+    default: 0.55,
+  })
+  heroOverlayOpacity: number;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

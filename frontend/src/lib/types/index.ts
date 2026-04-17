@@ -266,9 +266,46 @@ export interface ReservationStats {
   displayCount: number;
 }
 
-/** @deprecated 舊版預約欄位設定，新版不使用。保留供 reserve-design 頁面編譯用，P2 時移除 */
+/** @deprecated 舊版預約欄位設定，新版登入制預約不再使用；保留型別僅供後端 DTO 相容。 */
 export interface ReserveFieldConfig {
   [key: string]: { visible: boolean; required: boolean };
+}
+
+// ─── 發獎系統 ────────────────────────────────────────────────────
+
+export type RewardClaimStatus = 'pending' | 'sent' | 'failed';
+
+export interface RewardClaim {
+  id: string;
+  reservationId: string;
+  milestoneId: string;
+  gameAccountSnapshot: string;
+  rewardNameSnapshot: string;
+  status: RewardClaimStatus;
+  note: string | null;
+  sentAt: string | null;
+  sentBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MilestoneDistribution {
+  milestoneId: string;
+  rewardName: string;
+  threshold: number;
+  pending: number;
+  sent: number;
+  failed: number;
+  total: number;
+}
+
+export interface MyReward {
+  id: string;
+  milestoneId: string;
+  rewardName: string;
+  status: RewardClaimStatus;
+  sentAt: string | null;
+  createdAt: string;
 }
 
 // ═══════════════════════════════════════════════════════════════

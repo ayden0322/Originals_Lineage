@@ -4,7 +4,9 @@ import {
   IsInt,
   IsDateString,
   IsBoolean,
+  IsNumber,
   Min,
+  Max,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -39,4 +41,16 @@ export class UpdatePageSettingsDto {
   @IsOptional()
   @IsBoolean()
   isDistributionLocked?: boolean;
+
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/hero.jpg' })
+  @IsOptional()
+  @IsString()
+  heroBackgroundUrl?: string | null;
+
+  @ApiPropertyOptional({ example: 0.55 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  heroOverlayOpacity?: number;
 }

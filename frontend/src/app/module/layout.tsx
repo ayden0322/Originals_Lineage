@@ -35,7 +35,18 @@ interface MenuItem {
 const allMenuItems: MenuItem[] = [
   { key: '/module/dashboard', icon: <DashboardOutlined />, label: '儀表板' },
   { key: '/module/members', icon: <UserOutlined />, label: '會員管理', permission: 'module.originals.members.view' },
-  { key: '/module/reservations', icon: <CalendarOutlined />, label: '預約管理', permission: 'module.originals.reserve.view' },
+  {
+    key: 'reservations',
+    icon: <CalendarOutlined />,
+    label: '預約管理',
+    permission: 'module.originals.reserve.view',
+    children: [
+      { key: '/module/reservations', label: '預約名單' },
+      { key: '/module/reservations/distributions', label: '發獎管理', permission: 'module.originals.reserve.manage' },
+      { key: '/module/reservations/settings', label: '頁面設定', permission: 'module.originals.settings.manage' },
+      { key: '/module/reservations/milestones', label: '里程碑管理', permission: 'module.originals.settings.manage' },
+    ],
+  },
   {
     key: 'shop',
     icon: <ShoppingOutlined />,
@@ -70,7 +81,6 @@ const allMenuItems: MenuItem[] = [
         ],
       },
       { key: '/module/site-manage/changelog', label: '更新頁面管理' },
-      { key: '/module/site-manage/reserve-design', label: '預約頁設計' },
     ],
   },
   { key: '/module/media', icon: <PictureOutlined />, label: '媒體庫', permission: 'module.originals.media.view' },
@@ -196,7 +206,7 @@ export default function ModuleAdminLayout({
           theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
-          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment', 'commission']}
+          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment', 'commission', 'reservations']}
           items={menuItems}
           onClick={({ key }) => {
             // Only navigate for leaf items (those with actual paths)

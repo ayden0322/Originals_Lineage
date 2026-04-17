@@ -1,5 +1,13 @@
 import apiClient from './client';
-import type { ApiResponse, PaginatedResponse, ReservationMilestone } from '../types';
+import type {
+  ApiResponse,
+  PaginatedResponse,
+  ReservationMilestone,
+  RewardClaim,
+  RewardClaimStatus,
+  MilestoneDistribution,
+  MyReward,
+} from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -7,8 +15,11 @@ export interface ReservationPageSettings {
   pageTitle: string;
   pageSubtitle: string | null;
   pageDescription: string | null;
+  countBase: number;
   deadlineAt: string | null;
   isDistributionLocked: boolean;
+  heroBackgroundUrl: string | null;
+  heroOverlayOpacity: number;
 }
 
 export interface ReserveStatusResponse {
@@ -92,7 +103,7 @@ export async function getPageSettings(): Promise<ReservationPageSettings> {
 }
 
 export async function updatePageSettings(
-  dto: Partial<ReservationPageSettings & { countBase: number; deadlineAt: string }>,
+  dto: Partial<ReservationPageSettings>,
 ): Promise<ReservationPageSettings> {
   const { data } = await apiClient.patch<ApiResponse<ReservationPageSettings>>(
     '/modules/originals/reservations/page-settings',
@@ -145,4 +156,55 @@ export async function updateMilestone(
 
 export async function deleteMilestone(id: string): Promise<void> {
   await apiClient.delete(`/modules/originals/reservations/milestones/${id}`);
+}
+
+// ─── Admin: 發獎批次 ─────────────────────────────────────────────
+
+export async function distributeMilestone(
+  milestoneId: string,
+): Promise<{ created: number; skipped: number; totalReservations: number }> {
+  const { data } = await apiClient.post<
+    ApiResponse<{ created: number; skipped: number; totalReservations: number }>
+  >(`/modules/originals/reservations/milestones/${milestoneId}/distribute`);
+  return data.data;
+}
+
+export async function getDistributionSummary(): Promise<MilestoneDistribution[]> {
+  const { data } = await apiClient.get<ApiResponse<MilestoneDistribution[]>>(
+    '/modules/originals/reservations/distributions',
+  );
+  return data.data;
+}
+
+export async function getClaimsByMilestone(
+  milestoneId: string,
+  params: { status?: RewardClaimStatus; page?: number; limit?: number } = {},
+): Promise<PaginatedResponse<RewardClaim>> {
+  const { data } = await apiClient.get<
+    ApiResponse<PaginatedResponse<RewardClaim>>
+  >(`/modules/originals/reservations/milestones/${milestoneId}/claims`, {
+    params,
+  });
+  return data.data;
+}
+
+export async function markClaimsStatus(dto: {
+  claimIds: string[];
+  status: RewardClaimStatus;
+  note?: string;
+}): Promise<{ updated: number }> {
+  const { data } = await apiClient.patch<ApiResponse<{ updated: number }>>(
+    '/modules/originals/reservations/claims/status',
+    dto,
+  );
+  return data.data;
+}
+
+// ─── Public: 使用者獎勵 ──────────────────────────────────────────
+
+export async function getMyRewards(): Promise<MyReward[]> {
+  const { data } = await apiClient.get<ApiResponse<MyReward[]>>(
+    '/public/originals/reserve/my-rewards',
+  );
+  return data.data;
 }

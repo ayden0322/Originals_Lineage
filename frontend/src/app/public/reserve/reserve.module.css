@@ -10,25 +10,35 @@
 
 .hero {
   position: relative;
-  min-height: 80vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: calc(var(--header-total-height, 89px) + 40px) 24px 60px;
+  padding: calc(var(--header-total-height, 89px) + 40px) 24px 80px;
   overflow: hidden;
+  background-color: var(--bg-primary);
 }
 
+/* 背景圖遮罩：若有背景圖則加深色漸層保證可讀性 */
 .heroGradient {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    rgba(196, 162, 78, 0.08) 0%,
-    transparent 60%
-  );
   z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at 50% 30%,
+      rgba(196, 162, 78, 0.12) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(10, 10, 10, calc(var(--hero-overlay-opacity, 0.55) * 0.7)) 0%,
+      rgba(10, 10, 10, var(--hero-overlay-opacity, 0.55)) 55%,
+      rgba(10, 10, 10, 0.98) 100%
+    );
 }
 
 .heroContent {
@@ -237,31 +247,57 @@
 
 .rewardsSection {
   padding: 60px 24px;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
+}
+
+.rewardsHint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  margin: -28px 0 28px;
+  letter-spacing: 0.5px;
 }
 
 .rewardsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
 }
 
+/* 卡片改為 button，精簡不顯示內文 */
 .rewardCard {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background: var(--bg-secondary);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    transform 0.25s;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
 }
 
 .rewardCard:hover {
-  border-color: rgba(196, 162, 78, 0.2);
+  border-color: rgba(196, 162, 78, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .rewardReached {
-  border-color: rgba(196, 162, 78, 0.3);
-  box-shadow: 0 0 20px rgba(196, 162, 78, 0.08);
+  border-color: rgba(196, 162, 78, 0.55);
+  box-shadow: 0 0 18px rgba(196, 162, 78, 0.12);
+}
+
+.rewardReached:hover {
+  box-shadow: 0 8px 28px rgba(196, 162, 78, 0.25);
 }
 
 .rewardImageWrap {
@@ -276,45 +312,220 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.4s;
+}
+
+.rewardCard:hover .rewardImage {
+  transform: scale(1.05);
+}
+
+.rewardImagePlaceholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  color: rgba(196, 162, 78, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(196, 162, 78, 0.08),
+    rgba(0, 0, 0, 0.3)
+  );
 }
 
 .rewardReachedOverlay {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--accent-gold);
   color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(196, 162, 78, 0.5);
+  box-shadow: 0 0 12px rgba(196, 162, 78, 0.6);
 }
 
 .rewardInfo {
-  padding: 20px;
+  padding: 12px 14px 14px;
 }
 
 .rewardName {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.35;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rewardThreshold {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--accent-gold);
-  margin-bottom: 8px;
+  letter-spacing: 0.3px;
 }
 
-.rewardDesc {
+.rewardReachedTag {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(196, 162, 78, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid rgba(196, 162, 78, 0.4);
+}
+
+/* ─── Reward Detail Modal ──────────────────────────────────── */
+
+.detailModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: backdropFadeIn 0.2s ease-out;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.detailModal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: linear-gradient(
+    180deg,
+    #14120c 0%,
+    #0a0a0a 100%
+  );
+  border: 1px solid rgba(196, 162, 78, 0.35);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(196, 162, 78, 0.1);
+  animation: modalPop 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.detailClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: background 0.2s;
+}
+
+.detailClose:hover {
+  background: rgba(196, 162, 78, 0.25);
+}
+
+.detailImageWrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(196, 162, 78, 0.2);
+}
+
+.detailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detailBody {
+  padding: 24px 28px 28px;
+}
+
+.detailThreshold {
+  font-size: 12px;
+  color: var(--accent-gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.detailName {
+  font-family: var(--font-heading, Georgia, serif);
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #fff;
+}
+
+.detailReachedTag {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(196, 162, 78, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid rgba(196, 162, 78, 0.5);
+}
+
+.detailDesc {
   font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+  line-height: 1.75;
+}
+
+.detailDesc :global(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.detailDesc :global(p) {
+  margin: 0 0 10px;
+}
+
+.detailDescEmpty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+  margin: 0;
 }
 
 /* ─── Milestone Progress Track ─────────────────────────────── */
@@ -329,7 +540,7 @@
   display: flex;
   align-items: flex-start;
   position: relative;
-  padding: 40px 0;
+  padding: 56px 0 40px;
 }
 
 .milestoneNode {
@@ -340,108 +551,260 @@
   position: relative;
 }
 
-/* 軌道 */
+/* ─── 能量軌道（Rail）───────────────────────────────────── */
 
 .milestoneRail {
   position: absolute;
-  top: 18px;
+  top: 23px;
   right: 50%;
-  left: calc(-50% + 18px);
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
+  left: calc(-50% + 26px);
+  height: 6px;
+  border-radius: 3px;
   overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.6) 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      rgba(0, 0, 0, 0.6) 100%
+    );
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
 }
 
 .milestoneRailFill {
+  position: relative;
   height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
-  transition: width 0.8s ease-out;
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(138, 111, 46, 0.9) 0%,
+      var(--accent-gold, #c4a24e) 50%,
+      rgba(245, 215, 122, 1) 100%
+    );
+  box-shadow:
+    0 0 8px rgba(196, 162, 78, 0.6),
+    0 0 16px rgba(196, 162, 78, 0.35);
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
 }
 
-.railReached {
-  animation: shimmer 3s infinite;
+/* 內部流動的亮光帶（像能量流）*/
+.milestoneRailFill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: railStream 2.4s linear infinite;
+  mix-blend-mode: overlay;
 }
 
-@keyframes shimmer {
-  0% {
-    background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
-  }
-  50% {
-    background: linear-gradient(90deg, var(--accent-gold-light), var(--accent-gold));
-  }
-  100% {
-    background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold-light));
-  }
+@keyframes railStream {
+  0% { background-position: -100% 0; }
+  100% { background-position: 100% 0; }
 }
 
-/* 節點圓形 */
+.railReached::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 240, 180, 0.6),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: railSweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes railSweep {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
+/* ─── 節點圓形（能量徽章）──────────────────────────────── */
 
 .milestoneCircle {
-  width: 36px;
-  height: 36px;
+  position: relative;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   z-index: 1;
   flex-shrink: 0;
-  transition: all 0.3s;
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.4),
+    box-shadow 0.3s;
 }
 
-.circleReached {
-  background: var(--accent-gold);
-  color: #000;
-  box-shadow: 0 0 16px rgba(196, 162, 78, 0.5);
-  animation: glow 2s ease-in-out infinite;
+/* 待達成：黯淡，極慢呼吸 */
+.circlePending {
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(196, 162, 78, 0.05) 0%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+  color: rgba(255, 255, 255, 0.25);
+  animation: pendingBreath 3.5s ease-in-out infinite;
 }
 
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(196, 162, 78, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(196, 162, 78, 0.7);
-  }
+@keyframes pendingBreath {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.85; }
 }
 
+/* 目前里程碑：強烈脈衝 + 雙層擴散環 */
 .circleCurrent {
-  border: 3px solid var(--accent-gold);
-  background: transparent;
-  color: var(--accent-gold);
-  animation: pulse 2s ease-in-out infinite;
+  border: 3px solid var(--accent-gold, #c4a24e);
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(196, 162, 78, 0.35) 0%,
+      rgba(10, 10, 10, 0.7) 70%
+    );
+  color: var(--accent-gold, #c4a24e);
+  box-shadow:
+    0 0 0 0 rgba(196, 162, 78, 0.6),
+    0 0 24px rgba(196, 162, 78, 0.55);
+  animation: currentPulse 1.8s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes currentPulse {
   0%, 100% {
     transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(196, 162, 78, 0),
+      0 0 24px rgba(196, 162, 78, 0.55);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.06);
+    box-shadow:
+      0 0 0 8px rgba(196, 162, 78, 0.12),
+      0 0 36px rgba(196, 162, 78, 0.75);
   }
 }
 
-.circlePending {
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.2);
+/* 雙層擴散波紋（::before 與 ::after）*/
+.circleCurrent::before,
+.circleCurrent::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-gold, #c4a24e);
+  opacity: 0;
+  animation: waveRing 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.circleCurrent::after {
+  animation-delay: 1.1s;
+}
+
+@keyframes waveRing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* 已達成：黃金勳章風格（金屬浮雕 + 內部反光掃過，不擴散到圓外）*/
+.circleReached {
+  background:
+    radial-gradient(
+      circle at 35% 28%,
+      #fff2b8 0%,
+      #f5d77a 30%,
+      var(--accent-gold, #c4a24e) 65%,
+      #7a5820 100%
+    );
+  color: #1a1205;
+  text-shadow: 0 1px 1px rgba(255, 240, 180, 0.5);
+  border: 1.5px solid rgba(255, 240, 180, 0.55);
+  /* 金屬浮雕：內陰影做凸起感 + 輕微外投影 */
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 3px 8px rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(196, 162, 78, 0.15);
+  overflow: hidden;
+}
+
+/* 內部金屬反光斜掃（限制在圓內，不擴散到外面）*/
+.circleReached::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 220% 220%;
+  background-position: -60% -60%;
+  animation: medalShine 3.6s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+@keyframes medalShine {
+  0% {
+    background-position: -60% -60%;
+  }
+  55%, 100% {
+    background-position: 160% 160%;
+  }
 }
 
 /* 目前進度浮標 */
 
 .progressFloater {
   position: absolute;
-  top: -28px;
-  background: var(--accent-gold);
-  color: #000;
+  top: -32px;
+  background: linear-gradient(135deg, #f5d77a 0%, var(--accent-gold, #c4a24e) 100%);
+  color: #1a1205;
   font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 12px;
   border-radius: 4px;
   white-space: nowrap;
+  box-shadow:
+    0 4px 12px rgba(196, 162, 78, 0.35),
+    0 0 0 1px rgba(255, 240, 180, 0.5) inset;
+  animation: floaterBob 1.8s ease-in-out infinite;
+}
+
+@keyframes floaterBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 .progressFloater::after {
@@ -450,9 +813,9 @@
   bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--accent-gold);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--accent-gold, #c4a24e);
 }
 
 /* 節點資訊 */
@@ -533,7 +896,7 @@
   .milestoneTrack {
     flex-direction: column;
     align-items: flex-start;
-    padding: 20px 0 20px 40px;
+    padding: 20px 0 20px 44px;
   }
 
   .milestoneNode {
@@ -541,16 +904,17 @@
     align-items: center;
     gap: 16px;
     width: 100%;
+    padding: 18px 0;
   }
 
   .milestoneRail {
     position: absolute;
     top: auto;
-    left: 18px;
+    left: 19px;
     right: auto;
     bottom: 100%;
-    width: 4px;
-    height: 40px;
+    width: 6px;
+    height: 48px;
   }
 
   .milestoneRailFill {
@@ -558,10 +922,29 @@
     height: 100%;
   }
 
+  /* 手機版垂直流動：將 rail 內部亮帶方向改為 Y */
+  .milestoneRailFill::before {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0) 30%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0) 70%,
+      transparent 100%
+    );
+    background-size: 100% 200%;
+    animation: railStreamV 2.4s linear infinite;
+  }
+
+  @keyframes railStreamV {
+    0% { background-position: 0 -100%; }
+    100% { background-position: 0 100%; }
+  }
+
   .milestoneCircle {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
   }
 
   .milestoneLabel {
@@ -579,4 +962,77 @@
   .progressFloater::after {
     display: none;
   }
+}
+
+/* ─── 我的獎勵清單 ───────────────────────────────────────── */
+.myRewardsSection {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.myRewardsHint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  margin: -8px 0 24px;
+}
+
+.myRewardsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.myRewardItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  row-gap: 2px;
+  column-gap: 12px;
+  padding: 16px 18px;
+  background: rgba(196, 162, 78, 0.04);
+  border: 1px solid rgba(196, 162, 78, 0.25);
+  border-radius: 10px;
+}
+
+.myRewardName {
+  color: var(--accent-gold, #c4a24e);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.myRewardStatus {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.statusPending {
+  background: rgba(255, 186, 73, 0.12);
+  color: #f5b542;
+  border: 1px solid rgba(255, 186, 73, 0.35);
+}
+
+.statusSent {
+  background: rgba(82, 196, 26, 0.12);
+  color: #7bd14a;
+  border: 1px solid rgba(82, 196, 26, 0.35);
+}
+
+.statusFailed {
+  background: rgba(255, 77, 79, 0.12);
+  color: #ff7875;
+  border: 1px solid rgba(255, 77, 79, 0.35);
+}
+
+.myRewardSentAt {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
 }
