@@ -53,6 +53,8 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:4000/api
+      # 容器內部網路（給 Next.js rewrites 反向代理推廣連結用）
+      - INTERNAL_API_URL=http://backend:4000/api
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
     depends_on:

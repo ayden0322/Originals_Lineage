@@ -18,6 +18,7 @@ import {
   FileDoneOutlined,
   UserOutlined,
   LogoutOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { agentMe } from '@/lib/api/commission';
 import { clearTokens, getAccessToken } from '@/lib/api/client';
@@ -30,6 +31,7 @@ const baseMenu = [
   { key: '/agent/links', icon: <LinkOutlined />, label: '推廣連結' },
   { key: '/agent/settlements', icon: <FileDoneOutlined />, label: '結算紀錄' },
   { key: '/agent/players', icon: <UserOutlined />, label: '玩家明細' },
+  { key: '/agent/settings', icon: <SettingOutlined />, label: '帳號設定' },
 ];
 
 export default function AgentLayout({ children }: { children: React.ReactNode }) {

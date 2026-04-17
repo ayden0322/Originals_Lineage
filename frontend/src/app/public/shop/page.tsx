@@ -123,7 +123,14 @@ export default function ShopPage() {
         message.loading('正在跳轉到付款頁面...', 3);
         setTimeout(() => handlePaymentRedirect(payment), 500);
       } else {
-        message.success('訂單建立成功！');
+        // mock 金流：沒有真正的付款頁，後端會自己模擬 callback
+        const isMock = payment.transactionId?.startsWith('mock_');
+        message.success(
+          isMock
+            ? '訂單建立成功（測試模式，數秒內將自動完成模擬付款）'
+            : '訂單建立成功！',
+          4,
+        );
       }
       setBuyingProduct(null);
     } catch (err: unknown) {

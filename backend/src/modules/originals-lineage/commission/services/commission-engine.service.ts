@@ -127,6 +127,7 @@ export class CommissionEngineService {
           {
             transactionId: event.transactionId,
             agentId: owner.id,
+            playerId: event.playerId,
             level: 2,
             baseAmount: event.amount,
             rateSnapshot: rateB,
@@ -139,6 +140,7 @@ export class CommissionEngineService {
           {
             transactionId: event.transactionId,
             agentId: parent.id,
+            playerId: event.playerId,
             level: 1,
             baseAmount: event.amount,
             rateSnapshot: rateA,
@@ -165,6 +167,7 @@ export class CommissionEngineService {
     await this.recordRepo.insert({
       transactionId: event.transactionId,
       agentId: owner.id,
+      playerId: event.playerId,
       level: 1,
       baseAmount: event.amount,
       rateSnapshot: rateA,
@@ -189,6 +192,7 @@ export class CommissionEngineService {
     await this.recordRepo.insert({
       transactionId: event.transactionId,
       agentId: systemAgentId,
+      playerId: event.playerId,
       level: 1,
       baseAmount: event.amount,
       rateSnapshot: 0,

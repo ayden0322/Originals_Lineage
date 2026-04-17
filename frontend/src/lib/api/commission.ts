@@ -122,6 +122,14 @@ export async function resumeAgent(id: string) {
   return data.data;
 }
 
+export async function resetAgentPassword(id: string, newPassword: string) {
+  const { data } = await apiClient.patch<ApiResponse<{ message: string }>>(
+    `${ADMIN}/agents/${id}/password`,
+    { newPassword },
+  );
+  return data.data;
+}
+
 // ─── Admin: Referral Links ────────────────────────────────────────
 
 export async function listAgentLinks(agentId: string): Promise<CommissionReferralLink[]> {
@@ -334,6 +342,14 @@ export async function agentMyPlayers(params?: {
   const { data } = await apiClient.get<ApiResponse<CommissionPlayerTransaction[]>>(
     `${AGENT}/me/players`,
     { params },
+  );
+  return data.data;
+}
+
+export async function agentChangePassword(oldPassword: string, newPassword: string) {
+  const { data } = await apiClient.patch<ApiResponse<{ message: string }>>(
+    `${AGENT}/me/password`,
+    { oldPassword, newPassword },
   );
   return data.data;
 }

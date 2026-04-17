@@ -124,9 +124,10 @@ export class AgentReportService {
 
     const mask = await this.settings.get<boolean>('mask_player_id_for_agents', true);
 
+    // 直接用 commission_records.player_id（寫入時就已快照），
+    // 不再 join commission_player_attributions，避免 agent→players 一對多的 Cartesian 爆行
     const qb = this.recordRepo
       .createQueryBuilder('r')
-      .innerJoin('commission_player_attributions', 'pa', 'pa.agent_id = r.agent_id')
       .where('r.agent_id IN (:...ids)', { ids })
       .orderBy('r.paid_at', 'DESC');
 
@@ -141,7 +142,7 @@ export class AgentReportService {
       .select([
         'r.id AS id',
         'r.transaction_id AS transaction_id',
-        'pa.player_id AS player_id',
+        'r.player_id AS player_id',
         'r.base_amount AS base_amount',
         'r.commission_amount AS commission_amount',
         'r.paid_at AS paid_at',
@@ -191,9 +192,8 @@ export class AgentReportService {
       const txIds = records.map((r) => r.transactionId);
       const playerRows = await this.recordRepo.manager
         .createQueryBuilder()
-        .select(['r.transaction_id AS tx', 'pa.player_id AS pid'])
+        .select(['r.transaction_id AS tx', 'r.player_id AS pid'])
         .from(CommissionRecord, 'r')
-        .innerJoin('commission_player_attributions', 'pa', 'pa.agent_id = r.agent_id')
         .where('r.transaction_id IN (:...txIds)', { txIds })
         .andWhere('r.agent_id = :agentId', { agentId })
         .getRawMany();
