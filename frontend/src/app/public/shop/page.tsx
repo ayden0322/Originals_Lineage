@@ -1,8 +1,22 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Row, Col, Tag, Button, Typography, Modal, Spin, Empty, message, Tabs, Space, Radio, Alert } from 'antd';
+import {
+  Card,
+  Row,
+  Col,
+  Tag,
+  Button,
+  Typography,
+  Modal,
+  Spin,
+  Empty,
+  message,
+  Space,
+  Radio,
+  Alert,
+} from 'antd';
 import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
 
 /** 將後端 decimal(10,2) 字串/數字格式化為「NT$ 1,234」(整數金額) */
@@ -11,27 +25,34 @@ function formatPrice(value: number | string): string {
   if (!Number.isFinite(num)) return 'NT$ 0';
   return `NT$ ${Math.round(num).toLocaleString('zh-TW')}`;
 }
-import { getPublicProducts, createOrder, getPublicPaymentMethods, type PublicPaymentMethod } from '@/lib/api/shop';
+import {
+  getPublicProducts,
+  createOrder,
+  getPublicPaymentMethods,
+  type PublicPaymentMethod,
+} from '@/lib/api/shop';
 import { getAccessToken } from '@/lib/api/client';
 import { useShopConfig } from '@/components/providers/ShopConfigProvider';
 import PublicFooter from '@/components/public/PublicFooter';
-import type { Product, PaymentResult, ProductCategory } from '@/lib/types';
+import type { Product, PaymentResult } from '@/lib/types';
 
 const { Title, Paragraph, Text } = Typography;
-
-const CATEGORY_TABS: { key: ProductCategory; label: string; color: string }[] = [
-  { key: 'diamond', label: '鑽石', color: 'blue' },
-  { key: 'game_item', label: '遊戲禮包', color: 'purple' },
-  { key: 'monthly_card', label: '月卡', color: 'gold' },
-];
 
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
 function formatLimits(p: Product): string[] {
   const tags: string[] = [];
   if (p.dailyLimit != null) tags.push(`每日 ${p.dailyLimit} 次`);
-  if (p.weeklyLimit != null && p.weeklyResetDay != null && p.weeklyResetHour != null) {
-    tags.push(`每週 ${p.weeklyLimit} 次（${WEEKDAY_LABELS[p.weeklyResetDay]} ${String(p.weeklyResetHour).padStart(2, '0')}:00 重置）`);
+  if (
+    p.weeklyLimit != null &&
+    p.weeklyResetDay != null &&
+    p.weeklyResetHour != null
+  ) {
+    tags.push(
+      `每週 ${p.weeklyLimit} 次（${WEEKDAY_LABELS[p.weeklyResetDay]} ${String(
+        p.weeklyResetHour,
+      ).padStart(2, '0')}:00 重置）`,
+    );
   }
   if (p.monthlyLimit != null) tags.push(`每月 ${p.monthlyLimit} 次`);
   if (p.accountLimit > 0) tags.push(`帳號限購 ${p.accountLimit} 次`);
@@ -62,19 +83,22 @@ function handlePaymentRedirect(payment: PaymentResult) {
 export default function ShopPage() {
   const router = useRouter();
   const { config: shopConfig } = useShopConfig();
-  const heroSettings = shopConfig.settings;
+  const settings = shopConfig.settings;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<ProductCategory>('diamond');
 
   // 商品詳細 Modal 狀態
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   // 購買 Modal 狀態
   const [buyingProduct, setBuyingProduct] = useState<Product | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>([]);
-  const [selectedMethod, setSelectedMethod] = useState<'atm' | 'cvs' | 'credit_card' | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>(
+    [],
+  );
+  const [selectedMethod, setSelectedMethod] = useState<
+    'atm' | 'cvs' | 'credit_card' | null
+  >(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -96,9 +120,41 @@ export default function ShopPage() {
     })();
   }, []);
 
-  const filteredProducts = useMemo(
-    () => products.filter((p) => p.category === activeCategory),
-    [products, activeCategory],
+  /** 貨幣顯示（icon + 數量 + 名稱），icon 與數字靠近、數字與名稱保留較大間距 */
+  const Currency = ({
+    amount,
+    size = 20,
+    fontSize = 14,
+  }: {
+    amount: number;
+    size?: number;
+    fontSize?: number;
+  }) => (
+    <Text
+      strong
+      style={{
+        color: settings.currencyColor,
+        display: 'inline-flex',
+        alignItems: 'center',
+        fontSize,
+      }}
+    >
+      {settings.currencyIconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={settings.currencyIconUrl}
+          alt={settings.currencyName}
+          style={{
+            width: size,
+            height: size,
+            objectFit: 'contain',
+            marginRight: 4,
+          }}
+        />
+      ) : null}
+      <span style={{ marginRight: 8 }}>{amount}</span>
+      <span>{settings.currencyName}</span>
+    </Text>
   );
 
   const openBuyModal = (product: Product) => {
@@ -107,7 +163,7 @@ export default function ShopPage() {
       return;
     }
     setBuyingProduct(product);
-    setSelectedMethod(paymentMethods[0].method); // 預設第一個
+    setSelectedMethod(paymentMethods[0].method);
   };
 
   const handleConfirmBuy = async () => {
@@ -123,7 +179,6 @@ export default function ShopPage() {
         message.loading('正在跳轉到付款頁面...', 3);
         setTimeout(() => handlePaymentRedirect(payment), 500);
       } else {
-        // mock 金流：沒有真正的付款頁，後端會自己模擬 callback
         const isMock = payment.transactionId?.startsWith('mock_');
         message.success(
           isMock
@@ -152,10 +207,10 @@ export default function ShopPage() {
   return (
     <div style={{ paddingTop: 'var(--header-total-height, 89px)' }}>
       {/* ─── Hero 區（後台美編設定） ─────────────────────────────── */}
-      {heroSettings.heroEnabled && (
+      {settings.heroEnabled && (
         <div
           style={{
-            minHeight: heroSettings.heroHeight,
+            minHeight: settings.heroHeight,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -163,146 +218,155 @@ export default function ShopPage() {
             textAlign: 'center',
             padding: '32px 16px',
             marginBottom: 32,
-            color: heroSettings.heroTextColor,
-            background: heroSettings.heroBgImageUrl
-              ? `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("${heroSettings.heroBgImageUrl}") center/cover no-repeat`
+            color: settings.heroTextColor,
+            background: settings.heroBgImageUrl
+              ? `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("${settings.heroBgImageUrl}") center/cover no-repeat`
               : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           }}
         >
           <Title
             level={2}
-            style={{ marginBottom: 8, color: heroSettings.heroTextColor }}
+            style={{ marginBottom: 8, color: settings.heroTextColor }}
           >
             <GiftOutlined style={{ marginRight: 8 }} />
-            {heroSettings.heroTitle}
+            {settings.heroTitle}
           </Title>
           <Paragraph
             style={{
               fontSize: 16,
               marginBottom: 16,
-              color: heroSettings.heroTextColor,
+              color: settings.heroTextColor,
               opacity: 0.85,
             }}
           >
-            {heroSettings.heroSubtitle}
+            {settings.heroSubtitle}
           </Paragraph>
           {!isLoggedIn && (
             <Alert
               type="warning"
               showIcon
-              message="請先登入後才能購買商品"
+              message="請先登入後才能贊助"
               style={{ maxWidth: 360, margin: '0 auto' }}
             />
           )}
         </div>
       )}
 
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-
-      <Tabs
-        activeKey={activeCategory}
-        onChange={(k) => setActiveCategory(k as ProductCategory)}
-        centered
-        size="large"
-        style={{ marginBottom: 16 }}
-        items={CATEGORY_TABS.map((c) => ({ key: c.key, label: c.label }))}
-      />
-
-      {filteredProducts.length === 0 ? (
-        <Empty description="此分類目前沒有商品" style={{ padding: '80px 0' }} />
-      ) : (
-        <Row gutter={[24, 24]} align="stretch">
-          {filteredProducts.map((product) => {
-            const limitTags = formatLimits(product);
-            return (
-              <Col xs={24} sm={12} md={8} lg={6} key={product.id} style={{ display: 'flex' }}>
-                <Card
-                  hoverable
-                  onClick={() => setDetailProduct(product)}
-                  style={{ borderRadius: 12, display: 'flex', flexDirection: 'column', width: '100%', cursor: 'pointer' }}
-                  styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1 } }}
-                  cover={
-                    product.imageUrl ? (
-                      <img alt={product.name} src={product.imageUrl} style={{ height: 180, objectFit: 'cover' }} />
-                    ) : (
-                      <div
-                        style={{
-                          height: 180,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <GiftOutlined style={{ fontSize: 48, color: '#fff' }} />
-                      </div>
-                    )
-                  }
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+        {products.length === 0 ? (
+          <Empty
+            description="目前沒有上架的方案"
+            style={{ padding: '80px 0' }}
+          />
+        ) : (
+          <Row gutter={[24, 24]} align="stretch">
+            {products.map((product) => {
+              const limitTags = formatLimits(product);
+              return (
+                <Col
+                  xs={24}
+                  sm={12}
+                  md={8}
+                  lg={6}
+                  key={product.id}
+                  style={{ display: 'flex' }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <Title level={5} style={{ marginBottom: 4 }}>
-                      {product.name}
-                    </Title>
-                    <Paragraph
-                      type="secondary"
-                      ellipsis={{ rows: 2 }}
-                      style={{ marginBottom: 12, minHeight: 44 }}
-                    >
-                      {product.description}
-                    </Paragraph>
-                    <div style={{ marginBottom: 8 }}>
-                      {product.category === 'diamond' ? (
-                        <Text strong style={{ color: '#1677ff', fontSize: 14 }}>
-                          💎 {product.diamondAmount} 鑽石
-                        </Text>
-                      ) : (
-                        <Text strong style={{ color: '#722ed1', fontSize: 14 }}>
-                          🎁 {product.gameItemName} x{product.gameItemQuantity}
-                        </Text>
-                      )}
-                    </div>
-                    {limitTags.length > 0 && (
-                      <Space size={[4, 4]} wrap style={{ marginBottom: 12 }}>
-                        {limitTags.map((t) => (
-                          <Tag key={t} color="orange" style={{ fontSize: 11 }}>
-                            {t}
-                          </Tag>
-                        ))}
-                      </Space>
-                    )}
-                    <div style={{ marginBottom: 16 }}>
-                      <Text strong style={{ color: '#cf1322', fontSize: 20 }}>
-                        {formatPrice(product.price)}
-                      </Text>
-                    </div>
-                  </div>
-                  {/*
-                    未登入時不使用 disabled，避免 antd 深色 disabled 配色
-                    （bg rgba(255,255,255,0.08) + color 0.25）在深灰 Card 上
-                    對比幾乎為零、按鈕「看不到」。改成可點擊導去登入頁。
-                  */}
-                  <Button
-                    type="primary"
-                    icon={<ShoppingCartOutlined />}
-                    block
-                    size="large"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isLoggedIn) {
-                        openBuyModal(product);
-                      } else {
-                        router.push('/auth/login?redirect=/public/shop');
-                      }
+                  <Card
+                    hoverable
+                    onClick={() => setDetailProduct(product)}
+                    style={{
+                      borderRadius: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      width: '100%',
+                      cursor: 'pointer',
                     }}
+                    styles={{
+                      body: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                      },
+                    }}
+                    cover={
+                      product.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          alt={product.name}
+                          src={product.imageUrl}
+                          style={{ height: 180, objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            height: 180,
+                            background:
+                              'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <GiftOutlined style={{ fontSize: 48, color: '#fff' }} />
+                        </div>
+                      )
+                    }
                   >
-                    {isLoggedIn ? '購買' : '前往登入'}
-                  </Button>
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
-      )}
+                    <div style={{ flex: 1 }}>
+                      <Title level={5} style={{ marginBottom: 4 }}>
+                        {product.name}
+                      </Title>
+                      <Paragraph
+                        type="secondary"
+                        ellipsis={{ rows: 2 }}
+                        style={{ marginBottom: 12, minHeight: 44 }}
+                      >
+                        {product.description}
+                      </Paragraph>
+                      <div style={{ marginBottom: 8 }}>
+                        <Currency amount={product.diamondAmount} />
+                      </div>
+                      {limitTags.length > 0 && (
+                        <Space size={[4, 4]} wrap style={{ marginBottom: 12 }}>
+                          {limitTags.map((t) => (
+                            <Tag
+                              key={t}
+                              color={settings.accentColor}
+                              style={{ fontSize: 11 }}
+                            >
+                              {t}
+                            </Tag>
+                          ))}
+                        </Space>
+                      )}
+                      <div style={{ marginBottom: 16 }}>
+                        <Text strong style={{ color: '#cf1322', fontSize: 20 }}>
+                          {formatPrice(product.price)}
+                        </Text>
+                      </div>
+                    </div>
+                    <Button
+                      type="primary"
+                      icon={<ShoppingCartOutlined />}
+                      block
+                      size="large"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isLoggedIn) {
+                          openBuyModal(product);
+                        } else {
+                          router.push('/auth/login?redirect=/public/shop');
+                        }
+                      }}
+                    >
+                      {isLoggedIn ? '贊助' : '前往登入'}
+                    </Button>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        )}
       </div>
 
       {/* ─── 商品詳細 Modal ──────────────────────────────────── */}
@@ -314,128 +378,133 @@ export default function ShopPage() {
         width={520}
         styles={{ body: { padding: 0 } }}
       >
-        {detailProduct && (() => {
-          const limitTags = formatLimits(detailProduct);
-          return (
-            <div>
-              {/* 商品圖片 */}
-              {detailProduct.imageUrl ? (
-                <img
-                  alt={detailProduct.name}
-                  src={detailProduct.imageUrl}
-                  style={{ width: '100%', maxHeight: 300, objectFit: 'cover', display: 'block' }}
-                />
-              ) : (
-                <div
-                  style={{
-                    height: 200,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <GiftOutlined style={{ fontSize: 64, color: '#fff' }} />
-                </div>
-              )}
-
-              <div style={{ padding: '24px' }}>
-                {/* 名稱 */}
-                <Title level={4} style={{ marginBottom: 8 }}>
-                  {detailProduct.name}
-                </Title>
-
-                {/* 完整描述 */}
-                {detailProduct.description && (
-                  <Paragraph
-                    type="secondary"
-                    style={{ whiteSpace: 'pre-wrap', marginBottom: 16, fontSize: 14, lineHeight: 1.8 }}
+        {detailProduct &&
+          (() => {
+            const limitTags = formatLimits(detailProduct);
+            return (
+              <div>
+                {/* 商品圖片 */}
+                {detailProduct.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={detailProduct.name}
+                    src={detailProduct.imageUrl}
+                    style={{
+                      width: '100%',
+                      maxHeight: 300,
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: 200,
+                      background:
+                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    {detailProduct.description}
-                  </Paragraph>
+                    <GiftOutlined style={{ fontSize: 64, color: '#fff' }} />
+                  </div>
                 )}
 
-                {/* 數量資訊 */}
-                <div style={{ marginBottom: 12 }}>
-                  {detailProduct.category === 'diamond' ? (
-                    <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
-                      💎 {detailProduct.diamondAmount} 鑽石
-                    </Text>
-                  ) : (
-                    <Text strong style={{ color: '#722ed1', fontSize: 15 }}>
-                      🎁 {detailProduct.gameItemName} x{detailProduct.gameItemQuantity}
-                    </Text>
+                <div style={{ padding: '24px' }}>
+                  <Title level={4} style={{ marginBottom: 8 }}>
+                    {detailProduct.name}
+                  </Title>
+
+                  {detailProduct.description && (
+                    <Paragraph
+                      type="secondary"
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        marginBottom: 16,
+                        fontSize: 14,
+                        lineHeight: 1.8,
+                      }}
+                    >
+                      {detailProduct.description}
+                    </Paragraph>
                   )}
+
+                  <div style={{ marginBottom: 12 }}>
+                    <Currency
+                      amount={detailProduct.diamondAmount}
+                      size={22}
+                      fontSize={15}
+                    />
+                  </div>
+
+                  {limitTags.length > 0 && (
+                    <Space size={[4, 6]} wrap style={{ marginBottom: 16 }}>
+                      {limitTags.map((t) => (
+                        <Tag
+                          key={t}
+                          color={settings.accentColor}
+                          style={{ fontSize: 12 }}
+                        >
+                          {t}
+                        </Tag>
+                      ))}
+                    </Space>
+                  )}
+
+                  <div style={{ marginBottom: 20 }}>
+                    <Text strong style={{ color: '#cf1322', fontSize: 24 }}>
+                      {formatPrice(detailProduct.price)}
+                    </Text>
+                  </div>
+
+                  <Button
+                    type="primary"
+                    icon={<ShoppingCartOutlined />}
+                    block
+                    size="large"
+                    onClick={() => {
+                      if (isLoggedIn) {
+                        setDetailProduct(null);
+                        openBuyModal(detailProduct);
+                      } else {
+                        router.push('/auth/login?redirect=/public/shop');
+                      }
+                    }}
+                  >
+                    {isLoggedIn ? '立即贊助' : '前往登入'}
+                  </Button>
                 </div>
-
-                {/* 限購規則 */}
-                {limitTags.length > 0 && (
-                  <Space size={[4, 6]} wrap style={{ marginBottom: 16 }}>
-                    {limitTags.map((t) => (
-                      <Tag key={t} color="orange" style={{ fontSize: 12 }}>
-                        {t}
-                      </Tag>
-                    ))}
-                  </Space>
-                )}
-
-                {/* 價格 */}
-                <div style={{ marginBottom: 20 }}>
-                  <Text strong style={{ color: '#cf1322', fontSize: 24 }}>
-                    {formatPrice(detailProduct.price)}
-                  </Text>
-                </div>
-
-                {/* 購買按鈕 */}
-                <Button
-                  type="primary"
-                  icon={<ShoppingCartOutlined />}
-                  block
-                  size="large"
-                  onClick={() => {
-                    if (isLoggedIn) {
-                      setDetailProduct(null);
-                      openBuyModal(detailProduct);
-                    } else {
-                      router.push('/auth/login?redirect=/public/shop');
-                    }
-                  }}
-                >
-                  {isLoggedIn ? '立即購買' : '前往登入'}
-                </Button>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
       </Modal>
 
       {/* ─── 購買確認 Modal ──────────────────────────────────── */}
       <Modal
-        title="確認購買"
+        title="確認贊助"
         open={!!buyingProduct}
         onCancel={() => setBuyingProduct(null)}
         onOk={handleConfirmBuy}
         confirmLoading={purchaseLoading}
-        okText="確認購買"
+        okText="確認贊助"
         cancelText="取消"
       >
         {buyingProduct && (
           <div>
             <Paragraph>
-              您即將購買 <Text strong>{buyingProduct.name}</Text>
+              您即將贊助 <Text strong>{buyingProduct.name}</Text>
             </Paragraph>
             <Paragraph>
-              價格：<Text strong style={{ color: '#cf1322' }}>{formatPrice(buyingProduct.price)}</Text>
+              金額：
+              <Text strong style={{ color: '#cf1322' }}>
+                {formatPrice(buyingProduct.price)}
+              </Text>
             </Paragraph>
-            {buyingProduct.category === 'diamond' ? (
-              <Paragraph>
-                鑽石數量：<Text strong style={{ color: '#1677ff' }}>{buyingProduct.diamondAmount}</Text> 顆
-              </Paragraph>
-            ) : (
-              <Paragraph>
-                發放道具：<Text strong style={{ color: '#722ed1' }}>{buyingProduct.gameItemName}</Text> x{buyingProduct.gameItemQuantity}
-              </Paragraph>
-            )}
+            <Paragraph>
+              獲得：
+              <Currency amount={buyingProduct.diamondAmount} />
+            </Paragraph>
             <div style={{ marginTop: 16 }}>
               <Text strong>付款方式：</Text>
               <div style={{ marginTop: 12 }}>

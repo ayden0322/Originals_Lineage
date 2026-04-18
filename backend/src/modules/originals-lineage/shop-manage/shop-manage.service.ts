@@ -7,12 +7,19 @@ const SETTINGS_KEY = 'shopSettings';
 
 /** 商城美編設定預設值 */
 export const DEFAULT_SHOP_SETTINGS = {
+  // Hero
   heroEnabled: true,
-  heroTitle: '始祖商城',
-  heroSubtitle: '選購超值商品，開啟您的冒險之旅',
+  heroTitle: '贊助支持',
+  heroSubtitle: '選購四海銀票，支持伺服器營運',
   heroBgImageUrl: null as string | null,
   heroHeight: 240,
   heroTextColor: '#ffffff',
+  // 貨幣顯示（與 packages 頁一致，統一用四海銀票）
+  currencyName: '四海銀票',
+  currencyIconUrl: null as string | null,
+  currencyColor: '#c4a24e',
+  // 主色（Tag / 強調色）
+  accentColor: '#c4a24e',
 };
 
 export type ShopSettings = typeof DEFAULT_SHOP_SETTINGS;

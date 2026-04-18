@@ -27,6 +27,7 @@
     "@tiptap/react": "^3.20.4",
     "@tiptap/starter-kit": "^3.20.4",
     "antd": "^5.20.0",
+    "antd-img-crop": "^4.30.0",
     "axios": "^1.7.0",
     "dayjs": "^1.11.19",
     "next": "14.2.15",

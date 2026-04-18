@@ -146,8 +146,9 @@ export default function PublicHeader() {
     { label: '首頁', path: '/public' },
     { label: '最新消息', path: '/public/news' },
     ...(reserveEnabled ? [{ label: '新兵報到', path: '/public/reserve' }] : []),
-    { label: '禮包內容', path: '/public/shop' },
+    { label: '禮包內容', path: '/public/packages' },
     { label: '掉落查詢', path: '/public/drops' },
+    { label: '贊助', path: '/public/shop' },
   ];
 
   // On non-homepage, always show solid header background

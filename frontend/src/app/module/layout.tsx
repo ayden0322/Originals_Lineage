@@ -16,6 +16,7 @@ import {
   AuditOutlined,
   CreditCardOutlined,
   PartitionOutlined,
+  GiftOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -50,12 +51,21 @@ const allMenuItems: MenuItem[] = [
   {
     key: 'shop',
     icon: <ShoppingOutlined />,
-    label: '商城管理',
+    label: '贊助管理',
     children: [
-      { key: '/module/shop/products', label: '商品管理', permission: 'module.originals.shop.view' },
+      { key: '/module/shop/products', label: '贊助方案', permission: 'module.originals.shop.view' },
       { key: '/module/shop/templates', label: '常用範本', permission: 'module.originals.shop.manage' },
-      { key: '/module/shop/orders', label: '訂單管理', permission: 'module.originals.orders.view' },
-      { key: '/module/shop/settings', label: '商城設定', permission: 'module.originals.shop.manage' },
+      { key: '/module/shop/orders', label: '贊助訂單', permission: 'module.originals.orders.view' },
+      { key: '/module/shop/settings', label: '贊助頁設定', permission: 'module.originals.shop.manage' },
+    ],
+  },
+  {
+    key: 'packages',
+    icon: <GiftOutlined />,
+    label: '禮包管理',
+    children: [
+      { key: '/module/packages', label: '禮包管理', permission: 'module.originals.shop.view' },
+      { key: '/module/packages/settings', label: '禮包頁設定', permission: 'module.originals.shop.manage' },
     ],
   },
   {
@@ -206,7 +216,7 @@ export default function ModuleAdminLayout({
           theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
-          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'payment', 'commission', 'reservations']}
+          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'packages', 'payment', 'commission', 'reservations']}
           items={menuItems}
           onClick={({ key }) => {
             // Only navigate for leaf items (those with actual paths)

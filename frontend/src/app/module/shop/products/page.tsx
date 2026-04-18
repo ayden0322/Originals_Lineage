@@ -9,12 +9,10 @@ import {
   Modal,
   Form,
   Input,
-  Radio,
   Switch,
   InputNumber,
   Popconfirm,
   message,
-  Tabs,
   Select,
   Upload,
   Row,
@@ -31,7 +29,6 @@ import {
   ArrowDownOutlined,
   UploadOutlined,
   SaveOutlined,
-  AppstoreOutlined,
   PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -41,7 +38,6 @@ import {
   updateProduct,
   deleteProduct,
   moveProduct,
-  getGameItems,
   getProductTemplates,
   createProductTemplate,
 } from '@/lib/api/shop';
@@ -50,16 +46,17 @@ import type {
   Product,
   CreateProductDto,
   ProductCategory,
-  GameItem,
   ProductTemplate,
 } from '@/lib/types';
 
 // ─── 常數 ──────────────────────────────────────────────────────────────
 
+/**
+ * 目前僅支援 diamond（四海銀票）類別。
+ * 歷史上有 game_item / monthly_card，資料庫可能仍有舊資料但本頁已不顯示／不允許新建。
+ */
 const CATEGORY_TABS: { key: ProductCategory; label: string; color: string }[] = [
-  { key: 'diamond', label: '鑽石', color: 'blue' },
-  { key: 'game_item', label: '遊戲禮包', color: 'purple' },
-  { key: 'monthly_card', label: '月卡', color: 'gold' },
+  { key: 'diamond', label: '四海銀票', color: 'gold' },
 ];
 
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -90,11 +87,6 @@ export default function ProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm<CreateProductDto>();
   const [enabledLimits, setEnabledLimits] = useState<LimitKey[]>([]);
-  const formCategory = Form.useWatch('category', form);
-
-  // 遊戲物品挑選器
-  const [itemPickerOpen, setItemPickerOpen] = useState(false);
-
   // 媒體庫挑選器
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
@@ -128,7 +120,6 @@ export default function ProductsPage() {
     form.resetFields();
     form.setFieldsValue({
       category,
-      gameItemQuantity: 1,
       stock: -1,
       accountLimit: 0,
       isActive: true,
@@ -153,18 +144,13 @@ export default function ProductsPage() {
     if (record.requiredLevel != null) limits.push('level');
     setEnabledLimits(limits);
 
-    // 先 reset 避免上一筆編輯殘留欄位（例如 A 是 diamond 有 diamondAmount，
-    // 切到 B 是 game_item 時 form 內 diamondAmount 還在）
     form.resetFields();
     form.setFieldsValue({
       name: record.name,
       description: record.description ?? undefined,
       price: Number(record.price),
-      category: record.category,
+      category: 'diamond',
       diamondAmount: record.diamondAmount,
-      gameItemId: record.gameItemId ?? undefined,
-      gameItemName: record.gameItemName ?? undefined,
-      gameItemQuantity: record.gameItemQuantity,
       imageUrl: record.imageUrl ?? undefined,
       stock: record.stock,
       accountLimit: record.accountLimit,
@@ -187,7 +173,8 @@ export default function ProductsPage() {
       name: values.name,
       description: values.description,
       price: values.price,
-      category: values.category,
+      category: 'diamond', // 固定 diamond（四海銀票）
+      diamondAmount: values.diamondAmount,
       imageUrl: values.imageUrl || undefined,
       stock: values.stock,
       accountLimit: enabledLimits.includes('account') ? values.accountLimit ?? 0 : 0,
@@ -200,13 +187,6 @@ export default function ProductsPage() {
       isActive: values.isActive,
       sortOrder: values.sortOrder,
     };
-    if (values.category === 'diamond') {
-      dto.diamondAmount = values.diamondAmount;
-    } else {
-      dto.gameItemId = values.gameItemId;
-      dto.gameItemName = values.gameItemName;
-      dto.gameItemQuantity = values.gameItemQuantity ?? 1;
-    }
     return dto;
   };
 
@@ -255,12 +235,12 @@ export default function ProductsPage() {
 
   const loadTemplates = useCallback(async () => {
     try {
-      const tpls = await getProductTemplates(formCategory);
+      const tpls = await getProductTemplates('diamond');
       setTemplates(tpls);
     } catch {
       // silent
     }
-  }, [formCategory]);
+  }, []);
 
   useEffect(() => {
     if (modalOpen) loadTemplates();
@@ -357,10 +337,7 @@ export default function ProductsPage() {
         title: '內容',
         key: 'content',
         width: 180,
-        render: (_, r) =>
-          r.category === 'diamond'
-            ? `💎 ${r.diamondAmount} 鑽`
-            : `🎁 ${r.gameItemName ?? '-'} x${r.gameItemQuantity}`,
+        render: (_, r) => `${r.diamondAmount} 四海銀票`,
       },
       {
         title: '限購',
@@ -430,15 +407,6 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      <Tabs
-        activeKey={activeCategory}
-        onChange={(k) => {
-          setActiveCategory(k as ProductCategory);
-          setPage(1);
-        }}
-        items={CATEGORY_TABS.map((c) => ({ key: c.key, label: c.label }))}
-      />
-
       <Table
         rowKey="id"
         columns={columns}
@@ -484,57 +452,18 @@ export default function ProductsPage() {
         </div>
 
         <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item name="category" label="商品分類" rules={[{ required: true }]}>
-            <Radio.Group
-              onChange={() => {
-                // 切換分類時清掉另一邊的欄位
-                form.setFieldsValue({
-                  diamondAmount: undefined,
-                  gameItemId: undefined,
-                  gameItemName: undefined,
-                });
-              }}
-            >
-              {CATEGORY_TABS.map((c) => (
-                <Radio.Button key={c.key} value={c.key}>
-                  {c.label}
-                </Radio.Button>
-              ))}
-            </Radio.Group>
+          {/* 類別固定為 diamond（四海銀票），不再提供切換 */}
+          <Form.Item name="category" hidden initialValue="diamond">
+            <Input />
           </Form.Item>
 
-          {/* 鑽石類欄位 */}
-          {formCategory === 'diamond' && (
-            <Form.Item
-              name="diamondAmount"
-              label="鑽石數量"
-              rules={[{ required: true, message: '請輸入鑽石數量' }]}
-            >
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-          )}
-
-          {/* 遊戲禮包/月卡欄位 */}
-          {(formCategory === 'game_item' || formCategory === 'monthly_card') && (
-            <>
-              <Form.Item label="遊戲物品" required>
-                <Space.Compact style={{ width: '100%' }}>
-                  <Form.Item name="gameItemName" noStyle rules={[{ required: true, message: '請選擇遊戲物品' }]}>
-                    <Input readOnly placeholder="點右側按鈕從遊戲庫挑選" />
-                  </Form.Item>
-                  <Button icon={<AppstoreOutlined />} onClick={() => setItemPickerOpen(true)}>
-                    選擇
-                  </Button>
-                </Space.Compact>
-                <Form.Item name="gameItemId" hidden>
-                  <InputNumber />
-                </Form.Item>
-              </Form.Item>
-              <Form.Item name="gameItemQuantity" label="每次發放數量" rules={[{ required: true }]}>
-                <InputNumber min={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </>
-          )}
+          <Form.Item
+            name="diamondAmount"
+            label="四海銀票數量"
+            rules={[{ required: true, message: '請輸入四海銀票數量' }]}
+          >
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
 
           <Form.Item name="name" label="商品名稱" rules={[{ required: true, message: '請輸入商品名稱' }]}>
             <Input />
@@ -715,19 +644,6 @@ export default function ProductsPage() {
         </Form>
       </Modal>
 
-      {/* ─── 遊戲物品挑選 Modal ─────────────────── */}
-      <GameItemPickerModal
-        open={itemPickerOpen}
-        onCancel={() => setItemPickerOpen(false)}
-        onSelect={(item) => {
-          form.setFieldsValue({ gameItemId: item.itemId, gameItemName: item.name });
-          if (!form.getFieldValue('name')) {
-            form.setFieldsValue({ name: item.name });
-          }
-          setItemPickerOpen(false);
-        }}
-      />
-
       {/* ─── 媒體庫挑選 Modal ───────────────────── */}
       <MediaPickerModal
         open={mediaPickerOpen}
@@ -755,89 +671,6 @@ export default function ProductsPage() {
         />
       </Modal>
     </div>
-  );
-}
-
-// ─── 子元件：遊戲物品挑選 ────────────────────────────────────────────
-
-function GameItemPickerModal({
-  open,
-  onCancel,
-  onSelect,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onSelect: (item: GameItem) => void;
-}) {
-  const [search, setSearch] = useState('');
-  const [items, setItems] = useState<GameItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await getGameItems(search || undefined, page, 30);
-      setItems(res.items);
-      setTotal(res.total);
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error?.response?.data?.message || '查詢遊戲物品失敗');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, page]);
-
-  useEffect(() => {
-    if (open) fetchItems();
-  }, [open, fetchItems]);
-
-  return (
-    <Modal
-      title="從遊戲庫選擇物品（item_id > 6000000）"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={720}
-      destroyOnClose
-    >
-      <Input.Search
-        placeholder="搜尋物品名稱"
-        onSearch={(v) => {
-          setSearch(v);
-          setPage(1);
-        }}
-        style={{ marginBottom: 12 }}
-        allowClear
-      />
-      <Table
-        rowKey="itemId"
-        size="small"
-        loading={loading}
-        dataSource={items}
-        columns={[
-          { title: 'item_id', dataIndex: 'itemId', width: 110 },
-          { title: '名稱', dataIndex: 'name' },
-          {
-            title: '操作',
-            width: 80,
-            render: (_, r: GameItem) => (
-              <Button size="small" type="primary" onClick={() => onSelect(r)}>
-                選擇
-              </Button>
-            ),
-          },
-        ]}
-        pagination={{
-          current: page,
-          total,
-          pageSize: 30,
-          onChange: (p) => setPage(p),
-          showSizeChanger: false,
-        }}
-      />
-    </Modal>
   );
 }
 

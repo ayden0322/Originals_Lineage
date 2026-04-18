@@ -1,26 +1,29 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Table, Tag, Button, Space, Popconfirm, message, Modal, Tabs } from 'antd';
+import { Table, Tag, Button, Space, Popconfirm, message, Modal } from 'antd';
 import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getProductTemplates, deleteProductTemplate } from '@/lib/api/shop';
 import type { ProductTemplate, ProductCategory } from '@/lib/types';
 
+/**
+ * 類別顯示。
+ * 目前僅支援 diamond（四海銀票）；game_item / monthly_card 保留以顯示歷史資料。
+ */
 const CATEGORY_LABEL: Record<ProductCategory, string> = {
-  diamond: '鑽石',
-  game_item: '遊戲禮包',
-  monthly_card: '月卡',
+  diamond: '四海銀票',
+  game_item: '（舊）遊戲禮包',
+  monthly_card: '（舊）月卡',
 };
 
 const CATEGORY_COLOR: Record<ProductCategory, string> = {
-  diamond: 'blue',
-  game_item: 'purple',
-  monthly_card: 'gold',
+  diamond: 'gold',
+  game_item: 'default',
+  monthly_card: 'default',
 };
 
 export default function ProductTemplatesPage() {
-  const [activeCategory, setActiveCategory] = useState<ProductCategory | 'all'>('all');
   const [data, setData] = useState<ProductTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -29,14 +32,15 @@ export default function ProductTemplatesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const tpls = await getProductTemplates(activeCategory === 'all' ? undefined : activeCategory);
+      // 僅載入 diamond 類別的範本
+      const tpls = await getProductTemplates('diamond');
       setData(tpls);
     } catch {
       message.error('載入範本失敗');
     } finally {
       setLoading(false);
     }
-  }, [activeCategory]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -108,17 +112,6 @@ export default function ProductTemplatesPage() {
       <p style={{ color: '#666', marginBottom: 16 }}>
         在「商品管理」新增/編輯商品時，可將欄位儲存為範本，所有管理者皆可載入再做小幅調整。
       </p>
-
-      <Tabs
-        activeKey={activeCategory}
-        onChange={(k) => setActiveCategory(k as ProductCategory | 'all')}
-        items={[
-          { key: 'all', label: '全部' },
-          { key: 'diamond', label: '鑽石' },
-          { key: 'game_item', label: '遊戲禮包' },
-          { key: 'monthly_card', label: '月卡' },
-        ]}
-      />
 
       <Table rowKey="id" columns={columns} dataSource={data} loading={loading} />
 

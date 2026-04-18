@@ -746,10 +746,70 @@ export interface ShopSettings {
   heroBgImageUrl: string | null;
   heroHeight: number;
   heroTextColor: string;
+  // 貨幣顯示（四海銀票）
+  currencyName: string;
+  currencyIconUrl: string | null;
+  currencyColor: string;
+  // 主色
+  accentColor: string;
 }
 
 export interface PublicShopConfig {
   settings: ShopSettings;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Package Manage（禮包內容）
+// ═══════════════════════════════════════════════════════════════
+
+export interface PackageItem {
+  name: string;
+  quantity: number;
+  description?: string;
+  iconUrl?: string;
+}
+
+export interface GamePackage {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  largeImageUrl: string | null;
+  currencyAmount: number;
+  /** 舊資料相容：結構化內容物清單 */
+  items: PackageItem[];
+  /** 新格式：富文本 HTML（優先顯示） */
+  contentHtml?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PackageSettings {
+  // Hero
+  heroEnabled: boolean;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroBgImageUrl: string | null;
+  heroHeight: number;
+  heroTextColor: string;
+  // 貨幣
+  currencyName: string;
+  currencyIconUrl: string | null;
+  currencyColor: string;
+  // 卡片
+  cardColumns: number;
+  cardImageRatio: string;
+  cardBorderRadius: number;
+  cardBorderColor: string;
+  // 主色
+  accentColor: string;
+}
+
+export interface PublicPackageConfig {
+  settings: PackageSettings;
+  packages: GamePackage[];
 }
 
 // ═══════════════════════════════════════════════════════════════

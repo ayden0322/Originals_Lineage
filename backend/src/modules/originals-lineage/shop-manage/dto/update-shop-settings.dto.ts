@@ -48,4 +48,27 @@ export class UpdateShopSettingsDto {
   @IsOptional()
   @IsString()
   heroTextColor?: string;
+
+  // ─── 貨幣顯示 ────────────────────────────────────────────────
+  @ApiPropertyOptional({ example: '四海銀票', description: '貨幣名稱' })
+  @IsOptional()
+  @IsString()
+  currencyName?: string;
+
+  @ApiPropertyOptional({ description: '貨幣 Icon URL（傳 null 表示清除）' })
+  @IsOptional()
+  @ValidateIf((o) => o.currencyIconUrl !== null)
+  @IsString()
+  currencyIconUrl?: string | null;
+
+  @ApiPropertyOptional({ example: '#c4a24e', description: '貨幣顏色' })
+  @IsOptional()
+  @IsString()
+  currencyColor?: string;
+
+  // ─── 主色 ────────────────────────────────────────────────────
+  @ApiPropertyOptional({ example: '#c4a24e', description: '主色（Tag / 強調色）' })
+  @IsOptional()
+  @IsString()
+  accentColor?: string;
 }

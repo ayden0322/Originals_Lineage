@@ -7,11 +7,15 @@ import type { PublicShopConfig, ShopSettings } from '@/lib/types';
 /** 與後端 DEFAULT_SHOP_SETTINGS 保持一致，作為 fallback 與型別保證 */
 const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   heroEnabled: true,
-  heroTitle: '始祖商城',
-  heroSubtitle: '選購超值商品，開啟您的冒險之旅',
+  heroTitle: '贊助支持',
+  heroSubtitle: '選購四海銀票，支持伺服器營運',
   heroBgImageUrl: null,
   heroHeight: 240,
   heroTextColor: '#ffffff',
+  currencyName: '四海銀票',
+  currencyIconUrl: null,
+  currencyColor: '#c4a24e',
+  accentColor: '#c4a24e',
 };
 
 interface ShopConfigContextType {

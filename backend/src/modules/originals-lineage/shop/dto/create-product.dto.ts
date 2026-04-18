@@ -12,8 +12,18 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+/**
+ * 商品類別
+ *
+ * 歷史上支援 'diamond' | 'game_item' | 'monthly_card'，
+ * 自 2026-04 起僅開放 'diamond'（以台幣兌換四海銀票），
+ * 其他類別保留型別以相容資料庫既有資料，但不接受新建/修改為該類別。
+ */
 export const PRODUCT_CATEGORIES = ['diamond', 'game_item', 'monthly_card'] as const;
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+
+/** 目前允許建立的類別（僅 diamond） */
+export const ACTIVE_PRODUCT_CATEGORIES = ['diamond'] as const;
 
 export class CreateProductDto {
   @ApiProperty({ example: '鑽石禮包 100' })
@@ -30,8 +40,10 @@ export class CreateProductDto {
   @Min(1)
   price: number;
 
-  @ApiProperty({ enum: PRODUCT_CATEGORIES, example: 'diamond' })
-  @IsIn(PRODUCT_CATEGORIES as unknown as string[])
+  @ApiProperty({ enum: ACTIVE_PRODUCT_CATEGORIES, example: 'diamond' })
+  @IsIn(ACTIVE_PRODUCT_CATEGORIES as unknown as string[], {
+    message: '目前僅支援 diamond（四海銀票）類別',
+  })
   category: ProductCategory;
 
   // ─── 鑽石類專用 ────────────────────────────────────────────────

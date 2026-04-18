@@ -103,8 +103,11 @@ export class ShopService {
       .skip((page - 1) * limit)
       .take(limit);
 
+    // 後台只顯示 diamond（四海銀票）類別；舊的 game_item / monthly_card 完全隱藏
     if (category) {
-      qb.where('product.category = :category', { category });
+      qb.where('product.category = :category', { category: 'diamond' });
+    } else {
+      qb.where('product.category = :category', { category: 'diamond' });
     }
 
     const [items, total] = await qb.getManyAndCount();
@@ -168,6 +171,8 @@ export class ShopService {
     const products = await this.productRepo
       .createQueryBuilder('product')
       .where('product.is_active = :isActive', { isActive: true })
+      // 公開頁僅顯示 diamond（四海銀票）類別
+      .andWhere('product.category = :category', { category: 'diamond' })
       .andWhere(
         new Brackets((qb) => {
           qb.where('product.start_time IS NULL').orWhere(
