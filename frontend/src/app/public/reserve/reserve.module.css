@@ -70,6 +70,55 @@
   line-height: 1.7;
 }
 
+/* ─── 往下拉提示（hero 底部浮動箭頭）─────────────────────── */
+.scrollIndicator {
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  transition: color 0.2s ease;
+  animation: scrollFloat 2s ease-in-out infinite;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.scrollIndicator:hover {
+  color: #c4a24e;
+}
+
+.scrollHint {
+  font-family: var(--font-heading, Georgia, serif);
+  white-space: nowrap;
+}
+
+.scrollArrow {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: bold;
+}
+
+@keyframes scrollFloat {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(-50%, 8px);
+    opacity: 1;
+  }
+}
+
 /* ─── Countdown ────────────────────────────────────────────── */
 
 .countdown {
@@ -513,12 +562,42 @@
 .detailDesc :global(img) {
   max-width: 100%;
   height: auto;
-  border-radius: 8px;
-  margin: 12px 0;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin: 2px 6px;
 }
 
 .detailDesc :global(p) {
   margin: 0 0 10px;
+}
+
+/* ─── 富文本表格：金色框線，避免深色背景吃掉預設邊框 ─── */
+.detailDesc :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.detailDesc :global(th),
+.detailDesc :global(td) {
+  border: 1px solid var(--accent-gold);
+  padding: 8px 12px;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.detailDesc :global(th) {
+  background: rgba(196, 162, 78, 0.15);
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* 表格內的圖片不要撐到 100% 寬，避免每格圖片都被拉超大 */
+.detailDesc :global(td img),
+.detailDesc :global(th img) {
+  max-width: 48px;
+  margin: 0 6px 0 0;
 }
 
 .detailDescEmpty {
@@ -869,6 +948,16 @@
 
   .heroSubtitle {
     font-size: 16px;
+  }
+
+  .scrollIndicator {
+    bottom: 20px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .scrollArrow {
+    font-size: 18px;
   }
 
   .countdown {

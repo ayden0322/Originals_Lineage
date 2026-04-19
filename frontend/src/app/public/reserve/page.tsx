@@ -283,6 +283,21 @@ export default function ReservePage() {
             )}
           </div>
         </div>
+
+        {/* ─── 往下拉提示（只在有里程碑時顯示）──────────────── */}
+        {milestones.length > 0 && (
+          <button
+            type="button"
+            className={styles.scrollIndicator}
+            onClick={() =>
+              window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })
+            }
+            aria-label="往下捲動查看報到獎勵"
+          >
+            <span className={styles.scrollHint}>往下拉，查看報到獎勵</span>
+            <span className={styles.scrollArrow} aria-hidden>↓</span>
+          </button>
+        )}
       </section>
 
       {/* ─── 獎勵卡片區（精簡版，點擊開 modal）──────────────── */}
