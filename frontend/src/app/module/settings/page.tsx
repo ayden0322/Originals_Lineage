@@ -15,15 +15,17 @@ import {
   Checkbox,
   Radio,
   Select,
+  Switch,
 } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons';
-import { getSettings, updateLineBotSettings, updateGameDbSettings, testGameDbConnection, updateGameTableMapping, fetchTableColumns } from '@/lib/api/settings';
+import { getSettings, updateLineBotSettings, updateLineInviteSettings, updateGameDbSettings, testGameDbConnection, updateGameTableMapping, fetchTableColumns } from '@/lib/api/settings';
 import type {
   LineBotSettingsDto,
+  LineInviteSettingsDto,
   GameDbSettingsDto,
   GameTableMappingDto,
   PasswordEncryption,
@@ -33,6 +35,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [lineBotSubmitting, setLineBotSubmitting] = useState(false);
   const [lineBotForm] = Form.useForm<LineBotSettingsDto>();
+
+  // LINE 邀請浮窗
+  const [lineInviteForm] = Form.useForm<LineInviteSettingsDto>();
+  const [lineInviteSubmitting, setLineInviteSubmitting] = useState(false);
 
   // Game DB state
   const [gameDbForm] = Form.useForm<GameDbSettingsDto>();
@@ -59,6 +65,14 @@ export default function SettingsPage() {
         channelId: (lineBot.channelId as string) || '',
         channelSecret: (lineBot.channelSecret as string) || '',
         channelAccessToken: (lineBot.channelAccessToken as string) || '',
+      });
+
+      const lineInvite = settings.lineInvite as Record<string, unknown>;
+      lineInviteForm.setFieldsValue({
+        enabled: Boolean(lineInvite?.enabled),
+        inviteUrl: (lineInvite?.inviteUrl as string) || '',
+        showQrCode: lineInvite?.showQrCode !== false,
+        tooltip: (lineInvite?.tooltip as string) || '加入官方 LINE',
       });
 
       const gameDb = settings.gameDb as Record<string, unknown>;
@@ -109,7 +123,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineBotForm, gameDbForm, tableMappingForm]);
+  }, [lineBotForm, lineInviteForm, gameDbForm, tableMappingForm]);
 
   const handleLineBotSave = async () => {
     try {
@@ -121,6 +135,19 @@ export default function SettingsPage() {
       message.error('LINE Bot 設定儲存失敗');
     } finally {
       setLineBotSubmitting(false);
+    }
+  };
+
+  const handleLineInviteSave = async () => {
+    try {
+      const values = await lineInviteForm.validateFields();
+      setLineInviteSubmitting(true);
+      await updateLineInviteSettings(values);
+      message.success('LINE 邀請浮窗設定儲存成功');
+    } catch {
+      message.error('LINE 邀請浮窗設定儲存失敗');
+    } finally {
+      setLineInviteSubmitting(false);
     }
   };
 
@@ -236,6 +263,50 @@ export default function SettingsPage() {
                 onClick={handleLineBotSave}
               >
                 儲存 LINE Bot 設定
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+
+        <Divider />
+
+        {/* ─── LINE 邀請浮窗設定 ────────────────────── */}
+        <Card title="LINE 邀請浮窗（前台右下角）">
+          <Form form={lineInviteForm} layout="vertical">
+            <Form.Item
+              name="enabled"
+              label="啟用浮窗"
+              valuePropName="checked"
+              tooltip="關閉後前台右下角不會顯示 LINE 按鈕"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="inviteUrl"
+              label="官方 LINE 好友邀請連結"
+              rules={[{ type: 'url', message: '請輸入有效的網址' }]}
+              extra="例如：https://line.me/R/ti/p/@xxxxxx"
+            >
+              <Input placeholder="https://line.me/R/ti/p/@xxxxxx" />
+            </Form.Item>
+            <Form.Item
+              name="showQrCode"
+              label="同時顯示 QR Code"
+              valuePropName="checked"
+              tooltip="開啟後，彈窗內會自動將上方連結轉換為 QR Code"
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item name="tooltip" label="按鈕提示文字">
+              <Input placeholder="加入官方 LINE" maxLength={100} />
+            </Form.Item>
+            <Form.Item>
+              <Button
+                type="primary"
+                loading={lineInviteSubmitting}
+                onClick={handleLineInviteSave}
+              >
+                儲存 LINE 邀請設定
               </Button>
             </Form.Item>
           </Form>

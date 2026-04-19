@@ -16,6 +16,7 @@ import {
   Space,
   Radio,
   Alert,
+  Divider,
 } from 'antd';
 import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
 
@@ -289,27 +290,46 @@ export default function ShopPage() {
                       },
                     }}
                     cover={
-                      product.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          alt={product.name}
-                          src={product.imageUrl}
-                          style={{ height: 180, objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            height: 180,
-                            background:
-                              'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <GiftOutlined style={{ fontSize: 48, color: '#fff' }} />
-                        </div>
-                      )
+                      <div
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          // 固定 16:9 — 對應後台 ImageUpload 的裁切比例
+                          paddingTop: '56.25%',
+                          background:
+                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          borderTopLeftRadius: 12,
+                          borderTopRightRadius: 12,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            alt={product.name}
+                            src={product.imageUrl}
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <GiftOutlined style={{ fontSize: 48, color: '#fff' }} />
+                          </div>
+                        )}
+                      </div>
                     }
                   >
                     <div style={{ flex: 1 }}>
@@ -371,110 +391,100 @@ export default function ShopPage() {
 
       {/* ─── 商品詳細 Modal ──────────────────────────────────── */}
       <Modal
-        title={null}
+        title={detailProduct?.name}
         open={!!detailProduct}
         onCancel={() => setDetailProduct(null)}
         footer={null}
-        width={520}
-        styles={{ body: { padding: 0 } }}
+        width={720}
       >
         {detailProduct &&
           (() => {
             const limitTags = formatLimits(detailProduct);
             return (
               <div>
-                {/* 商品圖片 */}
-                {detailProduct.imageUrl ? (
+                {/* 商品圖片：完全貼合裁切比例（16:9），不加底色/留白 */}
+                {detailProduct.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     alt={detailProduct.name}
                     src={detailProduct.imageUrl}
                     style={{
                       width: '100%',
-                      maxHeight: 300,
-                      objectFit: 'cover',
+                      height: 'auto',
                       display: 'block',
+                      borderRadius: 12,
+                      marginBottom: 16,
                     }}
                   />
-                ) : (
-                  <div
-                    style={{
-                      height: 200,
-                      background:
-                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <GiftOutlined style={{ fontSize: 64, color: '#fff' }} />
-                  </div>
                 )}
 
-                <div style={{ padding: '24px' }}>
-                  <Title level={4} style={{ marginBottom: 8 }}>
-                    {detailProduct.name}
-                  </Title>
-
-                  {detailProduct.description && (
-                    <Paragraph
-                      type="secondary"
-                      style={{
-                        whiteSpace: 'pre-wrap',
-                        marginBottom: 16,
-                        fontSize: 14,
-                        lineHeight: 1.8,
-                      }}
-                    >
-                      {detailProduct.description}
-                    </Paragraph>
-                  )}
-
-                  <div style={{ marginBottom: 12 }}>
-                    <Currency
-                      amount={detailProduct.diamondAmount}
-                      size={22}
-                      fontSize={15}
-                    />
-                  </div>
-
-                  {limitTags.length > 0 && (
-                    <Space size={[4, 6]} wrap style={{ marginBottom: 16 }}>
-                      {limitTags.map((t) => (
-                        <Tag
-                          key={t}
-                          color={settings.accentColor}
-                          style={{ fontSize: 12 }}
-                        >
-                          {t}
-                        </Tag>
-                      ))}
-                    </Space>
-                  )}
-
-                  <div style={{ marginBottom: 20 }}>
-                    <Text strong style={{ color: '#cf1322', fontSize: 24 }}>
-                      {formatPrice(detailProduct.price)}
-                    </Text>
-                  </div>
-
-                  <Button
-                    type="primary"
-                    icon={<ShoppingCartOutlined />}
-                    block
-                    size="large"
-                    onClick={() => {
-                      if (isLoggedIn) {
-                        setDetailProduct(null);
-                        openBuyModal(detailProduct);
-                      } else {
-                        router.push('/auth/login?redirect=/public/shop');
-                      }
-                    }}
-                  >
-                    {isLoggedIn ? '立即贊助' : '前往登入'}
-                  </Button>
+                {/* 貨幣（獲得銀票） */}
+                <div style={{ marginBottom: 12 }}>
+                  <Text strong>獲得：</Text>{' '}
+                  <Currency
+                    amount={detailProduct.diamondAmount}
+                    size={22}
+                    fontSize={15}
+                  />
                 </div>
+
+                {/* 簡短描述 */}
+                {detailProduct.description && (
+                  <Paragraph type="secondary">{detailProduct.description}</Paragraph>
+                )}
+
+                {/* 限購 tag */}
+                {limitTags.length > 0 && (
+                  <Space size={[4, 6]} wrap style={{ marginBottom: 16 }}>
+                    {limitTags.map((t) => (
+                      <Tag
+                        key={t}
+                        color={settings.accentColor}
+                        style={{ fontSize: 12 }}
+                      >
+                        {t}
+                      </Tag>
+                    ))}
+                  </Space>
+                )}
+
+                {/* 詳細內容（富文本） */}
+                {detailProduct.contentHtml && detailProduct.contentHtml.trim() && (
+                  <>
+                    <Divider orientation="left" plain>
+                      詳細內容
+                    </Divider>
+                    <div
+                      className="shop-content-html"
+                      style={{ color: 'rgba(0, 0, 0, 0.85)', marginBottom: 16 }}
+                      dangerouslySetInnerHTML={{ __html: detailProduct.contentHtml }}
+                    />
+                  </>
+                )}
+
+                {/* 價格 */}
+                <div style={{ marginBottom: 20, marginTop: 16 }}>
+                  <Text strong style={{ color: '#cf1322', fontSize: 24 }}>
+                    {formatPrice(detailProduct.price)}
+                  </Text>
+                </div>
+
+                <Button
+                  type="primary"
+                  icon={<ShoppingCartOutlined />}
+                  block
+                  size="large"
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      setDetailProduct(null);
+                      openBuyModal(detailProduct);
+                    } else {
+                      router.push('/auth/login?redirect=/public/shop');
+                    }
+                  }}
+                >
+                  {isLoggedIn ? '立即贊助' : '前往登入'}
+                </Button>
               </div>
             );
           })()}
@@ -528,6 +538,43 @@ export default function ShopPage() {
       </Modal>
 
       <PublicFooter />
+
+      {/* 富文本內容 — 基本樣式（與禮包頁一致），讓表格、圖片、列表正常顯示 */}
+      <style jsx global>{`
+        .shop-content-html img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 6px;
+        }
+        .shop-content-html table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 8px 0;
+        }
+        .shop-content-html table td,
+        .shop-content-html table th {
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          padding: 6px 10px;
+          vertical-align: top;
+        }
+        .shop-content-html p {
+          margin: 0.5em 0;
+        }
+        .shop-content-html ul,
+        .shop-content-html ol {
+          padding-left: 1.5em;
+          margin: 0.5em 0;
+        }
+        .shop-content-html h1,
+        .shop-content-html h2,
+        .shop-content-html h3 {
+          margin: 0.8em 0 0.4em;
+        }
+        .shop-content-html a {
+          color: #1677ff;
+          text-decoration: underline;
+        }
+      `}</style>
     </div>
   );
 }

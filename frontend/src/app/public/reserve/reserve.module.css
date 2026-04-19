@@ -509,7 +509,7 @@
 
 .detailImageWrap {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   border-bottom: 1px solid rgba(196, 162, 78, 0.2);
 }

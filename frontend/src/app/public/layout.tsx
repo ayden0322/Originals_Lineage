@@ -5,6 +5,7 @@ import { SiteConfigProvider, useSiteConfig } from '@/components/providers/SiteCo
 import PublicHeader from '@/components/public/PublicHeader';
 import AnnouncementSystem from '@/components/public/AnnouncementSystem';
 import BgmPlayer from '@/components/public/BgmPlayer';
+import LineInviteFloat from '@/components/public/LineInviteFloat';
 import { ArticleMusicProvider } from '@/components/providers/ArticleMusicProvider';
 import { useEffect } from 'react';
 import { extractGoogleFontNames, buildGoogleFontsUrl } from '@/lib/fonts';
@@ -106,6 +107,7 @@ export default function PublicLayout({
             <PublicHeader />
             <main>{children}</main>
             <BgmPlayer />
+            <LineInviteFloat />
           </div>
         </ThemeInjector>
       </ArticleMusicProvider>

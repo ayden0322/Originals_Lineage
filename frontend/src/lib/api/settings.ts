@@ -4,6 +4,7 @@ import type {
   ModuleSettings,
   PaymentSettingsDto,
   LineBotSettingsDto,
+  LineInviteSettingsDto,
   GameDbSettingsDto,
   GameDbTestResult,
   GameTableMappingDto,
@@ -22,6 +23,11 @@ export async function updatePaymentSettings(dto: PaymentSettingsDto): Promise<Mo
 
 export async function updateLineBotSettings(dto: LineBotSettingsDto): Promise<ModuleSettings> {
   const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/line-bot', dto);
+  return data.data;
+}
+
+export async function updateLineInviteSettings(dto: LineInviteSettingsDto): Promise<ModuleSettings> {
+  const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/line-invite', dto);
   return data.data;
 }
 

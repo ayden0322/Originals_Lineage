@@ -35,6 +35,11 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ description: '商品詳細內容富文本（HTML）' })
+  @IsOptional()
+  @IsString()
+  contentHtml?: string;
+
   @ApiProperty({ example: 30, description: '商品價格（NT$），至少 1' })
   @IsNumber()
   @Min(1)

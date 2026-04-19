@@ -318,6 +318,7 @@ export interface Product {
   id: string;
   name: string;
   description: string;
+  contentHtml?: string | null;
   price: string;
   category: ProductCategory;
   // 鑽石類專用
@@ -347,6 +348,7 @@ export interface Product {
 export interface CreateProductDto {
   name: string;
   description?: string;
+  contentHtml?: string;
   price: number;
   category: ProductCategory;
   diamondAmount?: number;
@@ -553,6 +555,7 @@ export interface ModuleSettings {
   lineBotEnabled: boolean;
   payment: Record<string, unknown>;
   lineBot: Record<string, unknown>;
+  lineInvite: Record<string, unknown>;
   gameDb: Record<string, unknown>;
   gameDbConnected: boolean;
   gameTableMapping: GameTableMappingDto | null;
@@ -570,6 +573,13 @@ export interface LineBotSettingsDto {
   channelId?: string;
   channelSecret?: string;
   channelAccessToken?: string;
+}
+
+export interface LineInviteSettingsDto {
+  enabled?: boolean;
+  inviteUrl?: string;
+  showQrCode?: boolean;
+  tooltip?: string;
 }
 
 export interface GameDbSettingsDto {

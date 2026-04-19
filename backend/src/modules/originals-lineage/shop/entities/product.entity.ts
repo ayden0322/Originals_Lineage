@@ -19,6 +19,10 @@ export class Product {
   @Column('text', { nullable: true })
   description: string | null;
 
+  // 商品詳細內容（富文本 HTML）— 與 game_packages.content_html 相同用法
+  @Column({ name: 'content_html', type: 'text', nullable: true })
+  contentHtml: string | null;
+
   @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 

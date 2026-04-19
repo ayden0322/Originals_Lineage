@@ -3,6 +3,7 @@ import { ModuleConfigService } from '../../../core/module-config/module-config.s
 import { GameDbService, GameDbConfig } from '../game-db/game-db.service';
 import { UpdatePaymentSettingsDto } from './dto/update-payment-settings.dto';
 import { UpdateLineBotSettingsDto } from './dto/update-line-bot-settings.dto';
+import { UpdateLineInviteSettingsDto } from './dto/update-line-invite-settings.dto';
 import { UpdateGameDbSettingsDto } from './dto/update-game-db-settings.dto';
 import { TestGameDbConnectionDto } from './dto/test-game-db-connection.dto';
 import { UpdateGameTableMappingDto } from './dto/update-game-table-mapping.dto';
@@ -28,9 +29,43 @@ export class SettingsService {
       lineBotEnabled: config.lineBotEnabled,
       payment: config.configJson?.['payment'] || {},
       lineBot: config.configJson?.['lineBot'] || {},
+      lineInvite: config.configJson?.['lineInvite'] || {
+        enabled: false,
+        inviteUrl: '',
+        showQrCode: true,
+        tooltip: '加入官方 LINE',
+      },
       gameDb: config.configJson?.['gameDb'] || {},
       gameDbConnected: this.gameDbService.isConnected,
       gameTableMapping: config.configJson?.['gameTableMapping'] || null,
+    };
+  }
+
+  async updateLineInviteSettings(dto: UpdateLineInviteSettingsDto) {
+    const config = await this.moduleConfigService.findByCode(MODULE_CODE);
+    if (!config) throw new NotFoundException('Module config not found');
+
+    const current = (config.configJson?.['lineInvite'] as Record<string, unknown>) || {};
+    const lineInvite = { ...current, ...dto };
+    const configJson = { ...config.configJson, lineInvite };
+    await this.moduleConfigService.update(MODULE_CODE, { configJson });
+    return this.getSettings();
+  }
+
+  async getPublicLineInvite() {
+    const config = await this.moduleConfigService.findByCode(MODULE_CODE);
+    const raw = (config?.configJson?.['lineInvite'] as Record<string, unknown>) || {};
+    const enabled = Boolean(raw.enabled);
+    const inviteUrl = (raw.inviteUrl as string) || '';
+    // 後台未啟用或未填連結時，回傳 enabled=false，前台據此不渲染浮窗
+    if (!enabled || !inviteUrl) {
+      return { enabled: false, inviteUrl: '', showQrCode: false, tooltip: '' };
+    }
+    return {
+      enabled: true,
+      inviteUrl,
+      showQrCode: raw.showQrCode !== false,
+      tooltip: (raw.tooltip as string) || '加入官方 LINE',
     };
   }
 

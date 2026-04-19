@@ -1,0 +1,178 @@
+/* ─── FAB 按鈕 ──────────────────────────────
+   位置：右下角由下而上第三顆（公告 24 / 音樂 80 / LINE 140）
+*/
+.fab {
+  position: fixed;
+  bottom: 140px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: #06C755; /* LINE 品牌綠 */
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.45), 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1049; /* 低於公告浮窗（1050），避免擋到 */
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  padding: 0;
+}
+
+.fab:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(6, 199, 85, 0.55), 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.fab:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.fab:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+/* ─── 手機版：縮小 FAB、靠邊微調 ────────── */
+@media (max-width: 768px) {
+  .fab {
+    width: 44px;
+    height: 44px;
+    bottom: 128px;
+    right: 16px;
+  }
+}
+
+/* ─── 遮罩（僅手機版 bottom sheet 模式顯示） ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1060;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Popover（桌面版：FAB 左上角彈出） ────── */
+.popover {
+  position: fixed;
+  bottom: 200px;
+  right: 24px;
+  width: 280px;
+  background: #ffffff;
+  color: #1a1a1a;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1061;
+  overflow: hidden;
+  animation: popIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── 手機版：改為底部彈出（bottom sheet） ── */
+.popoverMobile {
+  bottom: 0;
+  right: 0;
+  left: 0;
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ─── Header ─────────────────────────────── */
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #06C755;
+  color: #ffffff;
+}
+
+.popoverTitle {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ─── Body ───────────────────────────────── */
+.popoverBody {
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.qrBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.qrHint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.inviteBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #06C755;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.inviteBtn:hover {
+  background: #05a848;
+}
+
+.inviteBtn:active {
+  transform: scale(0.98);
+}

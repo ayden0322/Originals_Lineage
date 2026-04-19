@@ -14,11 +14,9 @@ import {
   Popconfirm,
   message,
   Select,
-  Upload,
   Row,
   Col,
   Image,
-  Empty,
   Tooltip,
 } from 'antd';
 import {
@@ -27,11 +25,12 @@ import {
   DeleteOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
-  UploadOutlined,
   SaveOutlined,
   PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import ImageUpload from '@/components/ui/ImageUpload';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 import {
   getProducts,
   createProduct,
@@ -41,7 +40,6 @@ import {
   getProductTemplates,
   createProductTemplate,
 } from '@/lib/api/shop';
-import { uploadFile, listMedia, type MediaItem } from '@/lib/api/site-manage';
 import type {
   Product,
   CreateProductDto,
@@ -87,8 +85,6 @@ export default function ProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm<CreateProductDto>();
   const [enabledLimits, setEnabledLimits] = useState<LimitKey[]>([]);
-  // 媒體庫挑選器
-  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
   // 儲存範本對話框
   const [saveTplOpen, setSaveTplOpen] = useState(false);
@@ -124,6 +120,7 @@ export default function ProductsPage() {
       accountLimit: 0,
       isActive: true,
       sortOrder: 0,
+      contentHtml: '',
     });
     setEnabledLimits([]);
   };
@@ -148,6 +145,7 @@ export default function ProductsPage() {
     form.setFieldsValue({
       name: record.name,
       description: record.description ?? undefined,
+      contentHtml: record.contentHtml || '',
       price: Number(record.price),
       category: 'diamond',
       diamondAmount: record.diamondAmount,
@@ -172,6 +170,7 @@ export default function ProductsPage() {
     const dto: CreateProductDto = {
       name: values.name,
       description: values.description,
+      contentHtml: values.contentHtml || undefined,
       price: values.price,
       category: 'diamond', // 固定 diamond（四海銀票）
       diamondAmount: values.diamondAmount,
@@ -340,6 +339,17 @@ export default function ProductsPage() {
         render: (_, r) => `${r.diamondAmount} 四海銀票`,
       },
       {
+        title: '詳細',
+        key: 'contentHtml',
+        width: 90,
+        render: (_, r) =>
+          r.contentHtml && r.contentHtml.trim() ? (
+            <Tag color="blue">已設定</Tag>
+          ) : (
+            <Tag>未設定</Tag>
+          ),
+      },
+      {
         title: '限購',
         key: 'limits',
         width: 200,
@@ -466,51 +476,38 @@ export default function ProductsPage() {
           </Form.Item>
 
           <Form.Item name="name" label="商品名稱" rules={[{ required: true, message: '請輸入商品名稱' }]}>
-            <Input />
+            <Input placeholder="例：標準方案 300 銀票" />
           </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={2} />
+
+          <Form.Item label="描述" name="description" tooltip="卡片列表顯示前 2 行，簡短摘要即可">
+            <Input.TextArea rows={2} placeholder="簡短描述（列表卡片顯示前 2 行）" />
           </Form.Item>
+
           <Form.Item name="price" label="價格 (NT$)" rules={[{ required: true, message: '請輸入價格' }]}>
             <InputNumber min={0} style={{ width: '100%' }} addonBefore="NT$" />
           </Form.Item>
 
-          {/* 圖片 */}
-          <Form.Item label="商品圖片">
-            <Form.Item name="imageUrl" noStyle>
-              <Input placeholder="圖片網址" />
-            </Form.Item>
-            <Space style={{ marginTop: 8 }}>
-              <Upload
-                showUploadList={false}
-                customRequest={async ({ file, onSuccess, onError }) => {
-                  try {
-                    const result = await uploadFile(file as File, 'shop');
-                    form.setFieldsValue({ imageUrl: result.url });
-                    message.success('上傳成功');
-                    onSuccess?.(result);
-                  } catch (e) {
-                    message.error('上傳失敗');
-                    onError?.(e as Error);
-                  }
-                }}
-              >
-                <Button icon={<UploadOutlined />}>上傳新圖片</Button>
-              </Upload>
-              <Button icon={<PictureOutlined />} onClick={() => setMediaPickerOpen(true)}>
-                從媒體庫選擇
-              </Button>
-            </Space>
-            <Form.Item shouldUpdate noStyle>
-              {() => {
-                const url = form.getFieldValue('imageUrl');
-                return url ? (
-                  <div style={{ marginTop: 8 }}>
-                    <Image src={url} width={120} />
-                  </div>
-                ) : null;
-              }}
-            </Form.Item>
+          {/* 商品圖片（統一使用 ImageUpload + crop，與禮包頁一致） */}
+          <Form.Item
+            label="商品圖片"
+            name="imageUrl"
+            tooltip="同一張圖片會同時顯示在卡片縮圖與詳情彈窗。上傳後可圈選裁切範圍"
+          >
+            <ImageUpload
+              folder="shop"
+              crop
+              aspect={16 / 9}
+              previewWidth={320}
+            />
+          </Form.Item>
+
+          {/* 商品詳細內容（與禮包頁相同富文本編輯器） */}
+          <Form.Item
+            label="商品詳細內容"
+            name="contentHtml"
+            tooltip="前台詳情彈窗顯示的內容區塊。可插入圖片、表格、文字樣式等"
+          >
+            <RichTextEditor folder="shop" placeholder="請輸入商品詳細內容..." minHeight={240} />
           </Form.Item>
 
           <Form.Item name="stock" label="庫存" extra="-1 代表無限">
@@ -644,16 +641,6 @@ export default function ProductsPage() {
         </Form>
       </Modal>
 
-      {/* ─── 媒體庫挑選 Modal ───────────────────── */}
-      <MediaPickerModal
-        open={mediaPickerOpen}
-        onCancel={() => setMediaPickerOpen(false)}
-        onSelect={(url) => {
-          form.setFieldsValue({ imageUrl: url });
-          setMediaPickerOpen(false);
-        }}
-      />
-
       {/* ─── 儲存範本對話框 ─────────────────────── */}
       <Modal
         title="儲存為常用範本"
@@ -663,7 +650,7 @@ export default function ProductsPage() {
         okText="儲存"
         cancelText="取消"
       >
-        <p>將目前表單的所有設定儲存為共用範本，所有管理者皆可使用。</p>
+        <p>將目前表單的所有設定（含詳細內容富文本）儲存為共用範本，所有管理者皆可使用。</p>
         <Input
           placeholder="範本名稱（例：標準鑽石包）"
           value={saveTplName}
@@ -671,80 +658,5 @@ export default function ProductsPage() {
         />
       </Modal>
     </div>
-  );
-}
-
-// ─── 子元件：媒體庫挑選 ────────────────────────────────────────────
-
-function MediaPickerModal({
-  open,
-  onCancel,
-  onSelect,
-}: {
-  open: boolean;
-  onCancel: () => void;
-  onSelect: (url: string) => void;
-}) {
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    listMedia('shop')
-      .then((list) => setItems(list || []))
-      .catch(() => message.error('載入媒體庫失敗'))
-      .finally(() => setLoading(false));
-  }, [open]);
-
-  return (
-    <Modal
-      title="從媒體庫選擇圖片（shop 資料夾）"
-      open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={720}
-      destroyOnClose
-    >
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40 }}>載入中...</div>
-      ) : items.length === 0 ? (
-        <Empty description="媒體庫沒有 shop 資料夾的檔案" />
-      ) : (
-        <Row gutter={[12, 12]}>
-          {items.map((item) => (
-            <Col key={item.objectName} xs={12} sm={8} md={6}>
-              <div
-                style={{
-                  border: '1px solid #f0f0f0',
-                  borderRadius: 4,
-                  padding: 4,
-                  cursor: 'pointer',
-                }}
-                onClick={() => onSelect(item.url)}
-              >
-                <img
-                  src={item.url}
-                  alt={item.objectName}
-                  style={{ width: '100%', height: 120, objectFit: 'cover' }}
-                />
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: '#666',
-                    marginTop: 4,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.objectName.split('/').pop()}
-                </div>
-              </div>
-            </Col>
-          ))}
-        </Row>
-      )}
-    </Modal>
   );
 }
