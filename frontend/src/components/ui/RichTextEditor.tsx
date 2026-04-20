@@ -53,8 +53,8 @@ const CustomTableHeader = TableHeader.extend({
   },
 });
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Button, Upload, Tooltip, Divider, Dropdown, Popover, message } from 'antd';
-import type { MenuProps } from 'antd';
+import { Button, Upload, Tooltip, Divider, Dropdown, Popover, ColorPicker, message } from 'antd';
+import type { MenuProps, ColorPickerProps } from 'antd';
 import { EDITOR_FONT_OPTIONS } from '@/lib/fonts';
 import {
   BoldOutlined,
@@ -230,6 +230,156 @@ function TableGridPicker({ onSelect }: { onSelect: (rows: number, cols: number) 
         {hover.r > 0 ? `${hover.r} × ${hover.c}` : '選擇表格大小'}
       </div>
     </div>
+  );
+}
+
+/**
+ * 色盤預設 — 依無盡天堂品牌 + 語義/中性色分組
+ * 加上「最近使用」(localStorage) 與 antd 內建進階調色面板（HEX/RGB/吸管）
+ */
+const BRAND_PRESETS: NonNullable<ColorPickerProps['presets']> = [
+  {
+    label: '品牌金',
+    colors: ['#c4a24e', '#d4b76a', '#f5d77a', '#7a5820', '#1a1205'],
+  },
+  {
+    label: '深色底',
+    colors: ['#0a0a0a', '#141414', '#1a1a2e', '#16213e', '#0f3460'],
+  },
+  {
+    label: '語義',
+    colors: ['#52c41a', '#faad14', '#ff4d4f', '#1677ff', '#8b0000', '#06c755'],
+  },
+  {
+    label: '中性',
+    colors: ['#ffffff', '#f0f0f0', '#d9d9d9', '#8c8c8c', '#595959', '#000000'],
+  },
+];
+
+const RECENT_COLORS_KEY = 'rte_recent_colors_v1';
+const MAX_RECENT_COLORS = 8;
+
+function loadRecentColors(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_COLORS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((c): c is string => typeof c === 'string').slice(0, MAX_RECENT_COLORS);
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentColor(color: string): string[] {
+  if (typeof window === 'undefined') return [];
+  const cur = loadRecentColors();
+  const normalized = color.toLowerCase();
+  const next = [normalized, ...cur.filter((c) => c.toLowerCase() !== normalized)].slice(
+    0,
+    MAX_RECENT_COLORS,
+  );
+  try {
+    window.localStorage.setItem(RECENT_COLORS_KEY, JSON.stringify(next));
+  } catch {
+    // localStorage 失敗（隱私模式等）— 忽略
+  }
+  return next;
+}
+
+interface SwatchColorPickerProps {
+  value?: string | null;
+  onChange: (hex: string) => void;
+  title: string;
+  /** 觸發按鈕尺寸（正方形邊長） */
+  size?: number;
+  /** 觸發按鈕前綴圖示（放在色塊左側），不給則只顯示色塊 */
+  leadingIcon?: React.ReactNode;
+}
+
+/**
+ * 色盤選擇器：一鍵選品牌常用色 + 最近使用記憶 + 高階面板（HEX/RGB/吸管）
+ * - 使用 onChangeComplete（不在拖曳過程中持續觸發 editor 更新，避免灌爆 history）
+ */
+function SwatchColorPicker({
+  value,
+  onChange,
+  title,
+  size = 24,
+  leadingIcon,
+}: SwatchColorPickerProps) {
+  const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecent(loadRecentColors());
+  }, []);
+
+  const presets = useMemo<NonNullable<ColorPickerProps['presets']>>(() => {
+    if (!recent.length) return BRAND_PRESETS;
+    return [{ label: '最近使用', colors: recent }, ...BRAND_PRESETS];
+  }, [recent]);
+
+  const handleComplete: ColorPickerProps['onChangeComplete'] = (c) => {
+    const hex = c.toHexString();
+    onChange(hex);
+    setRecent(pushRecentColor(hex));
+  };
+
+  const swatchBg = value || '#ffffff';
+  const trigger = leadingIcon ? (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        height: size,
+        padding: '0 6px',
+        border: '1px solid #d9d9d9',
+        borderRadius: 4,
+        cursor: 'pointer',
+        background: '#fff',
+      }}
+    >
+      {leadingIcon}
+      <span
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 2,
+          background: swatchBg,
+          border: '1px solid rgba(0,0,0,0.08)',
+        }}
+      />
+      <DownOutlined style={{ fontSize: 8, color: '#999' }} />
+    </span>
+  ) : (
+    <span
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: size,
+        border: '1px solid #d9d9d9',
+        borderRadius: 4,
+        cursor: 'pointer',
+        background: swatchBg,
+        boxShadow: 'inset 0 0 0 2px #fff',
+      }}
+    />
+  );
+
+  return (
+    <Tooltip title={title}>
+      <ColorPicker
+        value={value || undefined}
+        presets={presets}
+        onChangeComplete={handleComplete}
+        size="small"
+        disabledAlpha
+      >
+        {trigger}
+      </ColorPicker>
+    </Tooltip>
   );
 }
 
@@ -483,23 +633,11 @@ export default function RichTextEditor({
         </Tooltip>
 
         {/* Text color */}
-        <Tooltip title="文字顏色">
-          <input
-            type="color"
-            value={editor.getAttributes('textStyle').color || '#ffffff'}
-            onChange={(e) =>
-              editor.chain().focus().setColor(e.target.value).run()
-            }
-            style={{
-              width: 24,
-              height: 24,
-              border: '1px solid #d9d9d9',
-              borderRadius: 4,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          />
-        </Tooltip>
+        <SwatchColorPicker
+          title="文字顏色"
+          value={editor.getAttributes('textStyle').color}
+          onChange={(hex) => editor.chain().focus().setColor(hex).run()}
+        />
 
         <Divider type="vertical" style={{ margin: '0 4px' }} />
 
@@ -721,26 +859,18 @@ export default function RichTextEditor({
           <Divider type="vertical" style={{ margin: '0 2px' }} />
 
           {/* 儲存格背景色 */}
-          <Tooltip title="儲存格背景色">
-            <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', position: 'relative' }}>
-              <BgColorsOutlined style={{ fontSize: 14, marginRight: 4, color: '#666' }} />
-              <input
-                type="color"
-                value={editor.getAttributes('tableCell').backgroundColor || editor.getAttributes('tableHeader').backgroundColor || '#ffffff'}
-                onChange={(e) => {
-                  editor.chain().focus().setCellAttribute('backgroundColor', e.target.value).run();
-                }}
-                style={{
-                  width: 20,
-                  height: 20,
-                  border: '1px solid #d9d9d9',
-                  borderRadius: 3,
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              />
-            </label>
-          </Tooltip>
+          <SwatchColorPicker
+            title="儲存格背景色"
+            size={22}
+            leadingIcon={<BgColorsOutlined style={{ fontSize: 13, color: '#666' }} />}
+            value={
+              editor.getAttributes('tableCell').backgroundColor ||
+              editor.getAttributes('tableHeader').backgroundColor
+            }
+            onChange={(hex) => {
+              editor.chain().focus().setCellAttribute('backgroundColor', hex).run();
+            }}
+          />
           <Tooltip title="清除背景色">
             <Button type="text" size="small"
               style={{ fontSize: 11, padding: '0 4px', color: '#999' }}
