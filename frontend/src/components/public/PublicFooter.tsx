@@ -7,21 +7,38 @@ export default function PublicFooter() {
   const { config } = useSiteConfig();
 
   return (
-    <footer className={styles.footer}>
-      {config?.settings.logoUrl ? (
-        <img
-          src={config.settings.logoUrl}
-          alt=""
-          className={styles.footerLogo}
-        />
-      ) : (
-        <div className={styles.logoText} style={{ marginBottom: 16 }}>
-          {config?.settings.siteName || '始祖天堂'}
-        </div>
-      )}
-      <p className={styles.footerText}>
-        {config?.settings.footerText || '始祖天堂 © 2026'}
-      </p>
-    </footer>
+    <>
+      <footer className={styles.footer}>
+        {config?.settings.logoUrl ? (
+          <img
+            src={config.settings.logoUrl}
+            alt=""
+            className={styles.footerLogo}
+          />
+        ) : (
+          <div className={styles.logoText} style={{ marginBottom: 16 }}>
+            {config?.settings.siteName || '始祖天堂'}
+          </div>
+        )}
+        <p className={styles.footerText}>
+          {config?.settings.footerText || '始祖天堂 © 2026'}
+        </p>
+      </footer>
+      <div className={styles.affiliateBar}>
+        <a
+          href="https://www.gamex123.com/lineage.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="私服123 - gamex123.com"
+        >
+          <img
+            src="/partners/gamex123.gif"
+            alt="私服123 - gamex123.com"
+            width={88}
+            height={31}
+          />
+        </a>
+      </div>
+    </>
   );
 }

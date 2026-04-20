@@ -585,6 +585,30 @@
   font-size: calc(13px * var(--font-scale, 1));
 }
 
+.affiliateBar {
+  background: var(--footer-bg-color, #0a0a0a);
+  padding: 12px 16px;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.affiliateBar a {
+  display: inline-block;
+  line-height: 0;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+.affiliateBar a:hover {
+  opacity: 1;
+}
+
+.affiliateBar img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
 /* ─── News Preview ──────────────────────────────────────────── */
 .newsSection {
   padding: 80px 32px;
