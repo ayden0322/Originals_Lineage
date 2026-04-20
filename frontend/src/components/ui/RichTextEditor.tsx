@@ -248,7 +248,7 @@ const BRAND_PRESETS: NonNullable<ColorPickerProps['presets']> = [
   },
   {
     label: '語義',
-    colors: ['#52c41a', '#faad14', '#ff4d4f', '#1677ff', '#8b0000', '#06c755'],
+    colors: ['#52c41a', '#faad14', '#ff4d4f', '#4791e1', '#1677ff', '#8b0000', '#06c755'],
   },
   {
     label: '中性',

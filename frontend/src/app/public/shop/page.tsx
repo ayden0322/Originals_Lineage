@@ -571,7 +571,7 @@ export default function ShopPage() {
           margin: 0.8em 0 0.4em;
         }
         .shop-content-html a {
-          color: #1677ff;
+          color: #4791e1;
           text-decoration: underline;
         }
       `}</style>
