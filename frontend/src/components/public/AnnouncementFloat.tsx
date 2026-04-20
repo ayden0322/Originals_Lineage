@@ -161,16 +161,18 @@ export default function AnnouncementFloat() {
 
   // Minimized state — show small floating button
   if (dismissed) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT;
+    const fabSize = isMobile ? 44 : 48;
     return (
       <button
         onClick={handleReopen}
         style={{
           position: 'fixed',
-          right: 24,
-          bottom: 24,
+          right: isMobile ? 16 : 24,
+          bottom: isMobile ? 16 : 24,
           zIndex: 1050,
-          width: 48,
-          height: 48,
+          width: fabSize,
+          height: fabSize,
           borderRadius: '50%',
           background: 'rgba(17, 17, 17, 0.9)',
           backdropFilter: 'blur(12px)',
