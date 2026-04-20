@@ -162,7 +162,7 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
             margin: 0.5em 0;
           }
           .article-content a {
-            color: var(--accent-gold, #c4a24e);
+            color: #4791e1;
             text-decoration: underline;
           }
           .article-content hr {
