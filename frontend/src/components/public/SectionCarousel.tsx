@@ -32,6 +32,8 @@ export default function SectionCarousel({ slides }: SectionCarouselProps) {
     return s;
   });
   const prevCurrentRef = useRef(current);
+  // 記住「已播到開頭」的 index，避免 mountedIndices 變動時誤把當前 video 倒回 0
+  const lastPlayedRef = useRef<number>(-1);
 
   // current 變動時：把舊的留著做淡出，1.1s 後清掉；同時把下一張加入預載
   useEffect(() => {
@@ -39,11 +41,15 @@ export default function SectionCarousel({ slides }: SectionCarouselProps) {
     const prevIdx = prevCurrentRef.current;
     prevCurrentRef.current = current;
 
+    // current 沒變動（例如 slides 陣列本身變更觸發）→ 不做任何 setState，
+    // 否則會無差別產生新的 Set 參考 → 觸發播放 effect → 把正在播的 video 倒回開頭。
+    if (prevIdx === current) return;
+
     setMountedIndices(() => {
       const s = new Set<number>();
       s.add(current);
       if (slides.length > 1) s.add((current + 1) % slides.length);
-      if (prevIdx !== current) s.add(prevIdx); // 保留淡出中的前一張
+      s.add(prevIdx); // 保留淡出中的前一張
       return s;
     });
 
@@ -73,10 +79,16 @@ export default function SectionCarousel({ slides }: SectionCarouselProps) {
   }, [slides, current, next]);
 
   // When slide changes, play/pause videos
+  // 依賴 mountedIndices 是為了讓「剛 mount 的新 current video」也會被觸發 play，
+  // 但只在 current 真的換人時才把 currentTime 歸零，否則 1.1s 的清理 timer
+  // 會讓正在播的 video 倒回開頭重播。
   useEffect(() => {
     videoRefs.current.forEach((video, index) => {
       if (index === current) {
-        video.currentTime = 0;
+        if (lastPlayedRef.current !== current) {
+          video.currentTime = 0;
+          lastPlayedRef.current = current;
+        }
         video.play().catch(() => {});
       } else {
         video.pause();
