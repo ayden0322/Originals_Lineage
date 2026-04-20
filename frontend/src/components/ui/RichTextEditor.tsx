@@ -376,6 +376,21 @@ function SwatchColorPicker({
         onChangeComplete={handleComplete}
         size="small"
         disabledAlpha
+        placement="bottomLeft"
+        // 關鍵：把面板整體用容器包起來並設 max-height，讓 antd 測量到較小的尺寸
+        // 才會正確 autoAdjustOverflow 往上翻 / 裡面的內容超出就捲動
+        panelRender={(panel) => (
+          <div
+            style={{
+              maxHeight: 'min(72vh, 420px)',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              paddingRight: 4,
+            }}
+          >
+            {panel}
+          </div>
+        )}
       >
         {trigger}
       </ColorPicker>
