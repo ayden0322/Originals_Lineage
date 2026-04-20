@@ -6,6 +6,7 @@ import SectionCarousel from '@/components/public/SectionCarousel';
 import SectionNav from '@/components/public/SectionNav';
 import NewsPreview from '@/components/public/NewsPreview';
 import PublicFooter from '@/components/public/PublicFooter';
+import LazySection from '@/components/public/LazySection';
 import styles from './styles/public.module.css';
 
 export default function HomePage() {
@@ -33,12 +34,16 @@ export default function HomePage() {
 
       {/* Snap scroll container */}
       <div ref={snapRef} className={styles.snapContainer}>
-        {/* All sections - each one fills 100vh */}
-        {sections.map((section) => (
-          <section
+        {/* All sections - each one fills 100vh
+         * 用 LazySection 包住：非視口附近的 section 只保留空殼維持高度，
+         * Carousel / 富文本在接近視口時才掛載，釋放非首屏的 video/圖片負載。
+         * 首個 section 設 eager，避免首屏閃爍與 hydration mismatch。 */}
+        {sections.map((section, idx) => (
+          <LazySection
             key={section.id}
             id={section.slug}
             className={styles.snapSection}
+            eager={idx === 0}
           >
             {/* Background: carousel slides or fallback gradient */}
             {section.slides.length > 0 ? (
@@ -64,7 +69,7 @@ export default function HomePage() {
                 dangerouslySetInnerHTML={{ __html: section.description }}
               />
             )}
-          </section>
+          </LazySection>
         ))}
 
         {/* News + Footer section (not snap, normal flow) */}

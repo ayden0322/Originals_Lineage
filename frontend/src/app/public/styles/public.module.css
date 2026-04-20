@@ -391,10 +391,14 @@
 }
 
 /* ─── Snap Scroll Container ────────────────────────────────── */
+/* 為什麼用 proximity 而非 mandatory：
+ * mandatory + snap-stop:always 會強制每次滾動都停在節點，和 iOS momentum scroll / Windows
+ * trackpad 慣性衝突，表現為「彈一下、卡一下」。proximity 仍會吸附鄰近節點，但不攔截自然滾動，
+ * 在低階裝置與大螢幕上觀感順很多。 */
 .snapContainer {
   height: 100vh;
   overflow-y: scroll;
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
   scroll-behavior: smooth;
 }
 
@@ -405,7 +409,6 @@
   height: 100vh;
   overflow: hidden;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 
 /* Last item (news + footer) doesn't snap strictly */
@@ -430,6 +433,9 @@
   background-size: cover;
   background-position: center;
   transition: opacity 1s ease-in-out;
+  /* 強制走 GPU 合成層，讓 opacity 過渡不觸發 paint，避免大尺寸 video/圖片 fade 時掉 frame */
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .sectionOverlay {
