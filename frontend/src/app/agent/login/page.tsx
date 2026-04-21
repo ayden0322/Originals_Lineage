@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Form, Input, Button, message, Typography } from 'antd';
+import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { agentLogin } from '@/lib/api/commission';
 import { setTokens } from '@/lib/api/client';
+import AuthShell from '@/components/auth/AuthShell';
 
 export default function AgentLoginPage() {
   const router = useRouter();
@@ -28,44 +29,26 @@ export default function AgentLoginPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1f2a5e 0%, #2d3a7e 100%)',
-      }}
-    >
-      <Card style={{ width: 420 }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Typography.Title level={3} style={{ marginBottom: 4 }}>
-            始祖天堂 代理後台
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            請使用管理者建立的代理帳號登入
-          </Typography.Text>
-        </div>
-        <Form layout="vertical" onFinish={handleSubmit} autoComplete="off">
-          <Form.Item
-            label="登入帳號"
-            name="loginAccount"
-            rules={[{ required: true, message: '請輸入帳號' }]}
-          >
-            <Input prefix={<UserOutlined />} placeholder="代理登入帳號" />
-          </Form.Item>
-          <Form.Item
-            label="密碼"
-            name="password"
-            rules={[{ required: true, message: '請輸入密碼' }]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="密碼" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={submitting} block>
-            登入
-          </Button>
-        </Form>
-      </Card>
-    </div>
+    <AuthShell title="代理後台" subtitle="請使用管理者建立的代理帳號登入">
+      <Form layout="vertical" onFinish={handleSubmit} autoComplete="off">
+        <Form.Item
+          label="登入帳號"
+          name="loginAccount"
+          rules={[{ required: true, message: '請輸入帳號' }]}
+        >
+          <Input prefix={<UserOutlined />} placeholder="代理登入帳號" size="large" />
+        </Form.Item>
+        <Form.Item
+          label="密碼"
+          name="password"
+          rules={[{ required: true, message: '請輸入密碼' }]}
+        >
+          <Input.Password prefix={<LockOutlined />} placeholder="密碼" size="large" />
+        </Form.Item>
+        <Button type="primary" htmlType="submit" loading={submitting} block size="large">
+          登入
+        </Button>
+      </Form>
+    </AuthShell>
   );
 }

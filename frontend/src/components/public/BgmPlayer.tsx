@@ -253,9 +253,10 @@ export default function BgmPlayer() {
     <div
       style={{
         position: 'fixed',
-        bottom: 80,
-        right: 20,
-        zIndex: 9999,
+        // 放左下，避免與右下的 AnnouncementFloat 浮窗／FAB 群組互相遮擋
+        bottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+        left: 'max(16px, env(safe-area-inset-left, 0px))',
+        zIndex: 1040,
         display: 'flex',
         alignItems: 'center',
         gap: 8,

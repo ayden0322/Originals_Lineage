@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Card, Form, Input, Button, Typography, message, Alert, Spin } from 'antd';
+import { Form, Input, Button, message, Alert, Spin } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import * as authApi from '@/lib/api/auth';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
-
-const { Title } = Typography;
+import AuthShell from '@/components/auth/AuthShell';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -99,22 +98,8 @@ export default function RegisterPage() {
   const isExistingPlayer = gameAccountStatus.checked && gameAccountStatus.exists && !isAccountError;
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f0f2f5',
-        padding: '24px 0',
-      }}
-    >
-      <Card style={{ width: 420, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <Title level={3} style={{ textAlign: 'center', marginBottom: 24 }}>
-          註冊帳號
-        </Title>
-
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+    <AuthShell title="註冊帳號" subtitle={`加入${siteName}，開啟你的冒險`}>
+      <Form form={form} layout="vertical" onFinish={onFinish}>
           {/* 遊戲帳號 */}
           <Form.Item
             name="gameAccountName"
@@ -203,11 +188,11 @@ export default function RegisterPage() {
             </Button>
           </Form.Item>
 
-          <div style={{ textAlign: 'center' }}>
-            <a href="/auth/login">已有帳號？前往登入</a>
+          <div style={{ textAlign: 'center', fontSize: 13 }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>已有帳號？</span>
+            <a href="/auth/login" style={{ color: '#c4a24e', marginLeft: 4 }}>前往登入</a>
           </div>
         </Form>
-      </Card>
-    </div>
+    </AuthShell>
   );
 }
