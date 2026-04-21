@@ -55,26 +55,41 @@ export default function SectionNav({ sections, navStyle }: SectionNavProps) {
   if (sections.length === 0) return null;
 
   return (
-    <nav className={styles.sectionNav}>
+    <nav
+      className={styles.sectionNav}
+      style={
+        {
+          '--nav-active-color': activeColor,
+          '--nav-inactive-color': inactiveColor,
+        } as React.CSSProperties
+      }
+    >
       {sections.map((section, idx) => {
         const isActive = idx === activeIndex;
         return (
           <button
             key={section.id}
-            className={styles.sectionNavItem}
+            className={`${styles.sectionNavItem} ${isActive ? styles.sectionNavItemActive : ''}`}
             onClick={() => handleClick(section.slug)}
-            style={{
-              color: isActive ? activeColor : inactiveColor,
-              fontSize: isActive ? `${activeFontSize}px` : `${inactiveFontSize}px`,
-              fontWeight: isActive ? activeFontWeight : inactiveFontWeight,
-              letterSpacing: `${letterSpacing}px`,
-              fontFamily,
-              opacity: isActive ? 1 : 0.5,
-              transform: isActive ? 'translateX(0)' : 'translateX(-4px)',
-              transition: 'all 0.4s ease',
-            }}
+            aria-label={section.displayName}
+            aria-current={isActive ? 'true' : undefined}
           >
-            {section.displayName}
+            <span
+              className={styles.sectionNavText}
+              style={{
+                color: isActive ? activeColor : inactiveColor,
+                fontSize: isActive ? `${activeFontSize}px` : `${inactiveFontSize}px`,
+                fontWeight: isActive ? activeFontWeight : inactiveFontWeight,
+                letterSpacing: `${letterSpacing}px`,
+                fontFamily,
+                opacity: isActive ? 1 : 0.5,
+                transform: isActive ? 'translateX(0)' : 'translateX(-4px)',
+                transition: 'all 0.4s ease',
+              }}
+            >
+              {section.displayName}
+            </span>
+            <span className={styles.sectionNavDot} aria-hidden />
           </button>
         );
       })}

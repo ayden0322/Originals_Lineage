@@ -96,11 +96,46 @@ export default function SectionCarousel({ slides }: SectionCarouselProps) {
     });
   }, [current, mountedIndices]);
 
+  // ─── Touch swipe（手機版左右滑動切換）──────────────────────
+  // 用 ref 記錄起點 + 是否構成 swipe；真的 swipe 時，隨後的 click 會被跳過，避免誤觸連結。
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const didSwipeRef = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+    didSwipeRef.current = false;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!start) return;
+      if (slides.length <= 1) return;
+      const end = e.changedTouches[0];
+      const dx = end.clientX - start.x;
+      const dy = end.clientY - start.y;
+      // 水平距離 > 50px 且主要為水平方向才視為 swipe
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        didSwipeRef.current = true;
+        if (dx < 0) next();
+        else prev();
+      }
+    },
+    [slides.length, next, prev],
+  );
+
   if (slides.length === 0) return null;
 
   const slide = slides[current];
 
   const handleClick = () => {
+    // swipe 剛發生時不觸發連結
+    if (didSwipeRef.current) {
+      didSwipeRef.current = false;
+      return;
+    }
     if (slide.linkEnabled && slide.linkUrl) {
       window.open(slide.linkUrl, '_blank', 'noopener,noreferrer');
     }
@@ -157,6 +192,8 @@ export default function SectionCarousel({ slides }: SectionCarouselProps) {
           cursor: slide.linkEnabled && slide.linkUrl ? 'pointer' : 'default',
         }}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       />
 
       {/* Indicators */}

@@ -700,11 +700,52 @@
   60% { transform: translateX(-50%) translateY(-4px); }
 }
 
-/* ─── Tablet overrides：tablet 空間也不足以容納左側 SectionNav ── */
+/* ─── 預設：dot 不顯示（桌機使用文字清單）──────────────────── */
+.sectionNavText {
+  display: inline-block;
+}
+
+.sectionNavDot {
+  display: none;
+}
+
+/* ─── Tablet + Mobile：文字清單改為右側圓點指示器 ──────────── */
 @media (max-width: 1023px) {
-  /* 平板 + 手機皆隱藏左側 SectionNav（會蓋住 hero 內容） */
   .sectionNav {
+    left: auto;
+    right: 14px;
+    gap: 14px;
+    z-index: 90;
+  }
+
+  .sectionNavItem {
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sectionNavText {
     display: none;
+  }
+
+  .sectionNavDot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--nav-inactive-color, rgba(255, 255, 255, 0.35));
+    opacity: 0.65;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  }
+
+  .sectionNavItemActive .sectionNavDot {
+    width: 10px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--nav-active-color, #ffffff);
+    opacity: 1;
   }
 }
 

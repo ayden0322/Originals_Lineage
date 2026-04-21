@@ -179,9 +179,6 @@ export default function ReservePage() {
           ps?.heroBackgroundUrl
             ? {
                 backgroundImage: `url(${ps.heroBackgroundUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed',
               }
             : undefined
         }
@@ -377,7 +374,12 @@ export default function ReservePage() {
                     <div className={styles.milestoneRail}>
                       <div
                         className={`${styles.milestoneRailFill} ${reached ? styles.railReached : ''}`}
-                        style={{ width: `${segmentProgress * 100}%` }}
+                        style={
+                          {
+                            width: `${segmentProgress * 100}%`,
+                            '--rail-progress': segmentProgress,
+                          } as React.CSSProperties
+                        }
                       />
                     </div>
                   )}
