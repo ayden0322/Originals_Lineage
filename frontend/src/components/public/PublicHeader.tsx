@@ -134,9 +134,8 @@ export default function PublicHeader() {
     };
   }, [topRowHeight, totalHeaderHeight]);
 
-  const lineSupportUrl = config?.settings.lineOfficialUrl;
   const topLinks = [
-    { label: '聯繫客服', path: lineSupportUrl || '/public/support', external: !!lineSupportUrl },
+    { label: '聯繫客服', path: '/public/support', external: false },
     { label: '遊戲下載', path: downloadUrl || '#', external: !!downloadUrl },
   ];
 
