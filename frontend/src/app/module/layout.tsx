@@ -159,6 +159,35 @@ function filterMenuByPermissions(items: MenuItem[], permissions: string[]): Item
   return result;
 }
 
+/** 找出 pathname 所屬的一串父群組 key（用於自動展開） */
+function findAncestorKeys(pathname: string, items: MenuItem[]): string[] {
+  for (const item of items) {
+    if (item.children) {
+      if (item.key === pathname) return [];
+      const sub = findAncestorKeys(pathname, item.children);
+      if (sub.length > 0 || item.children.some((c) => c.key === pathname)) {
+        return [item.key, ...sub];
+      }
+    }
+  }
+  return [];
+}
+
+const SIDEBAR_OPENKEYS_STORAGE = 'module-admin-sidebar-openkeys';
+
+/** 讀取 localStorage 保存的展開狀態（SSR safe） */
+function loadSavedOpenKeys(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(SIDEBAR_OPENKEYS_STORAGE);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((k) => typeof k === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function ModuleAdminLayout({
   children,
 }: {
@@ -182,6 +211,37 @@ export default function ModuleAdminLayout({
     const permissions = user?.permissions ?? [];
     return filterMenuByPermissions(allMenuItems, permissions);
   }, [user?.permissions]);
+
+  // ─── 側邊欄展開狀態 ──────────────────────────────────────────
+  // 初值：優先使用 localStorage 記住的狀態；若空，只展開當前路徑所屬群組
+  const [openKeys, setOpenKeys] = useState<string[]>(() => {
+    const saved = loadSavedOpenKeys();
+    if (saved.length > 0) return saved;
+    return findAncestorKeys(pathname, allMenuItems);
+  });
+
+  // 路徑變動時：確保當前頁所屬群組一定展開（不強制關掉使用者已打開的）
+  useEffect(() => {
+    const ancestors = findAncestorKeys(pathname, allMenuItems);
+    if (ancestors.length === 0) return;
+    setOpenKeys((prev) => {
+      const merged = Array.from(new Set([...prev, ...ancestors]));
+      return merged.length === prev.length ? prev : merged;
+    });
+  }, [pathname]);
+
+  // openKeys 變動時同步到 localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        SIDEBAR_OPENKEYS_STORAGE,
+        JSON.stringify(openKeys),
+      );
+    } catch {
+      // localStorage 被停用時靜默忽略
+    }
+  }, [openKeys]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -227,11 +287,14 @@ export default function ModuleAdminLayout({
       theme="dark"
       mode="inline"
       selectedKeys={[pathname]}
-      defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'packages', 'payment', 'commission', 'reservations']}
+      openKeys={openKeys}
+      onOpenChange={(keys) => setOpenKeys(keys as string[])}
       items={menuItems}
       onClick={({ key }) => {
-        // Only navigate for leaf items (those with actual paths)
-        if (key.startsWith('/')) router.push(key);
+        // 只對葉子節點 navigate；且若已在該頁就不 push，避免 Next.js 同路由 re-render 把 scroll 拉回頂部
+        if (key.startsWith('/') && key !== pathname) {
+          router.push(key);
+        }
       }}
       style={{ borderRight: 0 }}
     />
