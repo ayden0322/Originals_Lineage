@@ -13,16 +13,26 @@ export class MockPaymentProvider implements PaymentProvider {
   private readonly logger = new Logger(MockPaymentProvider.name);
 
   /**
-   * 正式環境（NODE_ENV=production）禁止使用 mock 金流。
+   * 正式環境（NODE_ENV=production）預設禁止使用 mock 金流。
    * 即使 DB 有人誤建了 type=mock 的 gateway 或把 routes 指向它，
    * 這裡會直接拒絕建立訂單，避免「玩家按下去就被自動發貨」的安全漏洞。
+   *
+   * 測試站（例如 Zeabur 的預覽環境）若確認需要用 mock 跑下單流程，
+   * 可設定環境變數 ALLOW_MOCK_PAYMENT=true 明確 opt-in。
+   * 注意：正式上線環境絕對不要設這個變數。
    */
   private ensureNotProduction() {
-    if (process.env.NODE_ENV === 'production') {
+    const allowMock = process.env.ALLOW_MOCK_PAYMENT === 'true';
+    if (process.env.NODE_ENV === 'production' && !allowMock) {
       this.logger.error(
-        '[SECURITY] 正式環境嘗試使用 mock 金流已被拒絕。請到後台將對應的 payment_channel_routes 指向真實 gateway。',
+        '[SECURITY] 正式環境嘗試使用 mock 金流已被拒絕。請到後台將對應的 payment_channel_routes 指向真實 gateway，或在測試站設定 ALLOW_MOCK_PAYMENT=true。',
       );
       throw new Error('正式環境禁止使用 mock 金流，請聯絡管理者檢查金流設定');
+    }
+    if (process.env.NODE_ENV === 'production' && allowMock) {
+      this.logger.warn(
+        '[MOCK] ALLOW_MOCK_PAYMENT=true：此環境允許 mock 金流（僅供測試站，勿用於正式站）。',
+      );
     }
   }
 
