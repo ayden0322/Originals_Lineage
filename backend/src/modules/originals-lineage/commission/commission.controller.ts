@@ -190,6 +190,37 @@ export class AdminCommissionController {
 
   // ──────────── 玩家歸屬 ────────────
 
+  /**
+   * 玩家歸屬總覽（含聚合業績）
+   *  - agentId: 篩特定代理旗下
+   *  - q: 搜玩家帳號 / email / playerId
+   *  - linkedSource: cookie/register/manual/system
+   *  - includeSystem: 預設排除 SYSTEM 歸屬（純雜項），=true 時才包含
+   */
+  @Get('players')
+  @RequirePermission('module.originals.commission.view')
+  listAttributions(
+    @Query('agentId') agentId?: string,
+    @Query('q') q?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('linkedSource') linkedSource?: 'cookie' | 'register' | 'manual' | 'system',
+    @Query('includeSystem') includeSystem?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.attribution.listAttributions({
+      agentId: agentId || undefined,
+      q: q || undefined,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      linkedSource,
+      includeSystem: includeSystem === 'true',
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
   @Get('players/:playerId/attribution')
   @RequirePermission('module.originals.commission.view')
   getAttribution(@Param('playerId') playerId: string) {

@@ -13,6 +13,7 @@ import type {
   CommissionSubordinateReport,
   CommissionPlayerTransaction,
   CommissionMyPlayerItem,
+  CommissionAttributionListItem,
   CommissionAgentSelf,
   AgentLoginResponse,
 } from '../types';
@@ -157,6 +158,26 @@ export async function toggleLink(linkId: string, active: boolean) {
 }
 
 // ─── Admin: Player Attribution ────────────────────────────────────
+
+/**
+ * Admin：玩家歸屬總覽列表
+ */
+export async function listPlayerAttributions(params?: {
+  agentId?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  linkedSource?: 'cookie' | 'register' | 'manual' | 'system';
+  includeSystem?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<CommissionAttributionListItem[]> {
+  const { data } = await apiClient.get<ApiResponse<CommissionAttributionListItem[]>>(
+    `${ADMIN}/players`,
+    { params },
+  );
+  return data.data;
+}
 
 export async function getPlayerAttribution(playerId: string) {
   const { data } = await apiClient.get<ApiResponse<CommissionPlayerAttribution>>(

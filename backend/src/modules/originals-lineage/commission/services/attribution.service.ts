@@ -32,6 +32,110 @@ export class AttributionService {
     return sys.id;
   }
 
+  /**
+   * 管理者：玩家歸屬總覽列表（含玩家帳號、代理、累積業績）
+   *  - 可依 agentId、q（帳號/email）、時間範圍、linkedSource 過濾
+   *  - 排除 SYSTEM 歸屬（預設），可用 includeSystem=true 打開
+   */
+  async listAttributions(options: {
+    agentId?: string;
+    q?: string;
+    from?: Date;
+    to?: Date;
+    linkedSource?: 'cookie' | 'register' | 'manual' | 'system';
+    includeSystem?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+
+    const qb = this.attrRepo
+      .createQueryBuilder('pa')
+      .leftJoin('commission_agents', 'a', 'a.id = pa.agent_id')
+      .leftJoin('website_users', 'wu', 'wu.id = pa.player_id')
+      .leftJoin(
+        'commission_records',
+        'cr',
+        'cr.player_id = pa.player_id AND cr.agent_id = pa.agent_id',
+      );
+
+    if (options.agentId) {
+      qb.andWhere('pa.agent_id = :aid', { aid: options.agentId });
+    }
+    if (!options.includeSystem) {
+      qb.andWhere('a.is_system = FALSE');
+    }
+    if (options.linkedSource) {
+      qb.andWhere('pa.linked_source = :src', { src: options.linkedSource });
+    }
+    if (options.from) {
+      qb.andWhere('pa.linked_at >= :from', { from: options.from });
+    }
+    if (options.to) {
+      qb.andWhere('pa.linked_at < :to', { to: options.to });
+    }
+    if (options.q) {
+      qb.andWhere(
+        '(wu.game_account_name ILIKE :q OR wu.email ILIKE :q OR CAST(pa.player_id AS TEXT) = :qexact)',
+        { q: `%${options.q}%`, qexact: options.q },
+      );
+    }
+
+    qb.groupBy('pa.player_id')
+      .addGroupBy('pa.agent_id')
+      .addGroupBy('pa.linked_at')
+      .addGroupBy('pa.linked_source')
+      .addGroupBy('pa.link_id')
+      .addGroupBy('a.id')
+      .addGroupBy('a.code')
+      .addGroupBy('a.name')
+      .addGroupBy('a.is_system')
+      .addGroupBy('a.parent_id')
+      .addGroupBy('wu.game_account_name')
+      .addGroupBy('wu.email')
+      .orderBy('pa.linked_at', 'DESC')
+      .limit(limit)
+      .offset(offset)
+      .select([
+        'pa.player_id AS player_id',
+        'pa.agent_id AS agent_id',
+        'pa.linked_at AS linked_at',
+        'pa.linked_source AS linked_source',
+        'pa.link_id AS link_id',
+        'a.code AS agent_code',
+        'a.name AS agent_name',
+        'a.is_system AS agent_is_system',
+        'a.parent_id AS agent_parent_id',
+        'wu.game_account_name AS game_account_name',
+        'wu.email AS email',
+        'COALESCE(SUM(cr.base_amount), 0) AS total_recharge',
+        'COALESCE(SUM(cr.commission_amount), 0) AS total_commission',
+        'COUNT(cr.id) AS tx_count',
+        'MAX(cr.paid_at) AS last_paid_at',
+      ]);
+
+    const rows = await qb.getRawMany();
+
+    return rows.map((row) => ({
+      playerId: row.player_id,
+      gameAccountName: row.game_account_name ?? null,
+      email: row.email ?? null,
+      agentId: row.agent_id,
+      agentCode: row.agent_code,
+      agentName: row.agent_name,
+      agentIsSystem: !!row.agent_is_system,
+      agentLevel: row.agent_parent_id ? 2 : 1,
+      linkedAt: row.linked_at,
+      linkedSource: row.linked_source as 'cookie' | 'register' | 'manual' | 'system',
+      linkId: row.link_id,
+      totalRecharge: Number(row.total_recharge),
+      totalCommission: Number(row.total_commission),
+      transactionCount: Number(row.tx_count),
+      lastPaidAt: row.last_paid_at,
+    }));
+  }
+
   /** 查詢玩家歸屬；查無則歸 SYSTEM */
   async getAttribution(playerId: string): Promise<PlayerAttribution> {
     const existing = await this.attrRepo.findOne({ where: { playerId } });

@@ -976,6 +976,28 @@ export interface CommissionPlayerTransaction {
 }
 
 /**
+ * 管理者：玩家歸屬總覽單列（後台玩家歸屬列表用）
+ * - 管理者看得到完整帳號、email（不遮罩）
+ */
+export interface CommissionAttributionListItem {
+  playerId: string;
+  gameAccountName: string | null;
+  email: string | null;
+  agentId: string;
+  agentCode: string;
+  agentName: string;
+  agentIsSystem: boolean;
+  agentLevel: 1 | 2;
+  linkedAt: string;
+  linkedSource: 'cookie' | 'register' | 'manual' | 'system';
+  linkId: string | null;
+  totalRecharge: number;
+  totalCommission: number;
+  transactionCount: number;
+  lastPaidAt: string | null;
+}
+
+/**
  * 代理的玩家清單（含註冊未消費者）
  * - gameAccountMasked: 首字母+***+末位數字（如 a***3）
  * - totalRecharge / totalCommission / transactionCount: 累積資訊（0 代表尚未消費）
