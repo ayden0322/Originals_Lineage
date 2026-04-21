@@ -20,6 +20,7 @@ import { CreateWebsiteUserDto } from './dto/create-website-user.dto';
 import { BindGameAccountDto } from './dto/bind-game-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeSecondPasswordDto } from './dto/change-second-password.dto';
+import { encryptPassword } from './utils/password-crypto';
 
 @Injectable()
 export class MemberService {
@@ -87,11 +88,13 @@ export class MemberService {
 
     // 3. Create WebsiteUser (password = game password, auto-synced)
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordEncrypted = encryptPassword(dto.password);
     const secondPasswordHash = await bcrypt.hash(dto.secondPassword, 10);
 
     const user = this.userRepo.create({
       gameAccountName: dto.gameAccountName,
       passwordHash,
+      passwordEncrypted,
       secondPasswordHash,
       secondPasswordPlain: dto.secondPassword,
       email: null,
@@ -132,6 +135,7 @@ export class MemberService {
     // 6. Return safe user data
     const {
       passwordHash: _ph,
+      passwordEncrypted: _pe,
       refreshTokenHash: _rt,
       secondPasswordHash: _sph,
       secondPasswordPlain: _spp,
@@ -221,8 +225,9 @@ export class MemberService {
       throw new NotFoundException('使用者不存在');
     }
 
-    // 3. Hash new password for website (bcrypt)
+    // 3. Hash + encrypt new password for website
     const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
+    const newPasswordEncrypted = encryptPassword(dto.newPassword);
 
     // 4. Hash new password for game DB (using configured encryption)
     const mapping = await this.gameDbService.getTableMapping();
@@ -240,6 +245,7 @@ export class MemberService {
 
     // 6. Update website user
     user.passwordHash = newPasswordHash;
+    user.passwordEncrypted = newPasswordEncrypted;
     await this.userRepo.save(user);
 
     return { message: '密碼已成功更新' };
@@ -293,6 +299,7 @@ export class MemberService {
       items: users.map((user) => {
         const {
           passwordHash,
+          passwordEncrypted,
           refreshTokenHash,
           secondPasswordHash,
           ...safeUser

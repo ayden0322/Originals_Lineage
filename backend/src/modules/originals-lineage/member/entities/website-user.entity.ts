@@ -21,6 +21,9 @@ export class WebsiteUser {
   @Column({ name: 'password_hash' })
   passwordHash: string;
 
+  @Column({ name: 'password_encrypted', type: 'varchar', nullable: true })
+  passwordEncrypted: string | null;
+
   @Column({ name: 'second_password_hash' })
   secondPasswordHash: string;
 
