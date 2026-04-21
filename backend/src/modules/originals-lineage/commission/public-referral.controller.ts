@@ -43,6 +43,9 @@ export class PublicReferralController {
         maxAge: cookieDays * 24 * 60 * 60 * 1000,
         httpOnly: false, // 讓前端 register 時可讀
         sameSite: 'lax',
+        // 必須指定 path='/'，否則預設會用請求路徑（/api/public/originals/ref），
+        // 導致前端 /auth/register 讀不到 cookie → refCode 永遠 undefined → 歸屬到 SYSTEM
+        path: '/',
       });
     }
 

@@ -12,6 +12,7 @@ import type {
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
   CommissionPlayerTransaction,
+  CommissionMyPlayerItem,
   CommissionAgentSelf,
   AgentLoginResponse,
 } from '../types';
@@ -333,14 +334,33 @@ export async function agentExportSettlement(id: string): Promise<Blob> {
   return res.data;
 }
 
+/**
+ * 代理玩家清單（含註冊未消費者）— /agent/players 頁面用
+ */
 export async function agentMyPlayers(params?: {
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<CommissionMyPlayerItem[]> {
+  const { data } = await apiClient.get<ApiResponse<CommissionMyPlayerItem[]>>(
+    `${AGENT}/me/players`,
+    { params },
+  );
+  return data.data;
+}
+
+/**
+ * 代理玩家消費交易明細（每筆交易一列）
+ */
+export async function agentMyTransactions(params?: {
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
 }): Promise<CommissionPlayerTransaction[]> {
   const { data } = await apiClient.get<ApiResponse<CommissionPlayerTransaction[]>>(
-    `${AGENT}/me/players`,
+    `${AGENT}/me/transactions`,
     { params },
   );
   return data.data;

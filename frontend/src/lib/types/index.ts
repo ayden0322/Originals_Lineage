@@ -975,6 +975,23 @@ export interface CommissionPlayerTransaction {
   agentId: string;
 }
 
+/**
+ * 代理的玩家清單（含註冊未消費者）
+ * - gameAccountMasked: 首字母+***+末位數字（如 a***3）
+ * - totalRecharge / totalCommission / transactionCount: 累積資訊（0 代表尚未消費）
+ */
+export interface CommissionMyPlayerItem {
+  playerId: string;
+  gameAccountMasked: string;
+  linkedAt: string;
+  linkedSource: 'cookie' | 'register' | 'manual' | 'system';
+  totalRecharge: number;
+  totalCommission: number;
+  transactionCount: number;
+  lastPaidAt: string | null;
+  agentId: string;
+}
+
 export interface CommissionAgentSelf {
   id: string;
   code: string;

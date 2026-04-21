@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Agent } from '../entities/agent.entity';
 import { CommissionRecord } from '../entities/commission-record.entity';
 import { Settlement } from '../entities/settlement.entity';
+import { PlayerAttribution } from '../entities/player-attribution.entity';
 import { CommissionSettingsService } from './commission-settings.service';
 import { getCurrentPeriod } from '../utils/period.util';
 
@@ -24,6 +25,8 @@ export class AgentReportService {
     private readonly recordRepo: Repository<CommissionRecord>,
     @InjectRepository(Settlement)
     private readonly settlementRepo: Repository<Settlement>,
+    @InjectRepository(PlayerAttribution)
+    private readonly attributionRepo: Repository<PlayerAttribution>,
     private readonly settings: CommissionSettingsService,
   ) {}
 
@@ -215,6 +218,98 @@ export class AgentReportService {
     });
 
     return [header, ...lines].join('\n');
+  }
+
+  /**
+   * 代理的玩家清單（含「只註冊未消費」的玩家）
+   *
+   * 與 getPlayerTransactions 的差別：
+   *  - 此方法以 commission_player_attributions 為主表，只要被歸屬的玩家都會出現
+   *  - 聚合 commission_records 以計算累積儲值 / 分潤 / 交易次數
+   *  - 沒消費過的玩家會顯示 totalRecharge=0 / txCount=0
+   *
+   * 隱私：玩家帳號以「首字母***末位數字」格式遮罩（如 ayden123 → a***3）
+   */
+  async getMyPlayersList(
+    agentId: string,
+    options: { from?: Date; to?: Date; limit?: number; offset?: number } = {},
+  ) {
+    const me = await this.agentRepo.findOne({ where: { id: agentId } });
+    if (!me) throw new ForbiddenException();
+
+    // 範圍：自己 + 旗下 B（A 可看下線帶來的玩家；B 只看自己的）
+    const ids: string[] = [agentId];
+    if (!me.parentId) {
+      const subs = await this.agentRepo.find({ where: { parentId: agentId } });
+      ids.push(...subs.map((s) => s.id));
+    }
+
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+
+    // LEFT JOIN commission_records：沒消費的玩家聚合值會是 NULL → 用 COALESCE 歸零
+    // 條件 cr.agent_id = pa.agent_id 確保只算該代理自己領到的分潤，不會混到上下線
+    const qb = this.attributionRepo
+      .createQueryBuilder('pa')
+      .leftJoin('website_users', 'wu', 'wu.id = pa.player_id')
+      .leftJoin(
+        'commission_records',
+        'cr',
+        `cr.player_id = pa.player_id AND cr.agent_id = pa.agent_id` +
+          (options.from ? ' AND cr.paid_at >= :from' : '') +
+          (options.to ? ' AND cr.paid_at < :to' : ''),
+      )
+      .where('pa.agent_id IN (:...ids)', { ids })
+      .groupBy('pa.player_id')
+      .addGroupBy('pa.agent_id')
+      .addGroupBy('pa.linked_at')
+      .addGroupBy('pa.linked_source')
+      .addGroupBy('wu.game_account_name')
+      .orderBy('pa.linked_at', 'DESC')
+      .limit(limit)
+      .offset(offset)
+      .select([
+        'pa.player_id AS player_id',
+        'pa.agent_id AS agent_id',
+        'pa.linked_at AS linked_at',
+        'pa.linked_source AS linked_source',
+        'wu.game_account_name AS game_account_name',
+        'COALESCE(SUM(cr.base_amount), 0) AS total_recharge',
+        'COALESCE(SUM(cr.commission_amount), 0) AS total_commission',
+        'COUNT(cr.id) AS tx_count',
+        'MAX(cr.paid_at) AS last_paid_at',
+      ]);
+
+    if (options.from) qb.setParameter('from', options.from);
+    if (options.to) qb.setParameter('to', options.to);
+
+    const rows = await qb.getRawMany();
+
+    return rows.map((row) => ({
+      playerId: row.player_id,
+      gameAccountMasked: this.maskAccountName(row.game_account_name),
+      linkedAt: row.linked_at,
+      linkedSource: row.linked_source as 'cookie' | 'register' | 'manual' | 'system',
+      totalRecharge: this.round(Number(row.total_recharge)),
+      totalCommission: this.round(Number(row.total_commission)),
+      transactionCount: Number(row.tx_count),
+      lastPaidAt: row.last_paid_at,
+      agentId: row.agent_id,
+    }));
+  }
+
+  /**
+   * 遮罩玩家遊戲帳號：首個英文字母 + *** + 最後一個數字
+   *  - ayden123 → a***3
+   *  - abc      → a***c   （沒數字取最後一字元）
+   *  - 999      → 9***9   （沒英文取第一字元）
+   *  - null     → ***
+   */
+  private maskAccountName(name: string | null | undefined): string {
+    if (!name) return '***';
+    const firstLetter = name.match(/[a-zA-Z]/)?.[0] ?? name[0];
+    const lastDigit = name.match(/\d(?!.*\d)/)?.[0] ?? name[name.length - 1];
+    return `${firstLetter}***${lastDigit}`;
   }
 
   private maskPlayerId(playerId: string): string {

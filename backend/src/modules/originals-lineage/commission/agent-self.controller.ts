@@ -214,10 +214,35 @@ export class AgentSelfController {
     res.send('\uFEFF' + csv); // BOM for Excel
   }
 
+  /**
+   * 我的玩家清單（含註冊未消費者）— 以 attribution 為主表聚合
+   * /agent/players 頁面用
+   */
   @ApiBearerAuth()
   @UseGuards(AgentJwtGuard)
   @Get('me/players')
   myPlayers(
+    @Req() req: Request,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.report.getMyPlayersList(this.getMe(req).id, {
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
+  /**
+   * 我的玩家消費交易明細（每筆交易一列）— 保留原有功能
+   */
+  @ApiBearerAuth()
+  @UseGuards(AgentJwtGuard)
+  @Get('me/transactions')
+  myTransactions(
     @Req() req: Request,
     @Query('from') from?: string,
     @Query('to') to?: string,

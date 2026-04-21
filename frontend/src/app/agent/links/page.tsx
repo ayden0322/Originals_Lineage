@@ -55,7 +55,8 @@ export default function AgentLinksPage() {
 
   const buildUrl = (code: string) => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/api/public/originals/ref/${code}`;
+    // 帶 ?to=/auth/register，讓玩家點完連結直接進註冊頁（省去自行找註冊入口的步驟）
+    return `${window.location.origin}/api/public/originals/ref/${code}?to=/auth/register`;
   };
 
   // 用免費的 goqr.me API 產 QR Code（無需安裝套件）
