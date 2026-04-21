@@ -293,6 +293,7 @@ export default function DistributionsPage() {
       />
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="milestoneId"
         columns={summaryColumns}
         dataSource={summaries}
@@ -355,6 +356,7 @@ export default function DistributionsPage() {
         </Space>
 
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           size="small"
           columns={claimColumns}

@@ -10,6 +10,8 @@ import {
   Space,
   Spin,
   Tag,
+  Drawer,
+  Grid,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -19,6 +21,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { agentMe } from '@/lib/api/commission';
 import { clearTokens, getAccessToken } from '@/lib/api/client';
@@ -40,6 +43,13 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   const { token } = theme.useToken();
   const [me, setMe] = useState<CommissionAgentSelf | null>(null);
   const [loading, setLoading] = useState(true);
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.lg === false;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   // 登入頁不套用 layout
   const isLoginPage = pathname === '/agent/login';
@@ -90,53 +100,86 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         ]
       : baseMenu;
 
+  const brand = (
+    <div
+      style={{
+        height: 64,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        padding: '8px 0',
+      }}
+    >
+      <div style={{ fontWeight: 'bold', fontSize: 14 }}>始祖天堂 代理</div>
+      <div style={{ fontSize: 12, opacity: 0.7 }}>{me.code}</div>
+    </div>
+  );
+
+  const sideMenu = (
+    <Menu
+      theme="dark"
+      mode="inline"
+      selectedKeys={[pathname]}
+      items={menuItems}
+      onClick={({ key }) => router.push(key)}
+      style={{ borderRight: 0 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider breakpoint="lg" collapsedWidth="80">
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            padding: '8px 0',
-          }}
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={240}
+          styles={{ body: { padding: 0, background: '#001529' }, header: { display: 'none' } }}
         >
-          <div style={{ fontWeight: 'bold', fontSize: 14 }}>始祖天堂 代理</div>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>{me.code}</div>
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-        />
-      </Sider>
+          {brand}
+          {sideMenu}
+        </Drawer>
+      ) : (
+        <Sider breakpoint="lg" collapsedWidth="80">
+          {brand}
+          {sideMenu}
+        </Sider>
+      )}
       <Layout>
         <Header
           style={{
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             background: token.colorBgContainer,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 8,
           }}
         >
-          <Space>
-            <Tag color={me.level === 1 ? 'purple' : 'blue'}>
+          {isMobile ? (
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setDrawerOpen(true)}
+              aria-label="開啟選單"
+            />
+          ) : (
+            <span />
+          )}
+          <Space size={isMobile ? 4 : 8} style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <Tag color={me.level === 1 ? 'purple' : 'blue'} style={{ margin: 0 }}>
               {me.level === 1 ? '一級代理（A）' : '二級代理（B）'}
             </Tag>
-            <span>{me.name}</span>
-            <Tag color="gold">{(me.currentRate * 100).toFixed(2)}%</Tag>
+            {!isMobile && <span>{me.name}</span>}
+            <Tag color="gold" style={{ margin: 0 }}>{(me.currentRate * 100).toFixed(2)}%</Tag>
             <Button icon={<LogoutOutlined />} type="text" onClick={handleLogout}>
-              登出
+              {isMobile ? '' : '登出'}
             </Button>
           </Space>
         </Header>
-        <Content style={{ margin: 24 }}>{children}</Content>
+        <Content style={{ margin: isMobile ? 12 : 24 }}>{children}</Content>
       </Layout>
     </Layout>
   );

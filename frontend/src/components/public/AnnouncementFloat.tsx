@@ -11,6 +11,8 @@ import type { ArticleCategory, Article } from '@/lib/types';
  */
 const PAGES_DEFAULT_MINIMIZED = ['/public/shop'];
 const MOBILE_BREAKPOINT = 768;
+// 小於此寬度預設收合為 FAB，避免右下浮窗擋住 Hero 主視覺
+const DEFAULT_MINIMIZE_BREAKPOINT = 1024;
 const DISMISS_STORAGE_KEY = 'announcementFloat.dismissed';
 
 /**
@@ -37,7 +39,7 @@ export default function AnnouncementFloat() {
     if (typeof window === 'undefined') return;
     const shouldMinimize =
       PAGES_DEFAULT_MINIMIZED.some((p) => pathname?.startsWith(p)) ||
-      window.innerWidth < MOBILE_BREAKPOINT ||
+      window.innerWidth < DEFAULT_MINIMIZE_BREAKPOINT ||
       sessionStorage.getItem(DISMISS_STORAGE_KEY) === '1';
     if (shouldMinimize) setDismissed(true);
   }, [pathname]);
@@ -208,10 +210,11 @@ export default function AnnouncementFloat() {
     <div
       style={{
         position: 'fixed',
-        right: 24 - position.x,
-        bottom: 24 - position.y,
+        right: `calc(max(16px, env(safe-area-inset-right, 0px)) - ${position.x}px)`,
+        bottom: `calc(max(16px, env(safe-area-inset-bottom, 0px)) - ${position.y}px)`,
         zIndex: 1050,
-        width: 380,
+        width: 'min(380px, calc(100vw - 32px))',
+        maxWidth: '380px',
         opacity: isDragging ? 0.7 : 1,
         transition: 'opacity 0.2s ease',
         animation: hasEntrance ? 'floatIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
@@ -345,8 +348,8 @@ export default function AnnouncementFloat() {
                 {/* Date */}
                 <span
                   style={{
-                    fontSize: 11,
-                    color: 'rgba(255,255,255,0.3)',
+                    fontSize: 12,
+                    color: 'rgba(255,255,255,0.45)',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     minWidth: 42,

@@ -113,7 +113,7 @@ export default function ProductTemplatesPage() {
         在「商品管理」新增/編輯商品時，可將欄位儲存為範本，所有管理者皆可載入再做小幅調整。
       </p>
 
-      <Table rowKey="id" columns={columns} dataSource={data} loading={loading} />
+      <Table rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 'max-content' }} />
 
       <Modal
         title={`範本預覽：${previewItem?.name ?? ''}`}

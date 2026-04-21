@@ -246,6 +246,7 @@ export default function ArticlesPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={data}

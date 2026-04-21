@@ -359,6 +359,7 @@ export default function PaymentGatewaysPage() {
         }
       >
         <Table
+          scroll={{ x: 'max-content' }}
           columns={gatewayColumns}
           dataSource={gateways}
           rowKey="id"

@@ -189,6 +189,7 @@ export default function OrdersPage() {
       <h2>訂單管理</h2>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={data}
@@ -270,6 +271,7 @@ export default function OrdersPage() {
 
             <h4 style={{ marginTop: 16 }}>訂單項目</h4>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               columns={itemColumns}
               dataSource={detailOrder.items}

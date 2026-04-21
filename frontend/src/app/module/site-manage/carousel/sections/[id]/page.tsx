@@ -258,6 +258,7 @@ export default function SectionDetailPage() {
         }
       >
         <Table
+          scroll={{ x: 'max-content' }}
           loading={slidesLoading}
           dataSource={slides}
           rowKey="id"

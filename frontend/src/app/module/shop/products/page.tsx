@@ -418,6 +418,7 @@ export default function ProductsPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={data}

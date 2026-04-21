@@ -230,6 +230,7 @@ export default function CommissionSettlementsPage() {
       </Space>
       {agentId ? (
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           loading={loading}
           columns={columns}
@@ -277,6 +278,7 @@ export default function CommissionSettlementsPage() {
             </Descriptions>
             <h4>加減項明細</h4>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               size="small"
               pagination={false}
@@ -291,6 +293,7 @@ export default function CommissionSettlementsPage() {
             />
             <h4 style={{ marginTop: 16 }}>分潤紀錄（{detail.records.length} 筆）</h4>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               size="small"
               pagination={{ pageSize: 5 }}

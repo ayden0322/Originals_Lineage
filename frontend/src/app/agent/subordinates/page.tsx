@@ -155,6 +155,7 @@ export default function AgentSubordinatesPage() {
         description="所有子代理由總管理者統一建立。如需擴充團隊，請聯絡管理者新增。"
       />
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={list}

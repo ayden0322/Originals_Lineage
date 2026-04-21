@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Layout, Menu, theme, Button, Space, Spin } from 'antd';
+import { useEffect, useState } from 'react';
+import { Layout, Menu, theme, Button, Space, Spin, Drawer, Grid } from 'antd';
 import {
   DashboardOutlined,
   UserOutlined,
   AppstoreOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -30,12 +31,19 @@ export default function PlatformAdminLayout({
   const pathname = usePathname();
   const { token } = theme.useToken();
   const { user, loading, logout } = useAuth();
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.lg === false;
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/admin/login');
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -54,40 +62,72 @@ export default function PlatformAdminLayout({
     return null;
   }
 
+  const brand = (
+    <div
+      style={{
+        height: 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+      }}
+    >
+      主後台
+    </div>
+  );
+
+  const sideMenu = (
+    <Menu
+      theme="dark"
+      mode="inline"
+      selectedKeys={[pathname]}
+      items={menuItems}
+      onClick={({ key }) => router.push(key)}
+      style={{ borderRight: 0 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider breakpoint="lg" collapsedWidth="80">
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: 16,
-          }}
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={240}
+          styles={{ body: { padding: 0, background: '#001529' }, header: { display: 'none' } }}
         >
-          主後台
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-        />
-      </Sider>
+          {brand}
+          {sideMenu}
+        </Drawer>
+      ) : (
+        <Sider breakpoint="lg" collapsedWidth="80">
+          {brand}
+          {sideMenu}
+        </Sider>
+      )}
       <Layout>
         <Header
           style={{
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             background: token.colorBgContainer,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
           }}
         >
+          {isMobile ? (
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setDrawerOpen(true)}
+              aria-label="開啟選單"
+            />
+          ) : (
+            <span />
+          )}
           <Space>
             <span>{user?.displayName || '管理者'}</span>
             <Button icon={<LogoutOutlined />} type="text" onClick={handleLogout}>
@@ -95,7 +135,7 @@ export default function PlatformAdminLayout({
             </Button>
           </Space>
         </Header>
-        <Content style={{ margin: 24 }}>{children}</Content>
+        <Content style={{ margin: isMobile ? 12 : 24 }}>{children}</Content>
       </Layout>
     </Layout>
   );

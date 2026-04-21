@@ -112,6 +112,7 @@ export default function SectionsPage() {
         新增區塊
       </Button>
       <Table
+        scroll={{ x: 'max-content' }}
         loading={loading}
         dataSource={sections}
         rowKey="id"

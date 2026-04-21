@@ -100,6 +100,7 @@ export default function AgentPlayersPage() {
         </Button>
       </Space>
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={loading}
         columns={columns}

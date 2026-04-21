@@ -114,6 +114,7 @@ export default function PaymentRoutesPage() {
         </Paragraph>
 
         <Table
+          scroll={{ x: 'max-content' }}
           rowKey="paymentMethod"
           dataSource={rows}
           columns={columns}

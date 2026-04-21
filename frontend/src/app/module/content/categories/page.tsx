@@ -96,6 +96,7 @@ export default function CategoriesPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         loading={loading}
         dataSource={categories}
         rowKey="id"

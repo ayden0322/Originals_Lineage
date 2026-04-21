@@ -148,6 +148,7 @@ export default function AgentSettlementsPage() {
   return (
     <Card title="結算紀錄">
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={loading}
         columns={columns}
@@ -192,6 +193,7 @@ export default function AgentSettlementsPage() {
 
             <h4>加減項明細</h4>
             <Table
+              scroll={{ x: 'max-content' }}
               rowKey="id"
               size="small"
               pagination={false}

@@ -285,6 +285,7 @@ export default function NewsSettingsPage() {
             新增分類
           </Button>
           <Table
+            scroll={{ x: 'max-content' }}
             loading={catLoading}
             dataSource={categories}
             rowKey="id"

@@ -706,6 +706,7 @@ export default function SettingsPage() {
                   {/* 各頁面音樂 */}
                   <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>各頁面音樂設定</div>
                   <Table
+                    scroll={{ x: 'max-content' }}
                     dataSource={PAGE_ROUTES}
                     rowKey="path"
                     pagination={false}

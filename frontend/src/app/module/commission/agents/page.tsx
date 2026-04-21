@@ -325,6 +325,7 @@ export default function CommissionAgentsPage() {
       return (
         <div className="sub-agent-wrapper">
           <Table
+            scroll={{ x: 'max-content' }}
             rowKey="id"
             size="small"
             pagination={false}

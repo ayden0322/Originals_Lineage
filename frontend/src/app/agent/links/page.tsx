@@ -168,6 +168,7 @@ export default function AgentLinksPage() {
       }
     >
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         loading={loading}
         columns={columns}

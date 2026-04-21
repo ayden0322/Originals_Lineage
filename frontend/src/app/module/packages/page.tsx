@@ -138,6 +138,7 @@ export default function PackagesAdminPage() {
 
       <Card>
         <Table<GamePackage>
+          scroll={{ x: 'max-content' }}
           rowKey="id"
           dataSource={rows}
           loading={loading}

@@ -163,6 +163,7 @@ export default function ReservationsPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={data}

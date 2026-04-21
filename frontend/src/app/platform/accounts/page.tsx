@@ -216,6 +216,7 @@ export default function AccountsPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={accounts}

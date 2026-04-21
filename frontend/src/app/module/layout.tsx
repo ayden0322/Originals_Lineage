@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { Layout, Menu, theme, Button, Space } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Layout, Menu, theme, Button, Space, Drawer, Grid } from 'antd';
 import type { ItemType } from 'antd/es/menu/interface';
 import {
   DashboardOutlined,
@@ -17,6 +17,7 @@ import {
   CreditCardOutlined,
   PartitionOutlined,
   GiftOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -167,6 +168,15 @@ export default function ModuleAdminLayout({
   const pathname = usePathname();
   const { token } = theme.useToken();
   const { user, loading, logout } = useAuth();
+  const screens = Grid.useBreakpoint();
+  // < lg (992px)：行動版 + 平板都改用 drawer 模式，讓平板有完整內容寬度
+  const isMobile = screens.lg === false;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // 路徑切換時關閉 drawer（行動版點選單後自動收起）
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   const menuItems = useMemo(() => {
     const permissions = user?.permissions ?? [];
@@ -196,44 +206,76 @@ export default function ModuleAdminLayout({
     return null;
   }
 
+  const brand = (
+    <div
+      style={{
+        height: 64,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+      }}
+    >
+      始祖天堂
+    </div>
+  );
+
+  const sideMenu = (
+    <Menu
+      theme="dark"
+      mode="inline"
+      selectedKeys={[pathname]}
+      defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'packages', 'payment', 'commission', 'reservations']}
+      items={menuItems}
+      onClick={({ key }) => {
+        // Only navigate for leaf items (those with actual paths)
+        if (key.startsWith('/')) router.push(key);
+      }}
+      style={{ borderRight: 0 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider breakpoint="lg" collapsedWidth="80">
-        <div
-          style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: 16,
-          }}
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={240}
+          styles={{ body: { padding: 0, background: '#001529' }, header: { display: 'none' } }}
         >
-          始祖天堂
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[pathname]}
-          defaultOpenKeys={['site-manage', 'carousel', 'news', 'content', 'shop', 'packages', 'payment', 'commission', 'reservations']}
-          items={menuItems}
-          onClick={({ key }) => {
-            // Only navigate for leaf items (those with actual paths)
-            if (key.startsWith('/')) router.push(key);
-          }}
-        />
-      </Sider>
+          {brand}
+          {sideMenu}
+        </Drawer>
+      ) : (
+        <Sider breakpoint="lg" collapsedWidth="80">
+          {brand}
+          {sideMenu}
+        </Sider>
+      )}
       <Layout>
         <Header
           style={{
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             background: token.colorBgContainer,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
           }}
         >
+          {isMobile ? (
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setDrawerOpen(true)}
+              aria-label="開啟選單"
+            />
+          ) : (
+            <span />
+          )}
           <Space>
             <span>{user?.displayName || '工作人員'}</span>
             <Button icon={<LogoutOutlined />} type="text" onClick={handleLogout}>
@@ -241,7 +283,7 @@ export default function ModuleAdminLayout({
             </Button>
           </Space>
         </Header>
-        <Content style={{ margin: 24 }}>{children}</Content>
+        <Content style={{ margin: isMobile ? 12 : 24 }}>{children}</Content>
       </Layout>
     </Layout>
   );

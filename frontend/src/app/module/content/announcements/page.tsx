@@ -224,6 +224,7 @@ export default function AnnouncementsPage() {
       </div>
 
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="id"
         columns={columns}
         dataSource={data}
