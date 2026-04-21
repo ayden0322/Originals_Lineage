@@ -32,3 +32,23 @@ body {
   --header-top-height: 52px; /* logo row: 36px logo + 8px*2 padding */
   --header-total-height: 97px; /* 52px top + 1px divider + 44px nav */
 }
+
+/* ─── News page tag row: mobile horizontal scroll ─────── */
+@media (max-width: 640px) {
+  .news-tag-row {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    /* allow reaching screen edges for the swipe feel */
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .news-tag-row::-webkit-scrollbar {
+    display: none;
+  }
+}

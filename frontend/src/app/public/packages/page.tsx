@@ -114,11 +114,11 @@ export default function PackagesPage() {
         {packages.length === 0 ? (
           <Empty description="目前沒有上架的禮包" style={{ padding: '80px 0' }} />
         ) : (
-          <Row gutter={[24, 24]} align="stretch">
+          <Row gutter={[16, 16]} align="stretch">
             {packages.map((pkg) => (
               <Col
                 key={pkg.id}
-                xs={24}
+                xs={12}
                 sm={12}
                 md={colSpan < 8 ? 12 : colSpan}
                 lg={colSpan}

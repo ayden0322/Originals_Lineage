@@ -89,7 +89,7 @@ export default function ChangelogPage() {
         style={{
           position: 'relative',
           width: '100%',
-          height: 200,
+          height: 'clamp(140px, 28vw, 200px)',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -137,7 +137,7 @@ export default function ChangelogPage() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 24px 64px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(24px, 6vw, 48px) clamp(16px, 4vw, 24px) 64px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <Spin size="large" />

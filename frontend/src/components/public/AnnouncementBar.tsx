@@ -82,11 +82,11 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
       {/* Type badge + Content */}
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: '#fff',
           background: 'rgba(255,255,255,0.15)',
           borderRadius: 3,
-          padding: '1px 6px',
+          padding: '2px 8px',
           whiteSpace: 'nowrap',
           flexShrink: 0,
         }}
@@ -111,9 +111,10 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
       {items.length > 1 && (
         <span
           style={{
-            fontSize: 11,
-            color: 'rgba(255,255,255,0.5)',
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.7)',
             whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
           {current + 1}/{items.length}
@@ -122,30 +123,50 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
 
       {/* Arrows (if multiple) */}
       {items.length > 1 && (
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
           <button
             onClick={() => setCurrent((p) => (p - 1 + items.length) % items.length)}
+            aria-label="上一則公告"
             style={{
               background: 'none',
               border: 'none',
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.7)',
               cursor: 'pointer',
-              fontSize: 12,
-              padding: '0 2px',
+              fontSize: 18,
+              lineHeight: 1,
+              width: 32,
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 4,
+              transition: 'background 0.15s, color 0.15s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
           >
             ‹
           </button>
           <button
             onClick={() => setCurrent((p) => (p + 1) % items.length)}
+            aria-label="下一則公告"
             style={{
               background: 'none',
               border: 'none',
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgba(255,255,255,0.7)',
               cursor: 'pointer',
-              fontSize: 12,
-              padding: '0 2px',
+              fontSize: 18,
+              lineHeight: 1,
+              width: 32,
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 4,
+              transition: 'background 0.15s, color 0.15s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
           >
             ›
           </button>
@@ -155,22 +176,28 @@ export default function AnnouncementBar({ announcements }: AnnouncementBarProps)
       {/* Close */}
       <button
         onClick={() => setDismissed(true)}
+        aria-label="關閉公告"
         style={{
           position: 'absolute',
-          right: 12,
+          right: 4,
           top: '50%',
           transform: 'translateY(-50%)',
           background: 'none',
           border: 'none',
-          color: 'rgba(255,255,255,0.4)',
+          color: 'rgba(255,255,255,0.6)',
           cursor: 'pointer',
-          fontSize: 16,
+          fontSize: 18,
           lineHeight: 1,
-          padding: '2px 4px',
-          transition: 'color 0.2s',
+          width: 36,
+          height: 36,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 4,
+          transition: 'background 0.15s, color 0.15s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
       >
         ✕
       </button>

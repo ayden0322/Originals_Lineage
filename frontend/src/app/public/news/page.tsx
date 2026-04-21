@@ -113,7 +113,7 @@ export default function NewsListPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
         {/* Category Tabs + Search */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="news-tag-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               onClick={() => { setCategory(''); setPage(1); }}
               style={{
@@ -122,6 +122,7 @@ export default function NewsListPage() {
                 border: `1px solid ${!category ? '#c4a24e' : '#333'}`,
                 color: !category ? '#c4a24e' : '#aaa',
                 fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+                flexShrink: 0,
               }}
             >
               全部
@@ -136,6 +137,7 @@ export default function NewsListPage() {
                   border: `1px solid ${category === cat.slug ? '#c4a24e' : '#333'}`,
                   color: category === cat.slug ? '#c4a24e' : '#aaa',
                   fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+                  flexShrink: 0,
                 }}
               >
                 {cat.name}
