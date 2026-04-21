@@ -7,6 +7,7 @@ import { ProductTemplate } from './entities/product-template.entity';
 import { MemberBinding } from '../member/entities/member-binding.entity';
 import { PaymentModule } from '../../../core/payment/payment.module';
 import { GameDbModule } from '../game-db/game-db.module';
+import { CommissionModule } from '../commission/commission.module';
 import { ShopService } from './shop.service';
 import { ShopAdminController, ShopPublicController } from './shop.controller';
 
@@ -21,6 +22,7 @@ import { ShopAdminController, ShopPublicController } from './shop.controller';
     ]),
     PaymentModule,
     GameDbModule,
+    CommissionModule,
   ],
   controllers: [ShopAdminController, ShopPublicController],
   providers: [ShopService],

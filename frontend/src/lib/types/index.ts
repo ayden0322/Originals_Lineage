@@ -396,13 +396,20 @@ export interface Order {
   orderNumber: string;
   memberBindingId: string;
   totalAmount: string;
-  status: 'pending' | 'paid' | 'failed' | 'cancelled';
+  status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'refunded';
   paymentTransactionId: string | null;
   deliveryStatus: 'pending' | 'delivered' | 'failed';
   deliveryDetails: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+  /** 後台列表/詳情會帶上，玩家端不會有 */
+  gameAccountName?: string | null;
+}
+
+export interface RefundOrderResult {
+  order: Order;
+  adjustmentsCreated: number;
 }
 
 export interface OrderItem {
@@ -953,6 +960,35 @@ export interface CommissionCurrentPeriodSummary {
   transactionCount: number;
   totalBaseAmount: number;
   myCommission: number;
+}
+
+export interface CommissionUnsettledPreviewItem {
+  periodKey: string;
+  isCurrentPeriod: boolean;
+  agentId: string;
+  agentCode: string | null;
+  agentName: string | null;
+  agentLevel: 1 | 2;
+  isSystem: boolean;
+  transactionCount: number;
+  totalBaseAmount: number;
+  totalCommission: number;
+}
+
+export interface CommissionUnsettledPreview {
+  settlementDay: number;
+  currentPeriod: {
+    periodKey: string;
+    periodStart: string;
+    periodEnd: string;
+  };
+  summary: {
+    totalAgents: number;
+    totalTransactions: number;
+    totalBaseAmount: number;
+    totalCommission: number;
+  };
+  items: CommissionUnsettledPreviewItem[];
 }
 
 export interface CommissionSubordinateReport {

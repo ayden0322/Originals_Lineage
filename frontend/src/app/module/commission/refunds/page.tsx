@@ -25,13 +25,20 @@ export default function CommissionRefundsPage() {
   };
 
   return (
-    <Card title="退款沖銷">
+    <Card title="進階：依交易 ID 補沖銷">
       <Alert
-        type="warning"
+        type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="請先在訂單頁將該筆訂單改為「退款」狀態，再來這裡執行沖銷。"
-        description="系統會自動找出該交易對應的 A、B 兩筆分潤紀錄，並在當前期的結算上各自加一筆負值加減項。沖銷一律記在當期，不追改歷史結算。"
+        message="一般退款請直接到「訂單管理」找出該筆訂單，點『退款』按鈕。"
+        description={
+          <>
+            此頁僅供例外情境使用：訂單資料遺失、或有 <code>payment_transactions.id</code>
+            但查不到對應訂單時，才需要在這裡手動沖銷分潤。<br />
+            系統會自動找出該交易對應的 A、B 兩筆分潤紀錄，並在當期結算上各自加一筆負值加減項。
+            沖銷一律記在當期，不追改歷史結算。同一交易若已沖銷，會被阻擋重複執行。
+          </>
+        }
       />
       <Form form={form} layout="vertical" style={{ maxWidth: 600 }}>
         <Form.Item

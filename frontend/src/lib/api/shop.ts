@@ -9,6 +9,7 @@ import type {
   GameItem,
   ProductTemplate,
   CreateProductTemplateDto,
+  RefundOrderResult,
 } from '../types';
 
 // ─── Admin - Products ────────────────────────────────────────────────
@@ -115,6 +116,17 @@ export async function getOrder(id: string): Promise<Order> {
 export async function retryDelivery(id: string): Promise<Order> {
   const { data } = await apiClient.post<ApiResponse<Order>>(
     `/modules/originals/orders/${id}/retry-delivery`,
+  );
+  return data.data;
+}
+
+export async function refundOrder(
+  id: string,
+  reason?: string,
+): Promise<RefundOrderResult> {
+  const { data } = await apiClient.post<ApiResponse<RefundOrderResult>>(
+    `/modules/originals/orders/${id}/refund`,
+    { reason },
   );
   return data.data;
 }

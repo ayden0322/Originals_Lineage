@@ -8,12 +8,24 @@ import {
   Space,
   Modal,
   Descriptions,
+  Input,
   message,
+  Popconfirm,
+  Alert,
 } from 'antd';
-import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  EyeOutlined,
+  ReloadOutlined,
+  RollbackOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { getOrders, getOrder, retryDelivery } from '@/lib/api/shop';
+import {
+  getOrders,
+  getOrder,
+  retryDelivery,
+  refundOrder,
+} from '@/lib/api/shop';
 import type { Order, OrderItem } from '@/lib/types';
 
 const orderStatusMap: Record<string, { label: string; color: string }> = {
@@ -21,6 +33,7 @@ const orderStatusMap: Record<string, { label: string; color: string }> = {
   paid: { label: '已付款', color: 'green' },
   failed: { label: '失敗', color: 'red' },
   cancelled: { label: '已取消', color: 'default' },
+  refunded: { label: '已退款', color: 'purple' },
 };
 
 const deliveryStatusMap: Record<string, { label: string; color: string }> = {
@@ -38,6 +51,12 @@ export default function OrdersPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Refund modal state
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundTarget, setRefundTarget] = useState<Order | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -83,6 +102,37 @@ export default function OrdersPage() {
     }
   };
 
+  const openRefund = (order: Order) => {
+    setRefundTarget(order);
+    setRefundReason('');
+    setRefundOpen(true);
+  };
+
+  const handleRefund = async () => {
+    if (!refundTarget) return;
+    setRefundSubmitting(true);
+    try {
+      const res = await refundOrder(refundTarget.id, refundReason.trim() || undefined);
+      message.success(
+        `退款完成：訂單已標記為已退款，沖銷 ${res.adjustmentsCreated} 筆分潤`,
+      );
+      setRefundOpen(false);
+      setRefundTarget(null);
+      setRefundReason('');
+      fetchData();
+      if (detailOrder?.id === refundTarget.id) {
+        const order = await getOrder(refundTarget.id);
+        setDetailOrder(order);
+      }
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } }).response?.data
+        ?.message;
+      message.error(msg || '退款失敗');
+    } finally {
+      setRefundSubmitting(false);
+    }
+  };
+
   const itemColumns: ColumnsType<OrderItem> = [
     {
       title: '商品 ID',
@@ -111,12 +161,26 @@ export default function OrdersPage() {
     },
   ];
 
+  const renderMember = (record: Order) => {
+    const game = record.gameAccountName;
+    if (!game) {
+      return <span style={{ color: '#999' }}>—</span>;
+    }
+    return <span style={{ fontWeight: 500 }}>{game}</span>;
+  };
+
   const columns: ColumnsType<Order> = [
     {
       title: '訂單編號',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
       width: 200,
+    },
+    {
+      title: '遊戲帳號',
+      key: 'member',
+      width: 160,
+      render: (_, record) => renderMember(record),
     },
     {
       title: '金額',
@@ -158,7 +222,8 @@ export default function OrdersPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 160,
+      width: 220,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button
@@ -177,6 +242,17 @@ export default function OrdersPage() {
               onClick={() => handleRetryDelivery(record.id)}
             >
               重新發貨
+            </Button>
+          )}
+          {record.status === 'paid' && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<RollbackOutlined />}
+              onClick={() => openRefund(record)}
+            >
+              退款
             </Button>
           )}
         </Space>
@@ -216,16 +292,37 @@ export default function OrdersPage() {
           setDetailOrder(null);
         }}
         footer={
-          detailOrder?.deliveryStatus === 'failed' ? (
+          detailOrder ? (
             <Space>
-              <Button onClick={() => setDetailOpen(false)}>關閉</Button>
               <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={() => handleRetryDelivery(detailOrder.id)}
+                onClick={() => {
+                  setDetailOpen(false);
+                  setDetailOrder(null);
+                }}
               >
-                重新發貨
+                關閉
               </Button>
+              {detailOrder.deliveryStatus === 'failed' && (
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => handleRetryDelivery(detailOrder.id)}
+                >
+                  重新發貨
+                </Button>
+              )}
+              {detailOrder.status === 'paid' && (
+                <Button
+                  danger
+                  type="primary"
+                  icon={<RollbackOutlined />}
+                  onClick={() => {
+                    setDetailOpen(false);
+                    openRefund(detailOrder);
+                  }}
+                >
+                  退款
+                </Button>
+              )}
             </Space>
           ) : (
             <Button onClick={() => setDetailOpen(false)}>關閉</Button>
@@ -239,6 +336,9 @@ export default function OrdersPage() {
             <Descriptions bordered size="small" column={2}>
               <Descriptions.Item label="訂單編號">
                 {detailOrder.orderNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="遊戲帳號">
+                {detailOrder.gameAccountName || '—'}
               </Descriptions.Item>
               <Descriptions.Item label="金額">
                 NT$ {Number(detailOrder.totalAmount).toLocaleString()}
@@ -278,6 +378,97 @@ export default function OrdersPage() {
               pagination={false}
               size="small"
             />
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        title="訂單退款"
+        open={refundOpen}
+        onCancel={() => {
+          if (refundSubmitting) return;
+          setRefundOpen(false);
+          setRefundTarget(null);
+          setRefundReason('');
+        }}
+        footer={
+          <Space>
+            <Button
+              onClick={() => {
+                setRefundOpen(false);
+                setRefundTarget(null);
+                setRefundReason('');
+              }}
+              disabled={refundSubmitting}
+            >
+              取消
+            </Button>
+            <Popconfirm
+              title="確定要退款？"
+              description="訂單將被標記為『已退款』，並沖銷該筆交易的代理分潤。此操作不會回收遊戲內已發放的道具/鑽石。"
+              okText="確定退款"
+              okButtonProps={{ danger: true }}
+              cancelText="再想想"
+              onConfirm={handleRefund}
+            >
+              <Button
+                type="primary"
+                danger
+                icon={<RollbackOutlined />}
+                loading={refundSubmitting}
+              >
+                執行退款
+              </Button>
+            </Popconfirm>
+          </Space>
+        }
+        width={560}
+      >
+        {refundTarget && (
+          <>
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="此操作將同時：①把訂單狀態改為已退款 ②沖銷對應分潤（當期加負值加減項）"
+              description="冪等保證：同一訂單若已退款，系統會阻擋重複執行。"
+            />
+            <Descriptions bordered size="small" column={1}>
+              <Descriptions.Item label="訂單編號">
+                {refundTarget.orderNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="遊戲帳號">
+                {refundTarget.gameAccountName || '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="金額">
+                NT$ {Number(refundTarget.totalAmount).toLocaleString()}
+              </Descriptions.Item>
+              <Descriptions.Item label="發貨狀態">
+                <Tag
+                  color={
+                    (deliveryStatusMap[refundTarget.deliveryStatus] || { color: 'default' })
+                      .color
+                  }
+                >
+                  {
+                    (deliveryStatusMap[refundTarget.deliveryStatus] || {
+                      label: refundTarget.deliveryStatus,
+                    }).label
+                  }
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+            <div style={{ marginTop: 16 }}>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>退款原因（選填）</div>
+              <Input.TextArea
+                rows={3}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="例如：玩家申請退款，已通過審核"
+                maxLength={500}
+                showCount
+              />
+            </div>
           </>
         )}
       </Modal>

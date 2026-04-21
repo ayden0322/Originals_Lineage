@@ -19,6 +19,7 @@ import {
   CreateProductTemplateDto,
   UpdateProductTemplateDto,
 } from './dto/product-template.dto';
+import { RefundOrderDto } from './dto/refund-order.dto';
 import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../../common/guards/permission.guard';
 import { RequirePermission } from '../../../core/permission/decorators/require-permission.decorator';
@@ -136,13 +137,32 @@ export class ShopAdminController {
   @Get('orders/:id')
   @RequirePermission('module.originals.orders.view')
   findOrderById(@Param('id') id: string) {
-    return this.shopService.findOrderById(id);
+    return this.shopService.findAdminOrderById(id);
   }
 
   @Post('orders/:id/retry-delivery')
   @RequirePermission('module.originals.orders.manage')
   retryDelivery(@Param('id') id: string) {
     return this.shopService.retryDelivery(id);
+  }
+
+  /**
+   * 一鍵退款：改訂單狀態 → 沖銷分潤（同一個動作）
+   * - 僅允許 status='paid' 的訂單
+   * - 冪等：訂單已 refunded 會回 409
+   */
+  @Post('orders/:id/refund')
+  @RequirePermission('module.originals.orders.manage')
+  refundOrder(
+    @Param('id') id: string,
+    @Body() dto: RefundOrderDto,
+    @CurrentUser('id') operatorId: string,
+  ) {
+    return this.shopService.refundOrder({
+      orderId: id,
+      reason: dto.reason,
+      operatorId,
+    });
   }
 }
 

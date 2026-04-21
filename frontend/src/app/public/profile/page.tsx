@@ -43,6 +43,7 @@ const orderStatusMap: Record<Order['status'], { label: string; color: string }> 
   paid: { label: '已付款', color: 'green' },
   failed: { label: '失敗', color: 'red' },
   cancelled: { label: '已取消', color: 'default' },
+  refunded: { label: '已退款', color: 'purple' },
 };
 
 const deliveryStatusMap: Record<Order['deliveryStatus'], { label: string; color: string }> = {

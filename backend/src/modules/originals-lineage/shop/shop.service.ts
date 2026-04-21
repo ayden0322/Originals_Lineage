@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Logger,
@@ -18,6 +19,7 @@ import { ProductTemplate } from './entities/product-template.entity';
 import { MemberBinding } from '../member/entities/member-binding.entity';
 import { GameDbService } from '../game-db/game-db.service';
 import { PaymentService } from '../../../core/payment/payment.service';
+import { RefundService } from '../commission/services/refund.service';
 import { REDIS_CLIENT } from '../../../core/database/redis.module';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -26,6 +28,11 @@ import {
   CreateProductTemplateDto,
   UpdateProductTemplateDto,
 } from './dto/product-template.dto';
+
+/** 後台訂單檢視：Order 實體 + 遊戲帳號名，方便識別是哪位玩家的訂單 */
+export type AdminOrderView = Order & {
+  gameAccountName: string | null;
+};
 
 @Injectable()
 export class ShopService {
@@ -44,6 +51,7 @@ export class ShopService {
     private readonly memberBindingRepo: Repository<MemberBinding>,
     private readonly paymentService: PaymentService,
     private readonly gameDbService: GameDbService,
+    private readonly refundService: RefundService,
     private readonly dataSource: DataSource,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly eventEmitter: EventEmitter2,
@@ -727,10 +735,37 @@ export class ShopService {
 
   // ─── Order Query Methods ────────────────────────────────────────────
 
+  /**
+   * 幫訂單補上遊戲帳號名
+   * - 單次查詢 memberBindings，避免 N+1
+   * - 供後台列表／詳情使用；一般玩家端無需此資訊
+   */
+  private async enrichOrders(orders: Order[]): Promise<AdminOrderView[]> {
+    if (orders.length === 0) return [];
+
+    const bindingIds = Array.from(
+      new Set(orders.map((o) => o.memberBindingId).filter(Boolean)),
+    );
+    const bindings = bindingIds.length
+      ? await this.memberBindingRepo
+          .createQueryBuilder('b')
+          .where('b.id IN (:...ids)', { ids: bindingIds })
+          .getMany()
+      : [];
+    const bindingMap = new Map(bindings.map((b) => [b.id, b]));
+
+    return orders.map((o) => {
+      const binding = bindingMap.get(o.memberBindingId);
+      return Object.assign(o, {
+        gameAccountName: binding?.gameAccountName ?? null,
+      }) as AdminOrderView;
+    });
+  }
+
   async findAllOrders(
     page = 1,
     limit = 20,
-  ): Promise<{ items: Order[]; total: number; page: number; limit: number }> {
+  ): Promise<{ items: AdminOrderView[]; total: number; page: number; limit: number }> {
     const [items, total] = await this.orderRepo.findAndCount({
       relations: ['items'],
       skip: (page - 1) * limit,
@@ -738,7 +773,8 @@ export class ShopService {
       order: { createdAt: 'DESC' },
     });
 
-    return { items, total, page, limit };
+    const enriched = await this.enrichOrders(items);
+    return { items: enriched, total, page, limit };
   }
 
   async findOrderById(id: string): Promise<Order> {
@@ -752,6 +788,15 @@ export class ShopService {
     }
 
     return order;
+  }
+
+  /**
+   * 後台訂單詳情（帶會員資料）
+   */
+  async findAdminOrderById(id: string): Promise<AdminOrderView> {
+    const order = await this.findOrderById(id);
+    const [enriched] = await this.enrichOrders([order]);
+    return enriched;
   }
 
   async findOrdersByMember(
@@ -790,6 +835,94 @@ export class ShopService {
     const order = await this.findOrderById(orderId);
     await this.deliverOrder(order);
     return this.findOrderById(orderId);
+  }
+
+  /**
+   * 後台：一鍵退款
+   * - 僅允許 status='paid' 的訂單
+   * - 將 order.status 改為 'refunded'，並呼叫 RefundService 產生分潤沖銷
+   * - 整個流程在同一個 transaction 中，任何一步失敗都會 rollback
+   * - 不動庫存、不回收遊戲道具（依業務需求可自行加）
+   */
+  async refundOrder(params: {
+    orderId: string;
+    reason?: string;
+    operatorId?: string;
+  }): Promise<{ order: AdminOrderView; adjustmentsCreated: number }> {
+    const { orderId, reason, operatorId } = params;
+
+    await this.dataSource.transaction(async (manager) => {
+      const order = await manager
+        .getRepository(Order)
+        .createQueryBuilder('o')
+        .setLock('pessimistic_write')
+        .where('o.id = :id', { id: orderId })
+        .getOne();
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+      if (order.status === 'refunded') {
+        throw new ConflictException('此訂單已退款，請勿重複操作');
+      }
+      if (order.status !== 'paid') {
+        throw new BadRequestException(
+          `訂單狀態為 ${order.status}，僅允許退款已付款 (paid) 的訂單`,
+        );
+      }
+
+      order.status = 'refunded';
+      order.deliveryDetails = {
+        ...(order.deliveryDetails ?? {}),
+        refundedAt: new Date().toISOString(),
+        refundedBy: operatorId ?? null,
+        refundReason: reason ?? null,
+      };
+      await manager.getRepository(Order).save(order);
+    });
+
+    // transaction 外再做分潤沖銷：RefundService 內部自己會處理冪等與結算期建立
+    // 刻意不包進同一個 transaction，因為 adjustment 寫入要看到主要 order 的 status 變更
+    // 且 RefundService 自己有冪等檢查（sourceTransactionId 唯一），安全可補跑
+    let adjustmentsCreated = 0;
+    const refreshed = await this.findOrderById(orderId);
+    if (refreshed.paymentTransactionId) {
+      try {
+        const res = await this.refundService.applyRefund({
+          transactionId: refreshed.paymentTransactionId,
+          operatorId,
+          reason:
+            reason ??
+            `訂單退款：${refreshed.orderNumber}`,
+        });
+        adjustmentsCreated = res.adjustmentsCreated;
+      } catch (err) {
+        // 若是 ConflictException（已沖銷過）則視為成功，只是補沖銷這步 skip
+        const e = err as { status?: number; response?: { statusCode?: number } };
+        const status = e.status ?? e.response?.statusCode;
+        if (status !== 409) {
+          this.logger.error(
+            `Order ${orderId} refund adjustment failed: ${(err as Error).message}`,
+            (err as Error).stack,
+          );
+          throw err;
+        }
+        this.logger.warn(
+          `Order ${orderId} 分潤沖銷已存在，skip（可能為補救二次執行）`,
+        );
+      }
+    } else {
+      this.logger.log(
+        `Order ${orderId} 無 paymentTransactionId，僅改狀態、不做分潤沖銷`,
+      );
+    }
+
+    this.logger.log(
+      `Order ${orderId} refunded, adjustments=${adjustmentsCreated}, operator=${operatorId ?? 'system'}`,
+    );
+
+    const enriched = await this.findAdminOrderById(orderId);
+    return { order: enriched, adjustmentsCreated };
   }
 
   // ─── Game Items Lookup（後台選遊戲物品用）─────────────────────────
