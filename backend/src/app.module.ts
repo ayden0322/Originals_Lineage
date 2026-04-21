@@ -11,6 +11,7 @@ import { PaymentModule } from './core/payment/payment.module';
 import { StorageModule } from './core/storage/storage.module';
 import { OriginalsLineageModule } from './modules/originals-lineage/originals-lineage.module';
 import { HealthController } from './health.controller';
+import { DbPoolMonitorService } from './common/services/db-pool-monitor.service';
 
 @Module({
   imports: [
@@ -33,6 +34,14 @@ import { HealthController } from './health.controller';
         autoLoadEntities: true,
         synchronize: config.get('TYPEORM_SYNC', 'false') === 'true' || config.get('NODE_ENV') === 'development',
         logging: config.get('NODE_ENV') === 'development',
+        // pg Pool 參數（node-postgres 透過 extra 傳入）：
+        //   max 原預設 10 偏緊，拉到 20。需確保 DB max_connections 接得住（pool×pod + 其他連線 < 上限）。
+        //   connectionTimeoutMillis 讓等不到連線時改為 3s 拋錯，避免前端無限跑圈圈、使用者能看到錯誤訊息、後端能收到 5xx 告警。
+        extra: {
+          max: 20,
+          idleTimeoutMillis: 30_000,
+          connectionTimeoutMillis: 3_000,
+        },
       }),
     }),
 
@@ -54,5 +63,6 @@ import { HealthController } from './health.controller';
     OriginalsLineageModule,
   ],
   controllers: [HealthController],
+  providers: [DbPoolMonitorService],
 })
 export class AppModule {}
