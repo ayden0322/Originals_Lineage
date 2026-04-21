@@ -354,9 +354,15 @@ export default function PackagesPage() {
           border-collapse: collapse;
           margin: 8px 0;
         }
+        .package-content-html table,
+        .package-content-html table td,
+        .package-content-html table th,
+        .package-content-html table tr {
+          border-color: #ffffff !important;
+        }
         .package-content-html table td,
         .package-content-html table th {
-          border: 1px solid rgba(0, 0, 0, 0.15);
+          border: 1px solid #ffffff !important;
           padding: 6px 10px;
           vertical-align: top;
         }
