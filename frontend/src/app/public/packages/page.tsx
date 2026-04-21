@@ -358,11 +358,11 @@ export default function PackagesPage() {
         .package-content-html table td,
         .package-content-html table th,
         .package-content-html table tr {
-          border-color: #ffffff !important;
+          border-color: #434343 !important;
         }
         .package-content-html table td,
         .package-content-html table th {
-          border: 1px solid #ffffff !important;
+          border: 1px solid #434343 !important;
           padding: 6px 10px;
           vertical-align: top;
         }
