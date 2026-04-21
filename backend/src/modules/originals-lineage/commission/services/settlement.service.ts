@@ -13,6 +13,41 @@ import { CommissionSettingsService } from './commission-settings.service';
 import { getCurrentPeriod, periodKeyOf } from '../utils/period.util';
 
 /**
+ * 當期預估：單一代理的待結分潤聚合
+ */
+export interface UnsettledPreviewAgentItem {
+  periodKey: string;
+  isCurrentPeriod: boolean;
+  agentId: string;
+  agentCode: string | null;
+  agentName: string | null;
+  agentLevel: 1 | 2;
+  isSystem: boolean;
+  transactionCount: number;
+  totalBaseAmount: number;
+  totalCommission: number;
+}
+
+/**
+ * 當期預估：全體聚合 + 每代理明細
+ */
+export interface UnsettledPreviewResult {
+  settlementDay: number;
+  currentPeriod: {
+    periodKey: string;
+    periodStart: Date;
+    periodEnd: Date;
+  };
+  summary: {
+    totalAgents: number;
+    totalTransactions: number;
+    totalBaseAmount: number;
+    totalCommission: number;
+  };
+  items: UnsettledPreviewAgentItem[];
+}
+
+/**
  * 結算服務
  *
  * 流程（詳見 分潤系統設計文件.md 第六章）：
@@ -203,6 +238,83 @@ export class SettlementService {
     s.paidAt = new Date();
     s.paidBy = operatorId;
     return this.settlementRepo.save(s);
+  }
+
+  /**
+   * 當期預估（尚未結算的分潤聚合，只讀不寫）
+   *
+   * 用途：管理者在結算日還沒到之前，想看看每個代理這期大概可以分多少。
+   * 行為：
+   *  - 撈所有 `commission_records WHERE settlement_id IS NULL`
+   *  - 按 (period_key, agent_id) 分組加總
+   *  - 依 period_key 是否等於「當前期」標記 isCurrentPeriod（其他視為前期殘留）
+   *  - 不寫入任何資料，管理者可任意多次點擊
+   */
+  async getUnsettledPreview(): Promise<UnsettledPreviewResult> {
+    const settlementDay = await this.settings.get<number>('settlement_day', 5);
+    const cur = getCurrentPeriod(new Date(), settlementDay);
+
+    const rows = await this.recordRepo
+      .createQueryBuilder('r')
+      .leftJoin('commission_agents', 'a', 'a.id = r.agent_id')
+      .where('r.settlement_id IS NULL')
+      .groupBy('r.period_key')
+      .addGroupBy('r.agent_id')
+      .addGroupBy('a.code')
+      .addGroupBy('a.name')
+      .addGroupBy('a.parent_id')
+      .addGroupBy('a.is_system')
+      .select([
+        'r.period_key AS period_key',
+        'r.agent_id AS agent_id',
+        'a.code AS agent_code',
+        'a.name AS agent_name',
+        'a.parent_id AS parent_id',
+        'a.is_system AS is_system',
+        'COUNT(r.id) AS tx_count',
+        'COALESCE(SUM(r.base_amount), 0) AS total_base',
+        'COALESCE(SUM(r.commission_amount), 0) AS total_commission',
+      ])
+      .orderBy('r.period_key', 'DESC')
+      .addOrderBy('total_commission', 'DESC')
+      .getRawMany();
+
+    const items: UnsettledPreviewAgentItem[] = rows.map((r) => ({
+      periodKey: r.period_key,
+      isCurrentPeriod: r.period_key === cur.periodKey,
+      agentId: r.agent_id,
+      agentCode: r.agent_code,
+      agentName: r.agent_name,
+      agentLevel: r.parent_id ? 2 : 1,
+      isSystem: !!r.is_system,
+      transactionCount: Number(r.tx_count),
+      totalBaseAmount: Number(r.total_base),
+      totalCommission: Number(r.total_commission),
+    }));
+
+    const summary = items.reduce(
+      (acc, it) => {
+        acc.totalTransactions += it.transactionCount;
+        acc.totalBaseAmount += it.totalBaseAmount;
+        acc.totalCommission += it.totalCommission;
+        return acc;
+      },
+      { totalAgents: 0, totalTransactions: 0, totalBaseAmount: 0, totalCommission: 0 },
+    );
+    summary.totalAgents = new Set(items.map((i) => i.agentId)).size;
+    summary.totalBaseAmount = Math.round(summary.totalBaseAmount * 100) / 100;
+    summary.totalCommission = Math.round(summary.totalCommission * 100) / 100;
+
+    return {
+      settlementDay,
+      currentPeriod: {
+        periodKey: cur.periodKey,
+        periodStart: cur.periodStart,
+        periodEnd: cur.periodEnd,
+      },
+      summary,
+      items,
+    };
   }
 
   /** 列出代理的所有結算 */

@@ -244,6 +244,18 @@ export class AdminCommissionController {
 
   // ──────────── 結算 ────────────
 
+  /**
+   * 當期預估（尚未結算的分潤聚合，只讀）
+   * - 不寫入任何資料
+   * - 回傳所有 settlement_id IS NULL 的 commission_records 按 (period, agent) 分組
+   * - 讓管理者在結算日前就能看到代理本期大概分多少
+   */
+  @Get('settlements/preview')
+  @RequirePermission('module.originals.commission.view')
+  previewUnsettled() {
+    return this.settlement.getUnsettledPreview();
+  }
+
   @Get('settlements')
   @RequirePermission('module.originals.commission.view')
   listSettlements(@Query('agentId') agentId?: string) {

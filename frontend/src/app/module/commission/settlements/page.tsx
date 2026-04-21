@@ -16,12 +16,20 @@ import {
   message,
   Popconfirm,
   Empty,
+  Tabs,
+  Statistic,
+  Row,
+  Col,
+  Alert,
+  Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   CheckCircleOutlined,
   DollarOutlined,
   PlusOutlined,
+  ReloadOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import {
   getAgentTree,
@@ -30,11 +38,14 @@ import {
   addAdjustment,
   confirmSettlement,
   markSettlementPaid,
+  getUnsettledPreview,
 } from '@/lib/api/commission';
 import type {
   CommissionAgentTreeNode,
   CommissionSettlement,
   CommissionSettlementDetail,
+  CommissionUnsettledPreview,
+  CommissionUnsettledPreviewItem,
 } from '@/lib/types';
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -57,6 +68,10 @@ export default function CommissionSettlementsPage() {
   const [adjType, setAdjType] = useState<'manual' | 'bonus'>('manual');
   const [submitting, setSubmitting] = useState(false);
 
+  // 當期預估
+  const [preview, setPreview] = useState<CommissionUnsettledPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const fetchAgents = useCallback(async () => {
     const tree = await getAgentTree();
     setAgents(tree);
@@ -75,9 +90,22 @@ export default function CommissionSettlementsPage() {
     }
   }, [agentId]);
 
+  const fetchPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    try {
+      const data = await getUnsettledPreview();
+      setPreview(data);
+    } catch {
+      message.error('載入當期預估失敗');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAgents();
-  }, [fetchAgents]);
+    fetchPreview();
+  }, [fetchAgents, fetchPreview]);
 
   useEffect(() => {
     fetchList();
@@ -127,7 +155,6 @@ export default function CommissionSettlementsPage() {
       setAdjustOpen(false);
       setAdjAmount(null);
       setAdjReason('');
-      // 重抓詳情
       const d = await getSettlementDetail(detail.settlement.id);
       setDetail(d);
       fetchList();
@@ -209,8 +236,183 @@ export default function CommissionSettlementsPage() {
     },
   ];
 
-  return (
-    <Card title="結算管理">
+  const previewColumns: ColumnsType<CommissionUnsettledPreviewItem> = [
+    {
+      title: '期別',
+      dataIndex: 'periodKey',
+      width: 110,
+      render: (v: string, r) => (
+        <Space size={4}>
+          <span>{v}</span>
+          {r.isCurrentPeriod ? (
+            <Tag color="blue">當期</Tag>
+          ) : (
+            <Tag color="orange">前期殘留</Tag>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: '代理',
+      key: 'agent',
+      render: (_, r) => {
+        if (r.isSystem) {
+          return (
+            <Tooltip title="玩家無歸屬（無 ref_code 或上游停權）的交易，不實際分潤">
+              <Tag>SYSTEM（無歸屬）</Tag>
+            </Tooltip>
+          );
+        }
+        return (
+          <Space>
+            <strong>{r.agentCode}</strong>
+            <span>{r.agentName}</span>
+            <Tag color={r.agentLevel === 1 ? 'geekblue' : 'purple'}>
+              {r.agentLevel === 1 ? 'A 一級' : 'B 二級'}
+            </Tag>
+          </Space>
+        );
+      },
+    },
+    {
+      title: '交易筆數',
+      dataIndex: 'transactionCount',
+      width: 100,
+      align: 'right',
+    },
+    {
+      title: '業績（儲值總額）',
+      dataIndex: 'totalBaseAmount',
+      width: 150,
+      align: 'right',
+      render: (v: number) => Number(v).toFixed(2),
+    },
+    {
+      title: '待結分潤',
+      dataIndex: 'totalCommission',
+      width: 140,
+      align: 'right',
+      render: (v: number) => <strong>{Number(v).toFixed(2)}</strong>,
+    },
+  ];
+
+  const renderPreviewTab = () => {
+    const nextSettleDate = preview
+      ? preview.currentPeriod.periodEnd.slice(0, 10)
+      : '-';
+    const hasOrphan = preview?.items.some((i) => !i.isCurrentPeriod);
+    const hasSystemItems = preview?.items.some((i) => i.isSystem);
+
+    return (
+      <>
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="info"
+          showIcon
+          message={
+            <Space wrap>
+              <span>
+                結算日：每月 <strong>{preview?.settlementDay ?? '-'}</strong> 號
+              </span>
+              <span>｜</span>
+              <span>
+                當期範圍：
+                <strong>
+                  {preview?.currentPeriod.periodStart.slice(0, 10) ?? '-'} ~{' '}
+                  {preview?.currentPeriod.periodEnd.slice(0, 10) ?? '-'}
+                </strong>
+              </span>
+              <span>｜</span>
+              <span>
+                下次自動結算：<strong>{nextSettleDate}</strong> 00:00
+              </span>
+            </Space>
+          }
+          description="此頁面為即時預估，資料來自尚未結算（settlement_id IS NULL）的分潤明細，只讀取不寫入，結算日 00:00 cron 跑完才會進「歷史結算」頁。"
+        />
+
+        {hasOrphan && (
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="warning"
+            showIcon
+            message="偵測到前期殘留：有尚未結算的前期分潤明細"
+            description="可能是該期結算日未跑、或先前手動結算時漏掉。建議聯繫技術人員執行補結算。"
+          />
+        )}
+
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col xs={12} md={6}>
+            <Card size="small">
+              <Statistic
+                title="涉及代理數"
+                value={preview?.summary.totalAgents ?? 0}
+                suffix="位"
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small">
+              <Statistic
+                title="待結交易數"
+                value={preview?.summary.totalTransactions ?? 0}
+                suffix="筆"
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small">
+              <Statistic
+                title="業績總額"
+                value={preview?.summary.totalBaseAmount ?? 0}
+                precision={2}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small">
+              <Statistic
+                title="待結分潤總額"
+                value={preview?.summary.totalCommission ?? 0}
+                precision={2}
+                valueStyle={{ color: '#3f8600' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Space style={{ marginBottom: 12 }}>
+          <Button icon={<ReloadOutlined />} onClick={fetchPreview} loading={previewLoading}>
+            重新整理
+          </Button>
+          {hasSystemItems && (
+            <Tooltip title="SYSTEM 是無歸屬玩家的累計，分潤為 0，純粹用來報表閉環">
+              <span style={{ color: '#999' }}>
+                <InfoCircleOutlined /> 列表含 SYSTEM（無歸屬）
+              </span>
+            </Tooltip>
+          )}
+        </Space>
+
+        <Table
+          scroll={{ x: 'max-content' }}
+          rowKey={(r) => `${r.periodKey}-${r.agentId}`}
+          loading={previewLoading}
+          columns={previewColumns}
+          dataSource={preview?.items ?? []}
+          pagination={{ pageSize: 20 }}
+          locale={{
+            emptyText: (
+              <Empty description="目前沒有待結算的分潤紀錄" />
+            ),
+          }}
+        />
+      </>
+    );
+  };
+
+  const renderHistoryTab = () => (
+    <>
       <Space style={{ marginBottom: 16 }}>
         <span>選擇代理：</span>
         <Select
@@ -240,6 +442,26 @@ export default function CommissionSettlementsPage() {
       ) : (
         <Empty description="請先選擇代理" />
       )}
+    </>
+  );
+
+  return (
+    <Card title="結算管理">
+      <Tabs
+        defaultActiveKey="preview"
+        items={[
+          {
+            key: 'preview',
+            label: '當期預估',
+            children: renderPreviewTab(),
+          },
+          {
+            key: 'history',
+            label: '歷史結算',
+            children: renderHistoryTab(),
+          },
+        ]}
+      />
 
       <Modal
         title={detail ? `結算詳情 - ${detail.settlement.periodKey}` : '結算詳情'}

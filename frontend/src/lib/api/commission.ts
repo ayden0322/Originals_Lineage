@@ -9,6 +9,7 @@ import type {
   CommissionPlayerAttribution,
   CommissionSettlement,
   CommissionSettlementDetail,
+  CommissionUnsettledPreview,
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
   CommissionPlayerTransaction,
@@ -199,6 +200,16 @@ export async function changePlayerAttribution(
 }
 
 // ─── Admin: Settlements ───────────────────────────────────────────
+
+/**
+ * 當期預估（只讀聚合，不寫 DB）
+ */
+export async function getUnsettledPreview(): Promise<CommissionUnsettledPreview> {
+  const { data } = await apiClient.get<ApiResponse<CommissionUnsettledPreview>>(
+    `${ADMIN}/settlements/preview`,
+  );
+  return data.data;
+}
 
 export async function listSettlements(agentId: string): Promise<CommissionSettlement[]> {
   const { data } = await apiClient.get<ApiResponse<CommissionSettlement[]>>(
