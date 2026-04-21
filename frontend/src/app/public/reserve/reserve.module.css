@@ -994,126 +994,80 @@
     gap: 12px;
   }
 
-  /* 手機版：里程碑改為連續垂直時間軸 ───────────────────────── */
+  /* 手機版：里程碑維持橫向，壓縮尺寸讓四個節點能塞進 viewport ── */
   .milestoneSection {
-    padding: 32px 20px 56px;
+    padding: 40px 12px 48px;
   }
 
   .milestoneTrack {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px 0;
-    gap: 0;
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 44px 0 20px;
   }
 
   .milestoneNode {
-    flex: 0 0 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-    padding: 14px 0;
-  }
-
-  /* Rail：從上一個 circle 中心延伸到本 circle 中心，視覺上貫穿連續 */
-  .milestoneRail {
-    position: absolute;
-    top: -14px;
-    left: 18px;
-    right: auto;
-    bottom: auto;
-    width: 4px;
-    height: 28px;
-    border-radius: 2px;
-    display: flex;
-    align-items: flex-start;
-    z-index: 0;
-    /* 保持縱向 inset 陰影 */
-    background:
-      linear-gradient(
-        90deg,
-        rgba(0, 0, 0, 0.6) 0%,
-        rgba(255, 255, 255, 0.04) 50%,
-        rgba(0, 0, 0, 0.6) 100%
-      );
-  }
-
-  /* fill 用 --rail-progress 撐高度，而非 width（桌機 width 在手機被覆蓋） */
-  .milestoneRailFill {
-    width: 100% !important;
-    height: calc(var(--rail-progress, 0) * 100%);
-    background: linear-gradient(
-      180deg,
-      rgba(138, 111, 46, 0.9) 0%,
-      var(--accent-gold, #c4a24e) 50%,
-      rgba(245, 215, 122, 1) 100%
-    );
-  }
-
-  /* 流動亮帶改 Y 方向 */
-  .milestoneRailFill::before {
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0) 30%,
-      rgba(255, 255, 255, 0.85) 50%,
-      rgba(255, 255, 255, 0) 70%,
-      transparent 100%
-    );
-    background-size: 100% 200%;
-    animation: railStreamV 2.4s linear infinite;
-  }
-
-  @keyframes railStreamV {
-    0% { background-position: 0 -100%; }
-    100% { background-position: 0 100%; }
-  }
-
-  /* 掃光動畫方向改為 Y */
-  .railReached::after {
-    background: linear-gradient(
-      180deg,
-      transparent,
-      rgba(255, 240, 180, 0.6),
-      transparent
-    );
-    transform: translateY(-100%);
-    animation: railSweepV 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-
-  @keyframes railSweepV {
-    0% { transform: translateY(-100%); }
-    60%, 100% { transform: translateY(100%); }
-  }
-
-  .milestoneCircle {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
-    z-index: 2;
-  }
-
-  .milestoneLabel {
-    margin-top: 0;
-    text-align: left;
     flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 0;
     min-width: 0;
   }
 
-  /* 目前進度徽章：改為 circle 右上角浮出，不再蓋到 label */
+  /* Rail：橫向連接 circle 中心（circle 36px → 半徑 18） */
+  .milestoneRail {
+    position: absolute;
+    top: 15px;
+    right: 50%;
+    left: calc(-50% + 18px);
+    bottom: auto;
+    width: auto;
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  .milestoneCircle {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    border-width: 2px;
+  }
+
+  .milestoneLabel {
+    margin-top: 10px;
+    text-align: center;
+    width: 100%;
+    padding: 0 2px;
+  }
+
+  .milestoneThreshold {
+    font-size: 11px;
+  }
+
+  .milestoneName {
+    font-size: 12px;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  /* 目前進度徽章：橫向版回到 circle 正上方
+   * 注意：原本 floaterBob 的 animation transform 會蓋掉 translateX，
+   * 所以這裡改用 left + margin 技巧水平置中，讓 transform 只負責動畫 bob。 */
   .progressFloater {
-    top: 4px;
-    left: 44px;
+    top: -30px;
+    left: 50%;
     right: auto;
     bottom: auto;
     font-size: 10px;
     padding: 3px 8px;
     letter-spacing: 0.3px;
-    z-index: 4;
+    transform: translate3d(-50%, 0, 0);
+    animation: floaterBobCentered 1.8s ease-in-out infinite;
   }
 
-  .progressFloater::after {
-    display: none;
+  @keyframes floaterBobCentered {
+    0%, 100% { transform: translate3d(-50%, 0, 0); }
+    50% { transform: translate3d(-50%, -3px, 0); }
   }
 }
 
