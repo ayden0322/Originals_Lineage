@@ -5,6 +5,7 @@ import { Form, Input, Button, message, Alert, Spin } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import * as authApi from '@/lib/api/auth';
+import { setTokens } from '@/lib/api/client';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import AuthShell from '@/components/auth/AuthShell';
 
@@ -82,8 +83,21 @@ export default function RegisterPage() {
         secondPassword: values.secondPassword,
         refCode,
       });
-      message.success(`註冊成功！歡迎加入${siteName}`);
-      router.push('/public');
+
+      // 註冊成功後自動登入，讓使用者直接以已登入狀態進入頁面
+      try {
+        const tokens = await authApi.playerLogin(
+          values.gameAccountName,
+          values.password,
+        );
+        setTokens('player', tokens.accessToken, tokens.refreshToken);
+        message.success(`註冊成功！歡迎加入${siteName}`);
+        router.push('/public/reserve');
+      } catch {
+        // 極少見：註冊成功但自動登入失敗，引導手動登入
+        message.success('註冊成功，請登入');
+        router.push('/auth/login?redirect=/public/reserve');
+      }
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||

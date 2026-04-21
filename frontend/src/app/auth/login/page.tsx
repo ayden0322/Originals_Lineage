@@ -20,7 +20,7 @@ function PlayerLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const redirect = searchParams.get('redirect') || '/public';
+  const redirect = searchParams.get('redirect') || '/public/reserve';
 
   const onFinish = async (values: { gameAccountName: string; password: string }) => {
     setLoading(true);
