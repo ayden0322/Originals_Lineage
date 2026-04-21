@@ -53,7 +53,7 @@ export class ReservePublicController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Req() req: Request) {
-    const websiteUserId = (req as any).user?.sub;
+    const websiteUserId = (req as any).user?.id;
     const ipAddress =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.ip ||
@@ -67,7 +67,7 @@ export class ReservePublicController {
   @Get('my-rewards')
   @UseGuards(JwtAuthGuard)
   async myRewards(@Req() req: Request) {
-    const websiteUserId = (req as any).user?.sub;
+    const websiteUserId = (req as any).user?.id;
     return this.claimService.findMyClaims(websiteUserId);
   }
 
@@ -216,7 +216,7 @@ export class ReserveAdminController {
   @Patch('claims/status')
   @RequirePermission('module.originals.reserve.manage')
   markClaimsStatus(@Body() dto: MarkClaimStatusDto, @Req() req: Request) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = (req as any).user?.id;
     return this.claimService.markClaimsStatus(
       dto.claimIds,
       dto.status,
