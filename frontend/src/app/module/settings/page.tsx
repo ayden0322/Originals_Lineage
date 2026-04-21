@@ -73,6 +73,9 @@ export default function SettingsPage() {
         inviteUrl: (lineInvite?.inviteUrl as string) || '',
         showQrCode: lineInvite?.showQrCode !== false,
         tooltip: (lineInvite?.tooltip as string) || '加入官方 LINE',
+        inviteCaption: (lineInvite?.inviteCaption as string) || '官方 LINE',
+        tradingGroupUrl: (lineInvite?.tradingGroupUrl as string) || '',
+        tradingGroupCaption: (lineInvite?.tradingGroupCaption as string) || '官方交易群',
       });
 
       const gameDb = settings.gameDb as Record<string, unknown>;
@@ -290,10 +293,32 @@ export default function SettingsPage() {
               <Input placeholder="https://line.me/R/ti/p/@xxxxxx" />
             </Form.Item>
             <Form.Item
+              name="inviteCaption"
+              label="官方 LINE QR Code 下方說明文字"
+              tooltip="顯示於浮窗彈出後，官方 LINE QR 圖片下方"
+            >
+              <Input placeholder="例如：官方 LINE" maxLength={100} />
+            </Form.Item>
+            <Form.Item
+              name="tradingGroupUrl"
+              label="官方交易群連結"
+              rules={[{ type: 'url', message: '請輸入有效的網址' }]}
+              extra="留空則浮窗僅顯示官方 LINE 一組 QR Code"
+            >
+              <Input placeholder="https://line.me/R/ti/g/xxxxxx" />
+            </Form.Item>
+            <Form.Item
+              name="tradingGroupCaption"
+              label="官方交易群 QR Code 下方說明文字"
+              tooltip="顯示於浮窗彈出後，交易群 QR 圖片下方"
+            >
+              <Input placeholder="例如：官方交易群" maxLength={100} />
+            </Form.Item>
+            <Form.Item
               name="showQrCode"
               label="同時顯示 QR Code"
               valuePropName="checked"
-              tooltip="開啟後，彈窗內會自動將上方連結轉換為 QR Code"
+              tooltip="關閉後彈窗僅顯示文字連結按鈕，不會顯示 QR Code"
             >
               <Switch />
             </Form.Item>

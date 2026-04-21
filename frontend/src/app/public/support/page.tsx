@@ -6,6 +6,66 @@ import PublicFooter from '@/components/public/PublicFooter';
 export default function SupportPage() {
   const { config } = useSiteConfig();
   const lineUrl = config?.settings.lineOfficialUrl;
+  const tradingUrl = config?.settings.tradingGroupUrl;
+  const lineCaption = config?.settings.lineOfficialCaption || '掃描 QR Code 加入官方 LINE';
+  const tradingCaption = config?.settings.tradingGroupCaption || '掃描 QR Code 加入交易群';
+
+  const qrCard = (url: string, title: string, caption: string) => (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+        flex: '1 1 220px',
+        minWidth: 220,
+      }}
+    >
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          background: '#fff',
+          borderRadius: 12,
+          padding: 16,
+          display: 'inline-block',
+          transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 10px 30px rgba(6,199,85,0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`}
+          alt={`${title} QR Code`}
+          width={200}
+          height={200}
+          style={{ display: 'block' }}
+        />
+      </a>
+      <div style={{ color: '#fff', fontSize: 15, fontWeight: 600, letterSpacing: 1 }}>
+        {title}
+      </div>
+      <p
+        style={{
+          color: 'rgba(255,255,255,0.5)',
+          fontSize: 13,
+          margin: 0,
+          textAlign: 'center',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {caption}
+      </p>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
@@ -138,36 +198,20 @@ export default function SupportPage() {
           </div>
         )}
 
-        {/* QR Code */}
-        {lineUrl && (
+        {/* QR Codes — 官方 Line + 交易群 */}
+        {(lineUrl || tradingUrl) && (
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 16,
+              flexWrap: 'wrap',
+              gap: 32,
+              justifyContent: 'center',
+              width: '100%',
+              maxWidth: 560,
             }}
           >
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: 16,
-                display: 'inline-block',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(lineUrl)}`}
-                alt="LINE QR Code"
-                width={200}
-                height={200}
-                style={{ display: 'block' }}
-              />
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: 0 }}>
-              掃描 QR Code 加入官方 LINE
-            </p>
+            {lineUrl && qrCard(lineUrl, '官方 LINE', lineCaption)}
+            {tradingUrl && qrCard(tradingUrl, '交易群', tradingCaption)}
           </div>
         )}
       </div>

@@ -11,6 +11,9 @@ interface LineInviteConfig {
   inviteUrl: string;
   showQrCode: boolean;
   tooltip: string;
+  inviteCaption?: string;
+  tradingGroupUrl?: string;
+  tradingGroupCaption?: string;
 }
 
 const MOBILE_BREAKPOINT = 768;
@@ -71,11 +74,19 @@ export default function LineInviteFloat() {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  if (!config || !config.enabled || !config.inviteUrl) return null;
+  const inviteUrl = config?.inviteUrl || '';
+  const tradingUrl = config?.tradingGroupUrl || '';
+
+  if (!config || !config.enabled || (!inviteUrl && !tradingUrl)) return null;
+
+  const hasBoth = !!inviteUrl && !!tradingUrl;
+  const primaryUrl = inviteUrl || tradingUrl;
+  const inviteCaption = config.inviteCaption || '官方 LINE';
+  const tradingCaption = config.tradingGroupCaption || '官方交易群';
 
   const handleToggle = () => setOpen((v) => !v);
   const handleOpenLink = () => {
-    window.open(config.inviteUrl, '_blank', 'noopener,noreferrer');
+    window.open(primaryUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -96,7 +107,7 @@ export default function LineInviteFloat() {
       {open && (
         <div
           ref={popoverRef}
-          className={`${styles.popover} ${isMobile ? styles.popoverMobile : ''}`}
+          className={`${styles.popover} ${hasBoth && !isMobile ? styles.popoverWide : ''} ${isMobile ? styles.popoverMobile : ''}`}
           role="dialog"
           aria-label="LINE 好友邀請"
         >
@@ -114,17 +125,50 @@ export default function LineInviteFloat() {
 
           <div className={styles.popoverBody}>
             {config.showQrCode && (
-              <div className={styles.qrBox}>
-                <QRCodeSVG
-                  value={config.inviteUrl}
-                  size={isMobile ? 180 : 200}
-                  level="M"
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                  includeMargin={false}
-                />
-                <p className={styles.qrHint}>使用 LINE 掃描 QR Code</p>
-              </div>
+              hasBoth ? (
+                <div className={styles.qrRow}>
+                  <div className={styles.qrItem}>
+                    <div className={styles.qrBox}>
+                      <QRCodeSVG
+                        value={inviteUrl}
+                        size={isMobile ? 130 : 150}
+                        level="M"
+                        bgColor="#ffffff"
+                        fgColor="#000000"
+                        includeMargin={false}
+                      />
+                    </div>
+                    <p className={styles.qrCaption}>{inviteCaption}</p>
+                  </div>
+                  <div className={styles.qrItem}>
+                    <div className={styles.qrBox}>
+                      <QRCodeSVG
+                        value={tradingUrl}
+                        size={isMobile ? 130 : 150}
+                        level="M"
+                        bgColor="#ffffff"
+                        fgColor="#000000"
+                        includeMargin={false}
+                      />
+                    </div>
+                    <p className={styles.qrCaption}>{tradingCaption}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.qrBox}>
+                  <QRCodeSVG
+                    value={primaryUrl}
+                    size={isMobile ? 180 : 200}
+                    level="M"
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    includeMargin={false}
+                  />
+                  <p className={styles.qrHint}>
+                    {inviteUrl ? inviteCaption : tradingCaption}
+                  </p>
+                </div>
+              )
             )}
 
             <button type="button" className={styles.inviteBtn} onClick={handleOpenLink}>

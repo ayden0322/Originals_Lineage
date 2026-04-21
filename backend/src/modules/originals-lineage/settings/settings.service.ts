@@ -34,6 +34,9 @@ export class SettingsService {
         inviteUrl: '',
         showQrCode: true,
         tooltip: '加入官方 LINE',
+        inviteCaption: '官方 LINE',
+        tradingGroupUrl: '',
+        tradingGroupCaption: '官方交易群',
       },
       gameDb: config.configJson?.['gameDb'] || {},
       gameDbConnected: this.gameDbService.isConnected,
@@ -57,15 +60,27 @@ export class SettingsService {
     const raw = (config?.configJson?.['lineInvite'] as Record<string, unknown>) || {};
     const enabled = Boolean(raw.enabled);
     const inviteUrl = (raw.inviteUrl as string) || '';
-    // 後台未啟用或未填連結時，回傳 enabled=false，前台據此不渲染浮窗
-    if (!enabled || !inviteUrl) {
-      return { enabled: false, inviteUrl: '', showQrCode: false, tooltip: '' };
+    const tradingGroupUrl = (raw.tradingGroupUrl as string) || '';
+    // 未啟用，或官方 LINE 與交易群連結都沒填，則不渲染浮窗
+    if (!enabled || (!inviteUrl && !tradingGroupUrl)) {
+      return {
+        enabled: false,
+        inviteUrl: '',
+        showQrCode: false,
+        tooltip: '',
+        inviteCaption: '',
+        tradingGroupUrl: '',
+        tradingGroupCaption: '',
+      };
     }
     return {
       enabled: true,
       inviteUrl,
       showQrCode: raw.showQrCode !== false,
       tooltip: (raw.tooltip as string) || '加入官方 LINE',
+      inviteCaption: (raw.inviteCaption as string) || '官方 LINE',
+      tradingGroupUrl,
+      tradingGroupCaption: (raw.tradingGroupCaption as string) || '官方交易群',
     };
   }
 

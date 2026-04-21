@@ -575,6 +575,23 @@ export default function SettingsPage() {
                   <Form.Item name="lineOfficialUrl" label="官方 Line 連結">
                     <Input placeholder="https://line.me/R/ti/p/@yourline" />
                   </Form.Item>
+                  <Form.Item
+                    name="lineOfficialCaption"
+                    label="官方 Line QR Code 下方說明文字"
+                    tooltip="顯示於聯繫客服頁面「官方 LINE」QR Code 圖片下方"
+                  >
+                    <Input placeholder="例如：掃描 QR Code 加入官方 LINE" />
+                  </Form.Item>
+                  <Form.Item name="tradingGroupUrl" label="交易群連結">
+                    <Input placeholder="https://line.me/R/ti/g/xxx" />
+                  </Form.Item>
+                  <Form.Item
+                    name="tradingGroupCaption"
+                    label="交易群 QR Code 下方說明文字"
+                    tooltip="顯示於聯繫客服頁面「交易群」QR Code 圖片下方"
+                  >
+                    <Input placeholder="例如：掃描 QR Code 加入交易群" />
+                  </Form.Item>
                   <Form.Item name="gameDownloadUrl" label="遊戲下載連結">
                     <Input placeholder="https://drive.google.com/file/xxx 或其他頁面連結" />
                   </Form.Item>

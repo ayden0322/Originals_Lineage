@@ -250,6 +250,21 @@ export class UpdateSiteSettingsDto {
   @IsString()
   lineOfficialUrl?: string;
 
+  @ApiPropertyOptional({ example: '掃描 QR Code 加入官方 LINE', description: '官方 Line QR Code 下方說明文字' })
+  @IsOptional()
+  @IsString()
+  lineOfficialCaption?: string;
+
+  @ApiPropertyOptional({ example: 'https://line.me/R/ti/g/xxx', description: '交易群連結' })
+  @IsOptional()
+  @IsString()
+  tradingGroupUrl?: string;
+
+  @ApiPropertyOptional({ example: '掃描 QR Code 加入交易群', description: '交易群 QR Code 下方說明文字' })
+  @IsOptional()
+  @IsString()
+  tradingGroupCaption?: string;
+
   @ApiPropertyOptional({ example: 'https://drive.google.com/file/xxx', description: '遊戲下載連結' })
   @IsOptional()
   @IsString()

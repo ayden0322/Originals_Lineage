@@ -23,4 +23,22 @@ export class UpdateLineInviteSettingsDto {
   @IsOptional()
   @MaxLength(100)
   tooltip?: string;
+
+  @ApiPropertyOptional({ description: '官方 LINE QR Code 下方說明文字' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  inviteCaption?: string;
+
+  @ApiPropertyOptional({ description: '官方交易群連結' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  tradingGroupUrl?: string;
+
+  @ApiPropertyOptional({ description: '官方交易群 QR Code 下方說明文字' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  tradingGroupCaption?: string;
 }

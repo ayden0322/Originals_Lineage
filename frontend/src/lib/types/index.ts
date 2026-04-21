@@ -580,6 +580,9 @@ export interface LineInviteSettingsDto {
   inviteUrl?: string;
   showQrCode?: boolean;
   tooltip?: string;
+  inviteCaption?: string;
+  tradingGroupUrl?: string;
+  tradingGroupCaption?: string;
 }
 
 export interface GameDbSettingsDto {
@@ -691,6 +694,9 @@ export interface SiteSettings {
   changelogPageTitle?: string;
   // Support page
   lineOfficialUrl?: string;
+  lineOfficialCaption?: string;
+  tradingGroupUrl?: string;
+  tradingGroupCaption?: string;
   // Download
   gameDownloadUrl?: string;
   // Reserve page
