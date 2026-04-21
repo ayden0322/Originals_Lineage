@@ -58,6 +58,20 @@ export class AttributionService {
         'commission_records',
         'cr',
         'cr.player_id = pa.player_id AND cr.agent_id = pa.agent_id',
+      )
+      // 對齊「該代理底下對該筆交易是否有退款沖銷」：
+      //  - source_type='refund' + source_transaction_id = cr.transaction_id
+      //  - 退款 adjustment 是 per-agent 的（跟 commission record 對齊），所以要確認 settlement 屬於同一代理
+      //  - unique index 保證一個代理+交易最多 1 筆 refund adjustment，不會放大行數
+      .leftJoin(
+        'commission_settlement_adjustments',
+        'ref_adj',
+        `ref_adj.source_type = 'refund'
+         AND ref_adj.source_transaction_id = cr.transaction_id
+         AND EXISTS (
+           SELECT 1 FROM commission_settlements s2
+           WHERE s2.id = ref_adj.settlement_id AND s2.agent_id = cr.agent_id
+         )`,
       );
 
     if (options.agentId) {
@@ -113,27 +127,43 @@ export class AttributionService {
         'COALESCE(SUM(cr.commission_amount), 0) AS total_commission',
         'COUNT(cr.id) AS tx_count',
         'MAX(cr.paid_at) AS last_paid_at',
+        // 已退款聚合：ref_adj 存在 = 該 cr 已被沖銷
+        'COALESCE(SUM(CASE WHEN ref_adj.id IS NOT NULL THEN cr.base_amount ELSE 0 END), 0) AS refunded_base',
+        'COALESCE(SUM(CASE WHEN ref_adj.id IS NOT NULL THEN cr.commission_amount ELSE 0 END), 0) AS refunded_commission',
+        'COUNT(DISTINCT CASE WHEN ref_adj.id IS NOT NULL THEN cr.id END) AS refunded_tx_count',
       ]);
 
     const rows = await qb.getRawMany();
 
-    return rows.map((row) => ({
-      playerId: row.player_id,
-      gameAccountName: row.game_account_name ?? null,
-      email: row.email ?? null,
-      agentId: row.agent_id,
-      agentCode: row.agent_code,
-      agentName: row.agent_name,
-      agentIsSystem: !!row.agent_is_system,
-      agentLevel: row.agent_parent_id ? 2 : 1,
-      linkedAt: row.linked_at,
-      linkedSource: row.linked_source as 'cookie' | 'register' | 'manual' | 'system',
-      linkId: row.link_id,
-      totalRecharge: Number(row.total_recharge),
-      totalCommission: Number(row.total_commission),
-      transactionCount: Number(row.tx_count),
-      lastPaidAt: row.last_paid_at,
-    }));
+    return rows.map((row) => {
+      const totalRecharge = Number(row.total_recharge);
+      const totalCommission = Number(row.total_commission);
+      const refundedBase = Number(row.refunded_base);
+      const refundedCommission = Number(row.refunded_commission);
+      return {
+        playerId: row.player_id,
+        gameAccountName: row.game_account_name ?? null,
+        email: row.email ?? null,
+        agentId: row.agent_id,
+        agentCode: row.agent_code,
+        agentName: row.agent_name,
+        agentIsSystem: !!row.agent_is_system,
+        agentLevel: row.agent_parent_id ? 2 : 1,
+        linkedAt: row.linked_at,
+        linkedSource: row.linked_source as 'cookie' | 'register' | 'manual' | 'system',
+        linkId: row.link_id,
+        totalRecharge,
+        totalCommission,
+        transactionCount: Number(row.tx_count),
+        lastPaidAt: row.last_paid_at,
+        // 退款相關：原始 - 已退 = 淨額
+        refundedBaseAmount: refundedBase,
+        refundedCommission,
+        refundedTxCount: Number(row.refunded_tx_count),
+        netRecharge: totalRecharge - refundedBase,
+        netCommission: totalCommission - refundedCommission,
+      };
+    });
   }
 
   /** 查詢玩家歸屬；查無則歸 SYSTEM */

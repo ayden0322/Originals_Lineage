@@ -972,7 +972,12 @@ export interface CommissionUnsettledPreviewItem {
   isSystem: boolean;
   transactionCount: number;
   totalBaseAmount: number;
+  /** 純分潤（未扣加減項） */
   totalCommission: number;
+  /** 當期加減項合計（含退款沖銷的負值） */
+  adjustmentTotal: number;
+  /** 淨分潤 = totalCommission + adjustmentTotal */
+  netCommission: number;
 }
 
 export interface CommissionUnsettledPreview {
@@ -987,6 +992,8 @@ export interface CommissionUnsettledPreview {
     totalTransactions: number;
     totalBaseAmount: number;
     totalCommission: number;
+    totalAdjustment: number;
+    totalNetCommission: number;
   };
   items: CommissionUnsettledPreviewItem[];
 }
@@ -1027,10 +1034,22 @@ export interface CommissionAttributionListItem {
   linkedAt: string;
   linkedSource: 'cookie' | 'register' | 'manual' | 'system';
   linkId: string | null;
+  /** 原始累積儲值（含已退款） */
   totalRecharge: number;
+  /** 原始累積分潤（含已退款） */
   totalCommission: number;
   transactionCount: number;
   lastPaidAt: string | null;
+  /** 已退款的儲值金額合計 */
+  refundedBaseAmount: number;
+  /** 已退款的分潤金額合計 */
+  refundedCommission: number;
+  /** 已退款的交易筆數 */
+  refundedTxCount: number;
+  /** 淨累積儲值 = totalRecharge - refundedBaseAmount */
+  netRecharge: number;
+  /** 淨累積分潤 = totalCommission - refundedCommission */
+  netCommission: number;
 }
 
 /**

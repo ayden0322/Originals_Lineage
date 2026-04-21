@@ -148,29 +148,98 @@ function AttributionListTab({
       render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: '累積儲值',
-      dataIndex: 'totalRecharge',
-      width: 110,
+      title: (
+        <Tooltip title="已扣除退款沖銷後的淨額">
+          <span>累積儲值（淨）</span>
+        </Tooltip>
+      ),
+      key: 'netRecharge',
+      width: 130,
       align: 'right',
-      render: (v: number) => Number(v).toFixed(2),
+      render: (_: unknown, row) => {
+        const hasRefund = row.refundedBaseAmount > 0;
+        const content = <span>{Number(row.netRecharge).toFixed(2)}</span>;
+        if (!hasRefund) return content;
+        return (
+          <Tooltip
+            title={
+              <div style={{ lineHeight: 1.8 }}>
+                <div>原始累積：{Number(row.totalRecharge).toFixed(2)}</div>
+                <div style={{ color: '#ffa39e' }}>
+                  已退款：-{Number(row.refundedBaseAmount).toFixed(2)}
+                </div>
+                <div style={{ borderTop: '1px solid #555', marginTop: 4, paddingTop: 4 }}>
+                  淨額：{Number(row.netRecharge).toFixed(2)}
+                </div>
+              </div>
+            }
+          >
+            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>
+              {Number(row.netRecharge).toFixed(2)}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
-      title: '累積分潤',
-      dataIndex: 'totalCommission',
-      width: 110,
+      title: (
+        <Tooltip title="已扣除退款沖銷後的淨額">
+          <span>累積分潤（淨）</span>
+        </Tooltip>
+      ),
+      key: 'netCommission',
+      width: 130,
       align: 'right',
-      render: (v: number) =>
-        v > 0 ? (
-          <strong style={{ color: '#cf1322' }}>{Number(v).toFixed(2)}</strong>
-        ) : (
-          <span style={{ color: '#999' }}>0.00</span>
-        ),
+      render: (_: unknown, row) => {
+        const hasRefund = row.refundedCommission > 0;
+        const net = Number(row.netCommission);
+        const core =
+          net > 0 ? (
+            <strong style={{ color: '#cf1322' }}>{net.toFixed(2)}</strong>
+          ) : (
+            <span style={{ color: '#999' }}>{net.toFixed(2)}</span>
+          );
+        if (!hasRefund) return core;
+        return (
+          <Tooltip
+            title={
+              <div style={{ lineHeight: 1.8 }}>
+                <div>原始分潤：{Number(row.totalCommission).toFixed(2)}</div>
+                <div style={{ color: '#ffa39e' }}>
+                  已退款：-{Number(row.refundedCommission).toFixed(2)}
+                </div>
+                <div style={{ borderTop: '1px solid #555', marginTop: 4, paddingTop: 4 }}>
+                  淨額：{net.toFixed(2)}
+                </div>
+              </div>
+            }
+          >
+            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>{core}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '交易數',
-      dataIndex: 'transactionCount',
-      width: 80,
+      key: 'transactionCount',
+      width: 100,
       align: 'right',
+      render: (_: unknown, row) => {
+        if (!row.refundedTxCount)
+          return <span>{row.transactionCount}</span>;
+        return (
+          <Tooltip
+            title={`原始 ${row.transactionCount} 筆，其中 ${row.refundedTxCount} 筆已退款`}
+          >
+            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>
+              {row.transactionCount}
+              <span style={{ color: '#cf1322', marginLeft: 4, fontSize: 12 }}>
+                (-{row.refundedTxCount})
+              </span>
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '最後消費',

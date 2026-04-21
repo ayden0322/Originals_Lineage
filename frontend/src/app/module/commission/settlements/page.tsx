@@ -288,11 +288,48 @@ export default function CommissionSettlementsPage() {
       render: (v: number) => Number(v).toFixed(2),
     },
     {
-      title: '待結分潤',
+      title: (
+        <Tooltip title="純分潤，未扣當期加減項（退款沖銷、手動調整、補發等）">
+          <span>待結分潤（原始）</span>
+        </Tooltip>
+      ),
       dataIndex: 'totalCommission',
       width: 140,
       align: 'right',
-      render: (v: number) => <strong>{Number(v).toFixed(2)}</strong>,
+      render: (v: number) => Number(v).toFixed(2),
+    },
+    {
+      title: (
+        <Tooltip title="當期的退款沖銷（負值）、手動調整、補發獎金等加減項合計">
+          <span>加減項</span>
+        </Tooltip>
+      ),
+      dataIndex: 'adjustmentTotal',
+      width: 120,
+      align: 'right',
+      render: (v: number) => {
+        if (!v) return <span style={{ color: '#999' }}>0.00</span>;
+        const n = Number(v);
+        return (
+          <span style={{ color: n < 0 ? '#cf1322' : '#3f8600' }}>
+            {n > 0 ? '+' : ''}
+            {n.toFixed(2)}
+          </span>
+        );
+      },
+    },
+    {
+      title: (
+        <Tooltip title="淨分潤 = 原始待結分潤 + 加減項；這是實際會入帳的金額">
+          <span>淨分潤</span>
+        </Tooltip>
+      ),
+      dataIndex: 'netCommission',
+      width: 140,
+      align: 'right',
+      render: (v: number) => (
+        <strong style={{ color: '#3f8600' }}>{Number(v).toFixed(2)}</strong>
+      ),
     },
   ];
 
@@ -328,7 +365,7 @@ export default function CommissionSettlementsPage() {
               </span>
             </Space>
           }
-          description="此頁面為即時預估，資料來自尚未結算（settlement_id IS NULL）的分潤明細，只讀取不寫入，結算日 00:00 cron 跑完才會進「歷史結算」頁。"
+          description="此頁面為即時預估，資料來自尚未結算（settlement_id IS NULL）的分潤明細 + 當期 pending 結算的加減項（退款沖銷、手動調整、補發等），只讀取不寫入，結算日 00:00 cron 跑完才會進「歷史結算」頁。"
         />
 
         {hasOrphan && (
@@ -342,7 +379,7 @@ export default function CommissionSettlementsPage() {
         )}
 
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={12} md={6}>
+          <Col xs={12} md={4}>
             <Card size="small">
               <Statistic
                 title="涉及代理數"
@@ -351,7 +388,7 @@ export default function CommissionSettlementsPage() {
               />
             </Card>
           </Col>
-          <Col xs={12} md={6}>
+          <Col xs={12} md={4}>
             <Card size="small">
               <Statistic
                 title="待結交易數"
@@ -360,7 +397,7 @@ export default function CommissionSettlementsPage() {
               />
             </Card>
           </Col>
-          <Col xs={12} md={6}>
+          <Col xs={12} md={5}>
             <Card size="small">
               <Statistic
                 title="業績總額"
@@ -369,14 +406,52 @@ export default function CommissionSettlementsPage() {
               />
             </Card>
           </Col>
-          <Col xs={12} md={6}>
+          <Col xs={12} md={5}>
             <Card size="small">
-              <Statistic
-                title="待結分潤總額"
-                value={preview?.summary.totalCommission ?? 0}
-                precision={2}
-                valueStyle={{ color: '#3f8600' }}
-              />
+              <Tooltip title="原始分潤合計（未扣退款沖銷 / 加減項）">
+                <div>
+                  <Statistic
+                    title="待結分潤（原始）"
+                    value={preview?.summary.totalCommission ?? 0}
+                    precision={2}
+                  />
+                </div>
+              </Tooltip>
+            </Card>
+          </Col>
+          <Col xs={12} md={3}>
+            <Card size="small">
+              <Tooltip title="當期加減項合計（退款沖銷的負值、手動調整、補發等）">
+                <div>
+                  <Statistic
+                    title="加減項"
+                    value={preview?.summary.totalAdjustment ?? 0}
+                    precision={2}
+                    valueStyle={{
+                      color:
+                        (preview?.summary.totalAdjustment ?? 0) < 0
+                          ? '#cf1322'
+                          : (preview?.summary.totalAdjustment ?? 0) > 0
+                            ? '#3f8600'
+                            : undefined,
+                    }}
+                  />
+                </div>
+              </Tooltip>
+            </Card>
+          </Col>
+          <Col xs={12} md={3}>
+            <Card size="small">
+              <Tooltip title="實際會入帳的淨分潤 = 原始 + 加減項">
+                <div>
+                  <Statistic
+                    title="淨分潤"
+                    value={preview?.summary.totalNetCommission ?? 0}
+                    precision={2}
+                    valueStyle={{ color: '#3f8600', fontWeight: 700 }}
+                  />
+                </div>
+              </Tooltip>
             </Card>
           </Col>
         </Row>

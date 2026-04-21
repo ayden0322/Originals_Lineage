@@ -25,7 +25,12 @@ export interface UnsettledPreviewAgentItem {
   isSystem: boolean;
   transactionCount: number;
   totalBaseAmount: number;
+  /** 純分潤（未扣加減項） */
   totalCommission: number;
+  /** 當期 pending settlement 的加減項合計（含退款沖銷的負值、手動調整、補發等） */
+  adjustmentTotal: number;
+  /** 淨分潤 = totalCommission + adjustmentTotal */
+  netCommission: number;
 }
 
 /**
@@ -43,6 +48,10 @@ export interface UnsettledPreviewResult {
     totalTransactions: number;
     totalBaseAmount: number;
     totalCommission: number;
+    /** 所有當期 pending settlement 的加減項合計（退款/手動/補發） */
+    totalAdjustment: number;
+    /** 淨分潤 = totalCommission + totalAdjustment */
+    totalNetCommission: number;
   };
   items: UnsettledPreviewAgentItem[];
 }
@@ -279,31 +288,125 @@ export class SettlementService {
       .addOrderBy('total_commission', 'DESC')
       .getRawMany();
 
-    const items: UnsettledPreviewAgentItem[] = rows.map((r) => ({
-      periodKey: r.period_key,
-      isCurrentPeriod: r.period_key === cur.periodKey,
-      agentId: r.agent_id,
-      agentCode: r.agent_code,
-      agentName: r.agent_name,
-      agentLevel: r.parent_id ? 2 : 1,
-      isSystem: !!r.is_system,
-      transactionCount: Number(r.tx_count),
-      totalBaseAmount: Number(r.total_base),
-      totalCommission: Number(r.total_commission),
-    }));
+    // 當期所有 pending settlement 的加減項合計（退款沖銷 / 手動 / 補發）
+    // - 只取 pending 狀態，避免把已 settled/paid 的結算重複計入「未結算預估」
+    // - 只取當期 periodKey；前期殘留的 pending settlement 極少見，若存在也只在該 periodKey 的 row 上顯示
+    const adjRows = await this.adjustmentRepo
+      .createQueryBuilder('adj')
+      .leftJoin('commission_settlements', 's', 's.id = adj.settlement_id')
+      .where("s.status = 'pending'")
+      .groupBy('s.period_key')
+      .addGroupBy('s.agent_id')
+      .select([
+        's.period_key AS period_key',
+        's.agent_id AS agent_id',
+        'COALESCE(SUM(adj.amount), 0) AS total_adjustment',
+      ])
+      .getRawMany();
+
+    const adjMap = new Map<string, number>();
+    for (const ar of adjRows) {
+      adjMap.set(`${ar.period_key}:${ar.agent_id}`, Number(ar.total_adjustment));
+    }
+
+    // 沒有分潤 record、只有 adjustment 的代理（例如：沖銷建立的空結算）也要列出來
+    const recordKeySet = new Set(rows.map((r) => `${r.period_key}:${r.agent_id}`));
+    const adjOnlyKeys = [...adjMap.keys()].filter((k) => !recordKeySet.has(k));
+
+    let adjOnlyAgentInfo = new Map<
+      string,
+      { code: string | null; name: string | null; parentId: string | null; isSystem: boolean }
+    >();
+    if (adjOnlyKeys.length > 0) {
+      const agentIds = Array.from(new Set(adjOnlyKeys.map((k) => k.split(':')[1])));
+      const agents = await this.settlementRepo.manager
+        .getRepository('commission_agents')
+        .createQueryBuilder('a')
+        .where('a.id IN (:...ids)', { ids: agentIds })
+        .select(['a.id AS id', 'a.code AS code', 'a.name AS name', 'a.parent_id AS parent_id', 'a.is_system AS is_system'])
+        .getRawMany();
+      adjOnlyAgentInfo = new Map(
+        agents.map((a) => [
+          a.id as string,
+          {
+            code: a.code ?? null,
+            name: a.name ?? null,
+            parentId: a.parent_id ?? null,
+            isSystem: !!a.is_system,
+          },
+        ]),
+      );
+    }
+
+    const items: UnsettledPreviewAgentItem[] = rows.map((r) => {
+      const adjustmentTotal = adjMap.get(`${r.period_key}:${r.agent_id}`) ?? 0;
+      const totalCommission = Number(r.total_commission);
+      return {
+        periodKey: r.period_key,
+        isCurrentPeriod: r.period_key === cur.periodKey,
+        agentId: r.agent_id,
+        agentCode: r.agent_code,
+        agentName: r.agent_name,
+        agentLevel: r.parent_id ? 2 : 1,
+        isSystem: !!r.is_system,
+        transactionCount: Number(r.tx_count),
+        totalBaseAmount: Number(r.total_base),
+        totalCommission,
+        adjustmentTotal,
+        netCommission: totalCommission + adjustmentTotal,
+      };
+    });
+
+    // 補上「只有 adjustment、沒有對應 commission_records」的 rows
+    for (const key of adjOnlyKeys) {
+      const [periodKey, agentId] = key.split(':');
+      const adjustmentTotal = adjMap.get(key) ?? 0;
+      const info = adjOnlyAgentInfo.get(agentId);
+      items.push({
+        periodKey,
+        isCurrentPeriod: periodKey === cur.periodKey,
+        agentId,
+        agentCode: info?.code ?? null,
+        agentName: info?.name ?? null,
+        agentLevel: info?.parentId ? 2 : 1,
+        isSystem: info?.isSystem ?? false,
+        transactionCount: 0,
+        totalBaseAmount: 0,
+        totalCommission: 0,
+        adjustmentTotal,
+        netCommission: adjustmentTotal,
+      });
+    }
+
+    // 排序：periodKey DESC，同期內 netCommission DESC
+    items.sort((a, b) => {
+      if (a.periodKey !== b.periodKey) return a.periodKey < b.periodKey ? 1 : -1;
+      return b.netCommission - a.netCommission;
+    });
 
     const summary = items.reduce(
       (acc, it) => {
         acc.totalTransactions += it.transactionCount;
         acc.totalBaseAmount += it.totalBaseAmount;
         acc.totalCommission += it.totalCommission;
+        acc.totalAdjustment += it.adjustmentTotal;
         return acc;
       },
-      { totalAgents: 0, totalTransactions: 0, totalBaseAmount: 0, totalCommission: 0 },
+      {
+        totalAgents: 0,
+        totalTransactions: 0,
+        totalBaseAmount: 0,
+        totalCommission: 0,
+        totalAdjustment: 0,
+        totalNetCommission: 0,
+      },
     );
     summary.totalAgents = new Set(items.map((i) => i.agentId)).size;
     summary.totalBaseAmount = Math.round(summary.totalBaseAmount * 100) / 100;
     summary.totalCommission = Math.round(summary.totalCommission * 100) / 100;
+    summary.totalAdjustment = Math.round(summary.totalAdjustment * 100) / 100;
+    summary.totalNetCommission =
+      Math.round((summary.totalCommission + summary.totalAdjustment) * 100) / 100;
 
     return {
       settlementDay,
