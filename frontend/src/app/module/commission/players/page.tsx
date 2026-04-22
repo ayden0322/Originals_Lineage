@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   Card,
   Input,
@@ -65,7 +66,7 @@ function AttributionListTab({
   >();
   const [q, setQ] = useState('');
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [includeSystem, setIncludeSystem] = useState(false);
+  const [includeSystem, setIncludeSystem] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
 
@@ -266,7 +267,7 @@ function AttributionListTab({
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="所有玩家歸屬總覽。預設排除 SYSTEM（無歸屬）玩家；可開啟下方開關查看。"
+        message="所有玩家歸屬總覽。預設包含 SYSTEM（無歸屬）玩家；可關閉下方開關以僅看有歸屬者。"
       />
       <Space wrap style={{ marginBottom: 16 }}>
         <Input
@@ -517,24 +518,44 @@ function SingleQueryTab({
 // ─── 主元件 ───────────────────────────────────────────────
 
 export default function CommissionPlayersPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Tab 狀態 + 跳轉玩家 ID 都從 URL 讀取，讓瀏覽器上一頁能正確回到列表 Tab
+  const tabFromUrl = searchParams.get('tab') === 'single' ? 'single' : 'list';
+  const playerIdFromUrl = searchParams.get('playerId') ?? undefined;
+
   const [agents, setAgents] = useState<CommissionAgentTreeNode[]>([]);
-  const [activeTab, setActiveTab] = useState('list');
-  const [jumpPlayerId, setJumpPlayerId] = useState<string | undefined>();
 
   useEffect(() => {
     getAgentTree().then(setAgents).catch(() => {});
   }, []);
 
+  /** 切換 Tab：用 router.push 推 history，讓上一頁能退回列表 */
+  const handleTabChange = (key: string) => {
+    if (key === 'list') {
+      // 回列表就用 replace（或 push）把 query 清掉
+      router.push(pathname);
+    } else {
+      // 切到單筆查詢，若已有 playerId 就保留
+      const qs = playerIdFromUrl
+        ? `?tab=single&playerId=${encodeURIComponent(playerIdFromUrl)}`
+        : '?tab=single';
+      router.push(`${pathname}${qs}`);
+    }
+  };
+
+  /** 列表中點「調整歸屬」：帶 playerId 跳單筆 Tab（push 一筆 history） */
   const onJumpToSingle = (playerId: string) => {
-    setJumpPlayerId(playerId);
-    setActiveTab('single');
+    router.push(`${pathname}?tab=single&playerId=${encodeURIComponent(playerId)}`);
   };
 
   return (
     <Card title="玩家歸屬管理">
       <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
+        activeKey={tabFromUrl}
+        onChange={handleTabChange}
         items={[
           {
             key: 'list',
@@ -550,7 +571,7 @@ export default function CommissionPlayersPage() {
             key: 'single',
             label: '單筆查詢 / 調整',
             children: (
-              <SingleQueryTab agents={agents} initialPlayerId={jumpPlayerId} />
+              <SingleQueryTab agents={agents} initialPlayerId={playerIdFromUrl} />
             ),
           },
         ]}
