@@ -158,6 +158,9 @@ export default function PaymentGatewaysPage() {
       dcvc: creds?.dcvc || '',
       rvg2c: creds?.rvg2c || '',
       verifyKey: creds?.verifyKey || '',
+      sn: creds?.sn || '',
+      apiKey: creds?.apiKey || '',
+      publicKey: creds?.publicKey || '',
       supportedMethods: gw.supportedMethods,
       productName: gw.productName ?? '',
       minAmount: gw.minAmount ?? 0,
@@ -183,6 +186,12 @@ export default function PaymentGatewaysPage() {
           dcvc: values.dcvc,
           rvg2c: values.rvg2c,
           verifyKey: values.verifyKey,
+        };
+      } else if (provider === 'tw92') {
+        credentials = {
+          sn: values.sn,
+          apiKey: values.apiKey,
+          publicKey: values.publicKey,
         };
       } else {
         credentials = {
@@ -273,10 +282,12 @@ export default function PaymentGatewaysPage() {
     {
       title: '商店代號',
       key: 'merchantId',
-      render: (_: unknown, record: PaymentGateway) =>
-        record.providerCode === 'smilepay'
-          ? (record.credentials as any)?.dcvc || '-'
-          : (record.credentials as any)?.merchantId || '-',
+      render: (_: unknown, record: PaymentGateway) => {
+        const creds = record.credentials as any;
+        if (record.providerCode === 'smilepay') return creds?.dcvc || '-';
+        if (record.providerCode === 'tw92') return creds?.sn || '-';
+        return creds?.merchantId || '-';
+      },
     },
     {
       title: '付款方式',
@@ -434,6 +445,21 @@ export default function PaymentGatewaysPage() {
               </Form.Item>
               <Form.Item name="verifyKey" label="驗證金鑰 (Verify Key)">
                 <Input.Password placeholder="SmilePay 驗證金鑰" />
+              </Form.Item>
+            </>
+          )}
+
+          {/* tw92 憑證欄位 */}
+          {selectedProvider === 'tw92' && (
+            <>
+              <Form.Item name="sn" label="商戶序號 (sn)">
+                <Input placeholder="tw92 提供的商戶序號" />
+              </Form.Item>
+              <Form.Item name="apiKey" label="API Key">
+                <Input.Password placeholder="tw92 提供的 API_KEY" />
+              </Form.Item>
+              <Form.Item name="publicKey" label="Public Key（加密用）">
+                <Input.Password placeholder="tw92 提供的 public_key" />
               </Form.Item>
             </>
           )}
