@@ -104,7 +104,14 @@ export default function VirtualAccountModal({ open, info, onClose }: Props) {
         style={{ marginBottom: 16 }}
       />
 
-      <div style={{ background: '#fafafa', padding: 16, borderRadius: 8 }}>
+      <div
+        style={{
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          padding: 16,
+          borderRadius: 8,
+        }}
+      >
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <div>
             <Text type="secondary">匯款銀行</Text>
