@@ -397,8 +397,8 @@ export default function CommissionAgentsPage() {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="代理層級規則"
-        description="一級代理（A）由管理者新增；二級代理（B）也由管理者新增並掛在某個 A 底下。B 的分潤比例可由 A 自設（需開啟「可設子%」開關）或由管理者設定。"
+        message="代理層級規則（加法模型）"
+        description="一級代理（A）的比例 = A 線團隊分潤上限（例如 30% 即每筆儲值最多拿 A 線 30%）。二級代理（B）的比例 = B 直接抽成（例如 15% = 每筆儲值直抽 15%），A 實拿 = A 上限 − B 直抽。約束：B 比例不可高於 A 比例。B 由管理者新增並掛在 A 底下；若 A 開啟「可設子%」，A 也可在代理後台調整旗下 B 的比例（仍受 B ≤ A 限制）。"
       />
       <Table
         rowKey="id"
@@ -612,10 +612,10 @@ function CreateAgentModal({
           <Input.Password autoComplete="new-password" />
         </Form.Item>
         <Form.Item
-          label={isSubAgent ? '分潤比例（從上層 A 的分潤中再切）' : '分潤比例'}
+          label={isSubAgent ? '分潤比例（B 直接抽成，須 ≤ 上層 A 的比例）' : '分潤比例（A 線團隊分潤上限）'}
           name="rate"
           rules={[{ required: true }]}
-          extra={isSubAgent ? '0.6 = 上層 A 拿到的 60%' : '0.3 = 30%'}
+          extra={isSubAgent ? '0.15 = 每筆儲值 B 直抽 15%；A 實拿 = A 上限 − B 直抽' : '0.3 = A 線團隊最多拿每筆儲值的 30%'}
         >
           <InputNumber min={0} max={1} step={0.05} style={{ width: '100%' }} />
         </Form.Item>
@@ -764,7 +764,7 @@ function RateAdjustModal({
         <Form.Item label="目前比例">
           <Tag color="gold">{(Number(agent.currentRate) * 100).toFixed(2)}%</Tag>
         </Form.Item>
-        <Form.Item label="新比例" extra="0~1 之間（0.3 = 30%）">
+        <Form.Item label="新比例" extra="A：A 線團隊分潤上限；B：B 直抽比例（必須 ≤ 上層 A 的比例）">
           <InputNumber
             min={0}
             max={1}

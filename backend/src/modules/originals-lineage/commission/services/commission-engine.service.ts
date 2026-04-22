@@ -27,10 +27,19 @@ export interface RechargePaidEvent {
 /**
  * 分潤計算引擎
  *
- * 核心邏輯（詳見 分潤系統設計文件.md 第四章）：
- * - Case 1（玩家歸屬在 B）：teamPool = amount × rateA；B拿 = teamPool × rateB；A拿 = teamPool − B拿
- * - Case 2（玩家歸屬在 A）：A拿 = amount × rateA
+ * 核心邏輯（2026-04 改版：加法模型 additive）：
+ * - Case 1（玩家歸屬在 B）：
+ *     teamPool = amount × rateA     （A 線總上限，rateA 設在 A 身上）
+ *     B 拿     = amount × rateB     （B 直接抽 amount 的 rateB，不是抽 teamPool）
+ *     A 拿     = teamPool − B 拿    （A 拿上限扣掉 B 後剩下的）
+ *   約束：rateB ≤ rateA，否則 aCut 會變負數 → rate.service 的 setRate 會驗證擋下
+ *        歷史 rate 不足時為了避免負值，這裡 clamp aCut = max(0, aCut)
+ * - Case 2（玩家歸屬在 A）：A 拿 = amount × rateA
  * - Case 3（歸屬 SYSTEM 或上游停權）：寫一筆 amount=0 的紀錄，報表閉環用
+ *
+ * 舊版為乘法模型（bCut = teamPool × rateB），會導致「B 設 15% 實際只拿 4.5%」
+ * 的不直覺行為，已廢棄。歷史紀錄靠 rate_snapshot / upstream_rate_snapshot 保護，
+ * 結算只加總 commission_records 不重算，故改公式不影響已落地的紀錄。
  *
  * 所有 rate 均以 paidAt 時刻的快照為準，歷史紀錄永不重算。
  */
@@ -118,8 +127,8 @@ export class CommissionEngineService {
       const rateB = await this.rateService.getEffectiveRate(owner.id, event.paidAt);
 
       const teamPool = this.round(event.amount * rateA);
-      const bCut = this.round(teamPool * rateB);
-      const aCut = this.round(teamPool - bCut);
+      const bCut = this.round(event.amount * rateB);
+      const aCut = Math.max(0, this.round(teamPool - bCut));
 
       await this.dataSource.transaction(async (trx) => {
         const repo = trx.getRepository(CommissionRecord);

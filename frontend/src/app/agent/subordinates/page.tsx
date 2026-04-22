@@ -173,7 +173,7 @@ export default function AgentSubordinatesPage() {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="此比例為「從你拿到的分潤池中切給該子代理」的比例（0~1）。例如設 0.6 = 60%。"
+          message="此為子代理的直抽比例（加法模型）。每筆儲值子代理直接抽成此%，你實拿 = 你的上限 − 子代理直抽。例如你是 30%、子代理設 15%：每筆儲值你拿 15%、子代理拿 15%。上限：不可超過你自己的比例。"
         />
         <Form layout="vertical">
           <Form.Item label="新比例" required>

@@ -58,6 +58,30 @@ export class RateService {
     if (!agent) throw new NotFoundException('代理不存在');
     if (agent.isSystem) throw new BadRequestException('SYSTEM 虛擬代理不可設定比例');
 
+    // 加法模型約束：子代理（B）的比例不能超過上游（A）的比例
+    // 原因：teamPool = amount × rateA 為 A 線總上限，B 拿 amount × rateB，
+    //      若 rateB > rateA 則 A 的 aCut 會變負數（雖然 engine 有 clamp，
+    //      但語意上不合理，應在設定時就擋下）
+    if (agent.parentId) {
+      const parentRate = await this.getCurrentRate(agent.parentId);
+      if (params.rate > parentRate) {
+        throw new BadRequestException(
+          `子代理比例（${(params.rate * 100).toFixed(2)}%）不可超過上游代理比例（${(parentRate * 100).toFixed(2)}%）`,
+        );
+      }
+    } else {
+      // A 級（無上游）調整時要檢查：不能調到比「自己旗下任一 B」還低，否則 B 的比例會反超
+      const subs = await this.agentRepo.find({ where: { parentId: agent.id } });
+      for (const sub of subs) {
+        const subRate = await this.getCurrentRate(sub.id);
+        if (subRate > params.rate) {
+          throw new BadRequestException(
+            `此比例（${(params.rate * 100).toFixed(2)}%）低於旗下子代理 ${sub.code} 的現行比例（${(subRate * 100).toFixed(2)}%），請先調降該子代理比例`,
+          );
+        }
+      }
+    }
+
     // 關閉舊 + 新增新必須在同一 transaction，避免中途 crash 導致代理無有效比例
     return this.dataSource.transaction(async (trx) => {
       const rateRepo = trx.getRepository(AgentRate);

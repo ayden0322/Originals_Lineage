@@ -9,6 +9,7 @@ import {
   Max,
   MinLength,
   IsObject,
+  Allow,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -151,6 +152,9 @@ export class UpdateSettingDto {
   @IsString()
   key: string;
 
-  // value 可能是任意型別
+  // value 可能是任意型別（number / boolean / string / object）
+  // 必須加 @Allow()，否則 ValidationPipe 的 whitelist 會將無 decorator 的屬性 strip 掉
+  // 導致 service 收到 undefined → 驗證失敗 400（結算日設 1 等情境的元兇）
+  @Allow()
   value: unknown;
 }
