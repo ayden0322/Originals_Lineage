@@ -1,9 +1,13 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import Redis from 'ioredis';
 import { Permission } from './entities/permission.entity';
 import { AccountPermission } from './entities/account-permission.entity';
 import { Account, BackendLevel } from '../account/entities/account.entity';
+import { REDIS_CLIENT } from '../database/redis.module';
+
+export const PERM_CHANGED_KEY = (accountId: string) => `perm:changed:${accountId}`;
 
 // Permission seed definitions
 const PERMISSION_SEEDS = [
@@ -50,7 +54,16 @@ export class PermissionService implements OnModuleInit {
     private readonly accountPermRepo: Repository<AccountPermission>,
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  // 標記該帳號的權限剛被變更。JwtStrategy 會比對此時間戳與 JWT iat，
+  // 若 token 是變更之前簽的，就即時從 DB 重抓權限覆寫到 request.user。
+  private async markPermissionsChanged(accountId: string) {
+    const now = Math.floor(Date.now() / 1000).toString();
+    // TTL 30 天，遠長於 refresh token 壽命即可（7d），避免 key 永久堆積
+    await this.redis.set(PERM_CHANGED_KEY(accountId), now, 'EX', 60 * 60 * 24 * 30);
+  }
 
   async onModuleInit() {
     await this.seedPermissions();
@@ -150,6 +163,7 @@ export class PermissionService implements OnModuleInit {
     const permissions = await this.permissionRepo.find();
     const codeToId = new Map(permissions.map((p) => [p.code, p.id]));
 
+    let added = 0;
     for (const code of permissionCodes) {
       const permissionId = codeToId.get(code);
       if (!permissionId) continue;
@@ -161,7 +175,12 @@ export class PermissionService implements OnModuleInit {
         await this.accountPermRepo.save(
           this.accountPermRepo.create({ accountId, permissionId, grantedBy }),
         );
+        added++;
       }
+    }
+
+    if (added > 0) {
+      await this.markPermissionsChanged(accountId);
     }
   }
 
@@ -169,10 +188,16 @@ export class PermissionService implements OnModuleInit {
     const permissions = await this.permissionRepo.find();
     const codeToId = new Map(permissions.map((p) => [p.code, p.id]));
 
+    let removed = 0;
     for (const code of permissionCodes) {
       const permissionId = codeToId.get(code);
       if (!permissionId) continue;
-      await this.accountPermRepo.delete({ accountId, permissionId });
+      const result = await this.accountPermRepo.delete({ accountId, permissionId });
+      if (result.affected && result.affected > 0) removed++;
+    }
+
+    if (removed > 0) {
+      await this.markPermissionsChanged(accountId);
     }
   }
 
