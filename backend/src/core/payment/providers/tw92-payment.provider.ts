@@ -10,10 +10,23 @@ import {
 const TW92_BASE_URL = 'https://twpay-tw92.max-cloud.cc';
 
 // tw92 TransactionType 對應系統 paymentMethod
-// 本次整合只啟用：atm→7（虛擬帳戶）、cvs→3（超商代碼）
+// 本次整合只啟用：atm→1（銀行帳戶代收）、cvs→3（超商代碼）
+// 原規劃用 Type 7 虛擬帳戶，但 tw92 端尚未對本商戶開通，先走 Type 1。
 // credit_card 不由 tw92 處理（tw92 雖支援 Type 4，但依需求不啟用）
-const TX_TYPE_VIRTUAL_ACCOUNT = 7;
+const TX_TYPE_BANK = 1;
 const TX_TYPE_CVS = 3;
+
+// Type 1 必填 TransactionData（買家/參考銀行帳戶陣列）
+// doc 僅規定格式（JSON 字串 + 欄位長度），未規定內容必須真實。
+// 先用 placeholder 送出，觀察 tw92 回傳（會覆蓋/忽略，或要求真實資料再調整）。
+const TW92_TYPE1_PLACEHOLDER_TRANSACTION_DATA = JSON.stringify([
+  {
+    BankNumber: '012',
+    BankName: '台灣銀行',
+    AccountName: '買家',
+    AccountNumber: '000000000000',
+  },
+]);
 
 // 訂單狀態碼：1=處理中 2=進行中 3=成功 4=取消 5=提交完成 6=爭議 7=延遲下發
 const TW92_STATUS_PAID = '3';
@@ -46,6 +59,15 @@ export class Tw92PaymentProvider implements PaymentProvider {
 
     if (txType === TX_TYPE_CVS) {
       payload.TransactionAccountName = (params.customerName || '買家').slice(0, 32);
+    }
+
+    if (txType === TX_TYPE_BANK) {
+      // Type 1 必填 TransactionData；允許從 credentials.bankAccounts 覆寫 placeholder
+      const customAccounts = credentials.bankAccounts;
+      payload.TransactionData =
+        customAccounts && Array.isArray(customAccounts) && customAccounts.length > 0
+          ? JSON.stringify(customAccounts)
+          : TW92_TYPE1_PLACEHOLDER_TRANSACTION_DATA;
     }
 
     const payloadJson = JSON.stringify(payload);
@@ -111,8 +133,8 @@ export class Tw92PaymentProvider implements PaymentProvider {
     // tw92 /api/order/query 亦支援用 TransactionCode 查詢。
     const transactionId = params.orderNumber;
 
-    // Type 7 虛擬帳戶：回傳銀行帳號資訊
-    if (txType === TX_TYPE_VIRTUAL_ACCOUNT) {
+    // Type 1 銀行帳戶代收：回傳銀行帳號資訊（UI 共用虛擬帳戶顯示卡）
+    if (txType === TX_TYPE_BANK) {
       return {
         transactionId,
         status: 'pending',
@@ -248,7 +270,7 @@ export class Tw92PaymentProvider implements PaymentProvider {
         return TX_TYPE_CVS;
       case 'atm':
       default:
-        return TX_TYPE_VIRTUAL_ACCOUNT;
+        return TX_TYPE_BANK;
     }
   }
 
