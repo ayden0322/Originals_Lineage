@@ -288,6 +288,9 @@ export default function AnnouncementFloat() {
           </span>
           <button
             onClick={handleDismiss}
+            // 阻止 mousedown 冒泡到 header 的 drag handler，避免 drag preventDefault 吃掉 click。
+            // 否則瀏覽器會把「按住 ✕」當成拖曳起點，handleDismiss 永遠不會被呼叫。
+            onMouseDown={(e) => e.stopPropagation()}
             style={{
               background: 'none',
               border: 'none',
