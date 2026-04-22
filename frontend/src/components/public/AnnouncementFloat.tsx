@@ -56,6 +56,10 @@ export default function AnnouncementFloat() {
   const [hasEntrance, setHasEntrance] = useState(true); // only true on first render
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
+  // 卡片 ref：用來量高度，把高度寫到 CSS var --announcement-height，
+  // 讓其他右下 FAB（例如 LineInviteFloat）可以 calc 自動往上讓位。
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setHasEntrance(false); // disable entrance animation after first interaction
@@ -129,6 +133,37 @@ export default function AnnouncementFloat() {
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
+
+  // 把卡片實際高度寫到 :root CSS var，供 LineInviteFloat 等右下 FAB 自動避讓。
+  // dismissed 或還沒 visible 時清成 0。
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const clear = () => root.style.setProperty('--announcement-height', '0px');
+
+    if (dismissed || !visible) {
+      clear();
+      return clear;
+    }
+    const el = cardRef.current;
+    if (!el) {
+      clear();
+      return;
+    }
+    const update = () => {
+      const h = el.offsetHeight;
+      // 卡片高度 + 8px 間距，讓 FAB 停在卡片上緣再往上一點
+      root.style.setProperty('--announcement-height', `${h + 8}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      clear();
+    };
+    // ResizeObserver 會抓到 articles 或分頁變動造成的高度變化，不必把它們放 deps
+  }, [dismissed, visible]);
 
   // Filter out categories with no articles (check after first load)
   // We keep all categories from API since backend returns active ones
@@ -208,6 +243,7 @@ export default function AnnouncementFloat() {
 
   return (
     <div
+      ref={cardRef}
       style={{
         position: 'fixed',
         right: `calc(max(16px, env(safe-area-inset-right, 0px)) - ${position.x}px)`,

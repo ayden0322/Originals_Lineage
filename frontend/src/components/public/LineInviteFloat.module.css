@@ -1,9 +1,11 @@
 /* ─── FAB 按鈕 ──────────────────────────────
    位置：右下角由下而上第三顆（公告 24 / 音樂 80 / LINE 140）
+   當 AnnouncementFloat 的卡片展開時，會在 :root 設置 --announcement-height，
+   用 calc 讓 LINE FAB 自動上移到卡片上方，不被遮擋。
 */
 .fab {
   position: fixed;
-  bottom: 140px;
+  bottom: calc(140px + var(--announcement-height, 0px));
   right: 24px;
   width: 48px;
   height: 48px;
@@ -17,7 +19,7 @@
   justify-content: center;
   box-shadow: 0 4px 12px rgba(6, 199, 85, 0.45), 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 1049; /* 低於公告浮窗（1050），避免擋到 */
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, bottom 0.25s ease;
   padding: 0;
 }
 
@@ -40,7 +42,7 @@
   .fab {
     width: 44px;
     height: 44px;
-    bottom: 128px;
+    bottom: calc(128px + var(--announcement-height, 0px));
     right: 16px;
   }
 }
@@ -62,7 +64,8 @@
 /* ─── Popover（桌面版：FAB 左上角彈出） ────── */
 .popover {
   position: fixed;
-  bottom: 200px;
+  /* 跟著 FAB 一起上移，保持在 FAB 正上方 */
+  bottom: calc(200px + var(--announcement-height, 0px));
   right: 24px;
   width: 280px;
   background: #ffffff;
