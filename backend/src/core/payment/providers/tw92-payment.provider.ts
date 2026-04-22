@@ -48,10 +48,21 @@ export class Tw92PaymentProvider implements PaymentProvider {
       payload.TransactionAccountName = (params.customerName || '買家').slice(0, 32);
     }
 
-    const encrypted = this.encrypt(JSON.stringify(payload), publicKey, apiKey);
+    const payloadJson = JSON.stringify(payload);
+    const encrypted = this.encrypt(payloadJson, publicKey, apiKey);
 
     const body = new URLSearchParams({ data: encrypted }).toString();
     const url = `${TW92_BASE_URL}/api/order/recharge?sn=${encodeURIComponent(sn)}`;
+
+    // ─── 除錯用完整 Request dump（可貼給 tw92 客服）───
+    this.logger.log(
+      `[tw92 REQUEST DUMP]\n` +
+        `URL: ${url}\n` +
+        `Method: POST\n` +
+        `Headers: Authorization=${apiKey}, Content-Type=application/x-www-form-urlencoded\n` +
+        `Body (plaintext before encryption): ${payloadJson}\n` +
+        `Body (actual encrypted data sent): data=${encrypted}`,
+    );
 
     const res = await fetch(url, {
       method: 'POST',
@@ -62,11 +73,25 @@ export class Tw92PaymentProvider implements PaymentProvider {
       body,
     });
 
-    const json = (await res.json()) as {
+    const responseText = await res.text();
+    // ─── 除錯用完整 Response dump（可貼給 tw92 客服）───
+    this.logger.log(
+      `[tw92 RESPONSE DUMP]\n` +
+        `HTTP Status: ${res.status}\n` +
+        `Body: ${responseText}`,
+    );
+
+    let json: {
       status: boolean;
       data?: Record<string, unknown>;
       error?: string;
     };
+    try {
+      json = JSON.parse(responseText);
+    } catch {
+      this.logger.error(`tw92 response 非合法 JSON: ${responseText}`);
+      throw new Error(`tw92 回應非合法 JSON：${responseText.slice(0, 200)}`);
+    }
 
     if (!json.status || !json.data) {
       this.logger.error(
