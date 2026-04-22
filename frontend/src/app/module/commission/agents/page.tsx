@@ -408,6 +408,9 @@ export default function CommissionAgentsPage() {
         expandable={expandable}
         pagination={false}
         scroll={{ x: 960 }}
+        // 關掉 antd Table 預設把 `children` 當樹狀資料的行為，
+        // 避免 B 既被自動當 tree 子節點渲染、又被 expandedRowRender 渲染一次（重複）
+        childrenColumnName="__noop__"
       />
 
       {/* ─── 新增代理 Modal ─── */}
