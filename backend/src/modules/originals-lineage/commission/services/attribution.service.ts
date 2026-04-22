@@ -5,6 +5,7 @@ import { Agent } from '../entities/agent.entity';
 import { PlayerAttribution } from '../entities/player-attribution.entity';
 import { PlayerAttributionHistory } from '../entities/player-attribution-history.entity';
 import { ReferralLink } from '../entities/referral-link.entity';
+import { GameDbService } from '../../game-db/game-db.service';
 
 /**
  * 玩家歸屬服務
@@ -23,6 +24,7 @@ export class AttributionService {
     @InjectRepository(ReferralLink)
     private readonly linkRepo: Repository<ReferralLink>,
     private readonly dataSource: DataSource,
+    private readonly gameDb: GameDbService,
   ) {}
 
   /** 取得 SYSTEM 虛擬代理 ID（快取可加在這） */
@@ -135,15 +137,28 @@ export class AttributionService {
 
     const rows = await qb.getRawMany();
 
+    // 批次查該頁玩家的遊戲角色 + 血盟（一帳號一角色）
+    const accountNames = rows
+      .map((r) => r.game_account_name)
+      .filter((v): v is string => !!v);
+    const charClanMap = await this.gameDb.findCharacterClanByAccounts(
+      Array.from(new Set(accountNames)),
+    );
+
     return rows.map((row) => {
       const totalRecharge = Number(row.total_recharge);
       const totalCommission = Number(row.total_commission);
       const refundedBase = Number(row.refunded_base);
       const refundedCommission = Number(row.refunded_commission);
+      const charClan = row.game_account_name
+        ? charClanMap.get(row.game_account_name)
+        : undefined;
       return {
         playerId: row.player_id,
         gameAccountName: row.game_account_name ?? null,
         email: row.email ?? null,
+        charName: charClan?.charName ?? null,
+        clanName: charClan?.clanName ?? null,
         agentId: row.agent_id,
         agentCode: row.agent_code,
         agentName: row.agent_name,
@@ -164,6 +179,177 @@ export class AttributionService {
         netCommission: totalCommission - refundedCommission,
       };
     });
+  }
+
+  /**
+   * 單筆查詢：歸屬 + 遊戲帳號 / 角色 / 血盟（供管理者 UI 顯示）
+   * - 歷史分潤計算仍走 getAttribution（純 entity）以免影響引擎
+   */
+  async getAttributionDetail(playerId: string) {
+    const attr = await this.getAttribution(playerId);
+    const row = await this.dataSource.query(
+      'SELECT game_account_name FROM website_users WHERE id = $1',
+      [playerId],
+    );
+    const gameAccountName: string | null =
+      (row as Array<{ game_account_name: string | null }>)[0]
+        ?.game_account_name ?? null;
+
+    let charName: string | null = null;
+    let clanName: string | null = null;
+    if (gameAccountName) {
+      const map = await this.gameDb.findCharacterClanByAccounts([
+        gameAccountName,
+      ]);
+      const hit = map.get(gameAccountName);
+      charName = hit?.charName ?? null;
+      clanName = hit?.clanName ?? null;
+    }
+
+    return {
+      playerId: attr.playerId,
+      agentId: attr.agentId,
+      linkId: attr.linkId,
+      linkedSource: attr.linkedSource,
+      linkedAt: attr.linkedAt,
+      updatedAt: attr.updatedAt,
+      gameAccountName,
+      charName,
+      clanName,
+    };
+  }
+
+  /**
+   * 玩家交易 / 分潤紀錄（供明細頁）
+   * - GROUP BY transaction_id：一筆儲值一列，A/B 分潤並排
+   * - 結算週期 = 日曆月，period_key = 'YYYY-MM'
+   * - 同步回傳區間聚合（summary），避免前端再打一次
+   */
+  async listPlayerTransactions(
+    playerId: string,
+    options: { from?: Date; to?: Date; limit?: number; offset?: number } = {},
+  ) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+
+    // 建動態 WHERE（注意：rowsSql 末尾還要附加 limit/offset，所以參數編號要留著）
+    const whereParts = ['cr.player_id = $1'];
+    const whereParams: unknown[] = [playerId];
+    if (options.from) {
+      whereParts.push(`cr.paid_at >= $${whereParams.length + 1}`);
+      whereParams.push(options.from);
+    }
+    if (options.to) {
+      whereParts.push(`cr.paid_at < $${whereParams.length + 1}`);
+      whereParams.push(options.to);
+    }
+    const whereSql = whereParts.join(' AND ');
+
+    // 每筆 cr 對齊該代理的退款 adjustment（若存在 = 該 cr 已被沖銷）
+    const refAdjJoin = `
+      LEFT JOIN commission_settlement_adjustments ref_adj
+        ON ref_adj.source_type = 'refund'
+       AND ref_adj.source_transaction_id = cr.transaction_id
+       AND EXISTS (
+         SELECT 1 FROM commission_settlements s2
+         WHERE s2.id = ref_adj.settlement_id AND s2.agent_id = cr.agent_id
+       )`;
+
+    // rowsSql 在 whereParams 之後再加 limit / offset
+    const rowsSql = `
+      SELECT
+        cr.transaction_id AS transaction_id,
+        MAX(cr.paid_at) AS paid_at,
+        MAX(cr.base_amount) AS base_amount,
+        MAX(cr.period_key) AS period_key,
+        BOOL_OR(cr.settlement_id IS NOT NULL) AS settled,
+        BOOL_OR(ref_adj.id IS NOT NULL) AS refunded,
+        MAX(CASE WHEN cr.level = 1 THEN cr.commission_amount END) AS a_commission,
+        MAX(CASE WHEN cr.level = 2 THEN cr.commission_amount END) AS b_commission,
+        MAX(CASE WHEN cr.level = 1 THEN cr.rate_snapshot END) AS a_rate,
+        MAX(CASE WHEN cr.level = 2 THEN cr.rate_snapshot END) AS b_rate,
+        MAX(CASE WHEN cr.level = 1 THEN a.code END) AS a_code,
+        MAX(CASE WHEN cr.level = 1 THEN a.name END) AS a_name,
+        MAX(CASE WHEN cr.level = 2 THEN a.code END) AS b_code,
+        MAX(CASE WHEN cr.level = 2 THEN a.name END) AS b_name
+      FROM commission_records cr
+      LEFT JOIN commission_agents a ON a.id = cr.agent_id
+      ${refAdjJoin}
+      WHERE ${whereSql}
+      GROUP BY cr.transaction_id
+      ORDER BY MAX(cr.paid_at) DESC
+      LIMIT $${whereParams.length + 1} OFFSET $${whereParams.length + 2}
+    `;
+    const rowsParams = [...whereParams, limit, offset];
+
+    const summarySql = `
+      WITH per_tx AS (
+        SELECT
+          cr.transaction_id,
+          MAX(cr.base_amount) AS base_amount,
+          SUM(cr.commission_amount) AS commission_sum,
+          BOOL_OR(ref_adj.id IS NOT NULL) AS refunded
+        FROM commission_records cr
+        ${refAdjJoin}
+        WHERE ${whereSql}
+        GROUP BY cr.transaction_id
+      )
+      SELECT
+        COUNT(*)::int AS tx_count,
+        COUNT(*) FILTER (WHERE refunded)::int AS refunded_tx_count,
+        COALESCE(SUM(base_amount), 0) AS total_recharge,
+        COALESCE(SUM(CASE WHEN refunded THEN base_amount ELSE 0 END), 0) AS refunded_recharge,
+        COALESCE(SUM(commission_sum), 0) AS total_commission,
+        COALESCE(SUM(CASE WHEN refunded THEN commission_sum ELSE 0 END), 0) AS refunded_commission
+      FROM per_tx
+    `;
+
+    const [rows, summaryRows] = await Promise.all([
+      this.dataSource.query(rowsSql, rowsParams),
+      this.dataSource.query(summarySql, whereParams),
+    ]);
+
+    const items = (rows as Array<Record<string, unknown>>).map((r) => {
+      const aCommission = r.a_commission != null ? Number(r.a_commission) : 0;
+      const bCommission = r.b_commission != null ? Number(r.b_commission) : 0;
+      return {
+        transactionId: String(r.transaction_id),
+        paidAt: r.paid_at as Date,
+        baseAmount: Number(r.base_amount),
+        periodKey: String(r.period_key),
+        settled: !!r.settled,
+        refunded: !!r.refunded,
+        aCode: (r.a_code as string) ?? null,
+        aName: (r.a_name as string) ?? null,
+        aRate: r.a_rate != null ? Number(r.a_rate) : null,
+        aCommission,
+        bCode: (r.b_code as string) ?? null,
+        bName: (r.b_name as string) ?? null,
+        bRate: r.b_rate != null ? Number(r.b_rate) : null,
+        bCommission,
+        totalCommission: aCommission + bCommission,
+      };
+    });
+
+    const s = (summaryRows as Array<Record<string, unknown>>)[0] ?? {};
+    const totalRecharge = Number(s.total_recharge ?? 0);
+    const refundedRecharge = Number(s.refunded_recharge ?? 0);
+    const totalCommission = Number(s.total_commission ?? 0);
+    const refundedCommission = Number(s.refunded_commission ?? 0);
+
+    return {
+      items,
+      summary: {
+        txCount: Number(s.tx_count ?? 0),
+        refundedTxCount: Number(s.refunded_tx_count ?? 0),
+        totalRecharge,
+        refundedRecharge,
+        netRecharge: totalRecharge - refundedRecharge,
+        totalCommission,
+        refundedCommission,
+        netCommission: totalCommission - refundedCommission,
+      },
+    };
   }
 
   /** 查詢玩家歸屬；查無則歸 SYSTEM */

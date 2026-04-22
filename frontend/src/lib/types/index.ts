@@ -1074,6 +1074,41 @@ export interface CommissionPlayerTransaction {
   agentId: string;
 }
 
+/** 管理者：玩家明細頁一筆交易（GROUP BY transaction_id） */
+export interface CommissionPlayerTransactionItem {
+  transactionId: string;
+  paidAt: string;
+  baseAmount: number;
+  periodKey: string;
+  settled: boolean;
+  refunded: boolean;
+  aCode: string | null;
+  aName: string | null;
+  aRate: number | null;
+  aCommission: number;
+  bCode: string | null;
+  bName: string | null;
+  bRate: number | null;
+  bCommission: number;
+  totalCommission: number;
+}
+
+export interface CommissionPlayerTransactionSummary {
+  txCount: number;
+  refundedTxCount: number;
+  totalRecharge: number;
+  refundedRecharge: number;
+  netRecharge: number;
+  totalCommission: number;
+  refundedCommission: number;
+  netCommission: number;
+}
+
+export interface CommissionPlayerTransactionsResult {
+  items: CommissionPlayerTransactionItem[];
+  summary: CommissionPlayerTransactionSummary;
+}
+
 /**
  * 管理者：玩家歸屬總覽單列（後台玩家歸屬列表用）
  * - 管理者看得到完整帳號、email（不遮罩）

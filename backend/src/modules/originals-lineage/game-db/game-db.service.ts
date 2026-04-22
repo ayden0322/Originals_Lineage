@@ -361,6 +361,49 @@ export class GameDbService implements OnModuleInit {
     );
   }
 
+  /**
+   * 批次查角色 + 血盟名稱（供玩家歸屬列表顯示）
+   * 一個遊戲帳號只有一個角色，回傳 Map<account_name, { charName, clanName }>
+   * 遊戲庫未連線時回傳空 Map（不拋錯，讓上游優雅降級）
+   */
+  async findCharacterClanByAccounts(
+    accountNames: string[],
+  ): Promise<Map<string, { charName: string; clanName: string | null }>> {
+    const result = new Map<
+      string,
+      { charName: string; clanName: string | null }
+    >();
+    if (!this.isConnected || accountNames.length === 0) return result;
+
+    const ds = this.dataSource!;
+    const placeholders = accountNames.map(() => '?').join(',');
+    try {
+      const rows = (await ds.query(
+        `SELECT c.account_name, c.char_name, cl.clan_name
+         FROM characters c
+         LEFT JOIN clan_data cl ON cl.clan_id = c.ClanID
+         WHERE c.account_name IN (${placeholders})`,
+        accountNames,
+      )) as Array<{
+        account_name: string;
+        char_name: string;
+        clan_name: string | null;
+      }>;
+
+      for (const row of rows) {
+        result.set(row.account_name, {
+          charName: row.char_name,
+          clanName: row.clan_name ?? null,
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        `findCharacterClanByAccounts failed: ${(err as Error).message}`,
+      );
+    }
+    return result;
+  }
+
   // ─── Shop / 商城專用 ─────────────────────────────────────
 
   /**

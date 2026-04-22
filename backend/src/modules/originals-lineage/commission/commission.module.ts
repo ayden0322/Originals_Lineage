@@ -28,6 +28,7 @@ import { AgentReportService } from './services/agent-report.service';
 import { AdminCommissionController } from './commission.controller';
 import { AgentSelfController } from './agent-self.controller';
 import { PublicReferralController } from './public-referral.controller';
+import { GameDbModule } from '../game-db/game-db.module';
 
 /**
  * 代理分潤系統模組
@@ -59,6 +60,7 @@ import { PublicReferralController } from './public-referral.controller';
     ]),
     ScheduleModule.forRoot(),
     JwtModule.register({}),
+    GameDbModule,
   ],
   controllers: [
     AdminCommissionController,

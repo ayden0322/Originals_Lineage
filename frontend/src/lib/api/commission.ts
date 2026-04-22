@@ -18,6 +18,7 @@ import type {
   CommissionAttributionListItem,
   CommissionAgentSelf,
   AgentLoginResponse,
+  CommissionPlayerTransactionsResult,
 } from '../types';
 
 const ADMIN = '/modules/originals/commission';
@@ -196,6 +197,17 @@ export async function changePlayerAttribution(
   const { data } = await apiClient.patch<ApiResponse<CommissionPlayerAttribution>>(
     `${ADMIN}/players/${playerId}/attribution`,
     { toAgentId, reason },
+  );
+  return data.data;
+}
+
+export async function listPlayerTransactions(
+  playerId: string,
+  params: { from?: string; to?: string; limit?: number; offset?: number } = {},
+): Promise<CommissionPlayerTransactionsResult> {
+  const { data } = await apiClient.get<ApiResponse<CommissionPlayerTransactionsResult>>(
+    `${ADMIN}/players/${playerId}/transactions`,
+    { params },
   );
   return data.data;
 }

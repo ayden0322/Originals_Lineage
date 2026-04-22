@@ -58,6 +58,7 @@ function AttributionListTab({
   agents: CommissionAgentTreeNode[];
   onJumpToSingle: (playerId: string) => void;
 }) {
+  const router = useRouter();
   const [list, setList] = useState<CommissionAttributionListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterAgent, setFilterAgent] = useState<string | undefined>();
@@ -102,161 +103,170 @@ function AttributionListTab({
 
   const columns: ColumnsType<CommissionAttributionListItem> = [
     {
-      title: '玩家帳號',
-      dataIndex: 'gameAccountName',
-      width: 160,
+      title: '玩家',
+      key: 'player',
+      width: 220,
       fixed: 'left',
-      render: (v: string | null, row) => (
-        <Space direction="vertical" size={0}>
-          <strong>{v ?? '(無帳號)'}</strong>
-          <Tooltip title={row.playerId}>
-            <code style={{ fontSize: 11, color: '#999' }}>
-              {row.playerId.slice(0, 8)}…
-            </code>
-          </Tooltip>
+      render: (_: unknown, row) => (
+        <Space direction="vertical" size={2}>
+          <Space size={6} wrap>
+            <strong>{row.gameAccountName ?? '(無帳號)'}</strong>
+            {row.charName && (
+              <Tag color="blue" style={{ margin: 0 }}>
+                {row.charName}
+              </Tag>
+            )}
+          </Space>
+          <Space size={6} wrap>
+            {row.charName ? (
+              row.clanName ? (
+                <Tag color="purple" style={{ margin: 0 }}>
+                  {row.clanName}
+                </Tag>
+              ) : (
+                <span style={{ fontSize: 11, color: '#999' }}>無血盟</span>
+              )
+            ) : (
+              <span style={{ fontSize: 11, color: '#999' }}>未建角</span>
+            )}
+            <Tooltip title={row.playerId}>
+              <code style={{ fontSize: 11, color: '#999' }}>
+                {row.playerId.slice(0, 8)}…
+              </code>
+            </Tooltip>
+          </Space>
         </Space>
       ),
     },
     {
       title: '歸屬代理',
-      width: 200,
-      render: (_, row) => (
-        <Space direction="vertical" size={0}>
-          <Space size={4}>
-            <strong>{row.agentCode}</strong>
-            {row.agentIsSystem && <Tag color="orange">SYSTEM</Tag>}
-            <Tag color={row.agentLevel === 1 ? 'gold' : 'cyan'}>
-              {row.agentLevel === 1 ? 'A' : 'B'}
-            </Tag>
+      key: 'agent',
+      width: 220,
+      render: (_: unknown, row) => {
+        const cfg = sourceLabel[row.linkedSource] ?? {
+          text: row.linkedSource,
+          color: 'default',
+        };
+        return (
+          <Space direction="vertical" size={2}>
+            <Space size={4} wrap>
+              <Tag color={row.agentLevel === 1 ? 'gold' : 'cyan'} style={{ margin: 0 }}>
+                {row.agentLevel === 1 ? 'A' : 'B'}
+              </Tag>
+              <strong>{row.agentCode}</strong>
+              {row.agentIsSystem && (
+                <Tag color="orange" style={{ margin: 0 }}>
+                  SYSTEM
+                </Tag>
+              )}
+            </Space>
+            <Space size={6}>
+              <Tag color={cfg.color} style={{ margin: 0 }}>
+                {cfg.text}
+              </Tag>
+              <span style={{ fontSize: 11, color: '#999' }}>
+                {dayjs(row.linkedAt).format('YYYY-MM-DD')}
+              </span>
+            </Space>
           </Space>
-          <span style={{ fontSize: 12, color: '#666' }}>{row.agentName}</span>
+        );
+      },
+    },
+    {
+      title: (
+        <Tooltip title="淨儲值 / 淨分潤（已扣退款）">
+          <span>業績（淨）</span>
+        </Tooltip>
+      ),
+      key: 'performance',
+      width: 180,
+      align: 'right',
+      render: (_: unknown, row) => {
+        const netR = Number(row.netRecharge);
+        const netC = Number(row.netCommission);
+        const hasRefund =
+          row.refundedBaseAmount > 0 || row.refundedCommission > 0;
+        const body = (
+          <Space direction="vertical" size={0} style={{ width: '100%' }}>
+            <span>
+              儲值 <strong>{netR.toFixed(2)}</strong>
+            </span>
+            <span style={{ fontSize: 12 }}>
+              分潤{' '}
+              {netC > 0 ? (
+                <strong style={{ color: '#cf1322' }}>{netC.toFixed(2)}</strong>
+              ) : (
+                <span style={{ color: '#999' }}>{netC.toFixed(2)}</span>
+              )}
+            </span>
+          </Space>
+        );
+        if (!hasRefund) return body;
+        return (
+          <Tooltip
+            title={
+              <div style={{ lineHeight: 1.8 }}>
+                <div>
+                  儲值原始 {Number(row.totalRecharge).toFixed(2)}（退{' '}
+                  {Number(row.refundedBaseAmount).toFixed(2)}）
+                </div>
+                <div>
+                  分潤原始 {Number(row.totalCommission).toFixed(2)}（退{' '}
+                  {Number(row.refundedCommission).toFixed(2)}）
+                </div>
+              </div>
+            }
+          >
+            <div style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>
+              {body}
+            </div>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: '消費',
+      key: 'activity',
+      width: 150,
+      render: (_: unknown, row) => (
+        <Space direction="vertical" size={0}>
+          <span style={{ fontSize: 12 }}>
+            {row.transactionCount} 筆
+            {row.refundedTxCount > 0 && (
+              <span style={{ color: '#cf1322', marginLeft: 4 }}>
+                (-{row.refundedTxCount})
+              </span>
+            )}
+          </span>
+          <span style={{ fontSize: 12, color: '#666' }}>
+            {row.lastPaidAt
+              ? dayjs(row.lastPaidAt).format('YYYY-MM-DD HH:mm')
+              : '未消費'}
+          </span>
         </Space>
       ),
     },
     {
-      title: '歸屬方式',
-      dataIndex: 'linkedSource',
-      width: 110,
-      render: (v: string) => {
-        const cfg = sourceLabel[v] ?? { text: v, color: 'default' };
-        return <Tag color={cfg.color}>{cfg.text}</Tag>;
-      },
-    },
-    {
-      title: '歸屬時間',
-      dataIndex: 'linkedAt',
-      width: 160,
-      render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
-    },
-    {
-      title: (
-        <Tooltip title="已扣除退款沖銷後的淨額">
-          <span>累積儲值（淨）</span>
-        </Tooltip>
-      ),
-      key: 'netRecharge',
-      width: 130,
-      align: 'right',
-      render: (_: unknown, row) => {
-        const hasRefund = row.refundedBaseAmount > 0;
-        const content = <span>{Number(row.netRecharge).toFixed(2)}</span>;
-        if (!hasRefund) return content;
-        return (
-          <Tooltip
-            title={
-              <div style={{ lineHeight: 1.8 }}>
-                <div>原始累積：{Number(row.totalRecharge).toFixed(2)}</div>
-                <div style={{ color: '#ffa39e' }}>
-                  已退款：-{Number(row.refundedBaseAmount).toFixed(2)}
-                </div>
-                <div style={{ borderTop: '1px solid #555', marginTop: 4, paddingTop: 4 }}>
-                  淨額：{Number(row.netRecharge).toFixed(2)}
-                </div>
-              </div>
-            }
-          >
-            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>
-              {Number(row.netRecharge).toFixed(2)}
-            </span>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: (
-        <Tooltip title="已扣除退款沖銷後的淨額">
-          <span>累積分潤（淨）</span>
-        </Tooltip>
-      ),
-      key: 'netCommission',
-      width: 130,
-      align: 'right',
-      render: (_: unknown, row) => {
-        const hasRefund = row.refundedCommission > 0;
-        const net = Number(row.netCommission);
-        const core =
-          net > 0 ? (
-            <strong style={{ color: '#cf1322' }}>{net.toFixed(2)}</strong>
-          ) : (
-            <span style={{ color: '#999' }}>{net.toFixed(2)}</span>
-          );
-        if (!hasRefund) return core;
-        return (
-          <Tooltip
-            title={
-              <div style={{ lineHeight: 1.8 }}>
-                <div>原始分潤：{Number(row.totalCommission).toFixed(2)}</div>
-                <div style={{ color: '#ffa39e' }}>
-                  已退款：-{Number(row.refundedCommission).toFixed(2)}
-                </div>
-                <div style={{ borderTop: '1px solid #555', marginTop: 4, paddingTop: 4 }}>
-                  淨額：{net.toFixed(2)}
-                </div>
-              </div>
-            }
-          >
-            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>{core}</span>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: '交易數',
-      key: 'transactionCount',
-      width: 100,
-      align: 'right',
-      render: (_: unknown, row) => {
-        if (!row.refundedTxCount)
-          return <span>{row.transactionCount}</span>;
-        return (
-          <Tooltip
-            title={`原始 ${row.transactionCount} 筆，其中 ${row.refundedTxCount} 筆已退款`}
-          >
-            <span style={{ borderBottom: '1px dashed #999', cursor: 'help' }}>
-              {row.transactionCount}
-              <span style={{ color: '#cf1322', marginLeft: 4, fontSize: 12 }}>
-                (-{row.refundedTxCount})
-              </span>
-            </span>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: '最後消費',
-      dataIndex: 'lastPaidAt',
-      width: 160,
-      render: (v: string | null) =>
-        v ? dayjs(v).format('YYYY-MM-DD HH:mm') : <span style={{ color: '#999' }}>未消費</span>,
-    },
-    {
       title: '操作',
-      width: 100,
+      width: 170,
       fixed: 'right',
       render: (_, row) => (
-        <Button size="small" onClick={() => onJumpToSingle(row.playerId)}>
-          調整歸屬
-        </Button>
+        <Space size={4}>
+          <Button
+            size="small"
+            type="primary"
+            onClick={() =>
+              router.push(
+                `/module/commission/players/${encodeURIComponent(row.playerId)}`,
+              )
+            }
+          >
+            明細
+          </Button>
+          <Button size="small" onClick={() => onJumpToSingle(row.playerId)}>
+            調整歸屬
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -339,7 +349,7 @@ function AttributionListTab({
       </Space>
       <Table
         rowKey="playerId"
-        scroll={{ x: 1400 }}
+        scroll={{ x: 940 }}
         loading={loading}
         columns={columns}
         dataSource={list}
@@ -455,6 +465,25 @@ function SingleQueryTab({
       {data ? (
         <Descriptions bordered column={1}>
           <Descriptions.Item label="玩家 ID">{data.playerId}</Descriptions.Item>
+          <Descriptions.Item label="遊戲帳號">
+            {data.gameAccountName ?? <span style={{ color: '#999' }}>(無)</span>}
+          </Descriptions.Item>
+          <Descriptions.Item label="遊戲角色">
+            {data.charName ? (
+              <strong>{data.charName}</strong>
+            ) : (
+              <span style={{ color: '#999' }}>未建角</span>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="所屬血盟">
+            {!data.charName ? (
+              <span style={{ color: '#bbb' }}>-</span>
+            ) : data.clanName ? (
+              <Tag color="purple">{data.clanName}</Tag>
+            ) : (
+              <span style={{ color: '#999' }}>無血盟</span>
+            )}
+          </Descriptions.Item>
           <Descriptions.Item label="當前歸屬代理">
             {currentAgent ? (
               <Space>

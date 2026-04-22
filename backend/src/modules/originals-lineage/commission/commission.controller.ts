@@ -224,7 +224,28 @@ export class AdminCommissionController {
   @Get('players/:playerId/attribution')
   @RequirePermission('module.originals.commission.view')
   getAttribution(@Param('playerId') playerId: string) {
-    return this.attribution.getAttribution(playerId);
+    return this.attribution.getAttributionDetail(playerId);
+  }
+
+  /**
+   * 玩家交易 / 分潤明細（明細頁用）
+   *  - from/to ISO 字串；結算週期=日曆月，建議前端傳該月 1 號 00:00 ~ 次月 1 號 00:00
+   */
+  @Get('players/:playerId/transactions')
+  @RequirePermission('module.originals.commission.view')
+  listPlayerTransactions(
+    @Param('playerId') playerId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.attribution.listPlayerTransactions(playerId, {
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
   }
 
   @Patch('players/:playerId/attribution')
