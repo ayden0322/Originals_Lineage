@@ -601,43 +601,6 @@ export default function ShopPage() {
       />
 
       <PublicFooter />
-
-      {/* 富文本內容 — 基本樣式（與禮包頁一致），讓表格、圖片、列表正常顯示 */}
-      <style jsx global>{`
-        .shop-content-html img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 6px;
-        }
-        .shop-content-html table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 8px 0;
-        }
-        .shop-content-html table td,
-        .shop-content-html table th {
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          padding: 6px 10px;
-          vertical-align: top;
-        }
-        .shop-content-html p {
-          margin: 0.5em 0;
-        }
-        .shop-content-html ul,
-        .shop-content-html ol {
-          padding-left: 1.5em;
-          margin: 0.5em 0;
-        }
-        .shop-content-html h1,
-        .shop-content-html h2,
-        .shop-content-html h3 {
-          margin: 0.8em 0 0.4em;
-        }
-        .shop-content-html a {
-          color: #4791e1;
-          text-decoration: underline;
-        }
-      `}</style>
     </div>
   );
 }
