@@ -949,6 +949,44 @@ export interface CommissionSettlementDetail {
   records: CommissionRecord[];
 }
 
+/** 代理在某期的訂單明細 Drawer 用 */
+export interface CommissionAgentRecordItem {
+  recordId: string;
+  transactionId: string;
+  playerId: string;
+  playerAccount: string | null;
+  level: 1 | 2;
+  baseAmount: number;
+  rateSnapshot: number;
+  commissionAmount: number;
+  paidAt: string;
+  periodKey: string;
+  settlementId: string | null;
+}
+
+export interface CommissionAgentAdjustmentItem {
+  id: string;
+  amount: number;
+  reason: string;
+  sourceType: 'refund' | 'manual' | 'bonus';
+  sourceTransactionId: string | null;
+  createdAt: string;
+}
+
+export interface CommissionAgentRecords {
+  periodKey: string;
+  availablePeriods: string[];
+  records: CommissionAgentRecordItem[];
+  adjustments: CommissionAgentAdjustmentItem[];
+  summary: {
+    recordCount: number;
+    totalBaseAmount: number;
+    totalCommission: number;
+    totalAdjustment: number;
+    netCommission: number;
+  };
+}
+
 export interface CommissionAgentParentHistory {
   id: string;
   agentId: string;

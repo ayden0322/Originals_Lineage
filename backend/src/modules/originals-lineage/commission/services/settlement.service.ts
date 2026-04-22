@@ -428,6 +428,154 @@ export class SettlementService {
     });
   }
 
+  /**
+   * 取某代理在某期的訂單明細（含分潤記錄 + 加減項 + 可選期別）
+   * 無論當期或歷史皆可用
+   */
+  async getAgentRecordsByPeriod(params: {
+    agentId: string;
+    periodKey: string;
+  }): Promise<{
+    periodKey: string;
+    availablePeriods: string[];
+    records: Array<{
+      recordId: string;
+      transactionId: string;
+      playerId: string;
+      playerAccount: string | null;
+      level: 1 | 2;
+      baseAmount: number;
+      rateSnapshot: number;
+      commissionAmount: number;
+      paidAt: Date;
+      periodKey: string;
+      settlementId: string | null;
+    }>;
+    adjustments: Array<{
+      id: string;
+      amount: number;
+      reason: string;
+      sourceType: 'refund' | 'manual' | 'bonus';
+      sourceTransactionId: string | null;
+      createdAt: Date;
+    }>;
+    summary: {
+      recordCount: number;
+      totalBaseAmount: number;
+      totalCommission: number;
+      totalAdjustment: number;
+      netCommission: number;
+    };
+  }> {
+    const { agentId, periodKey } = params;
+
+    // ① 分潤記錄 + join website_users 取玩家帳號
+    const recordRows = await this.recordRepo
+      .createQueryBuilder('r')
+      .leftJoin('website_users', 'u', 'u.id = r.player_id')
+      .where('r.agent_id = :agentId', { agentId })
+      .andWhere('r.period_key = :periodKey', { periodKey })
+      .select([
+        'r.id AS record_id',
+        'r.transaction_id AS transaction_id',
+        'r.player_id AS player_id',
+        'u.game_account_name AS player_account',
+        'r.level AS level',
+        'r.base_amount AS base_amount',
+        'r.rate_snapshot AS rate_snapshot',
+        'r.commission_amount AS commission_amount',
+        'r.paid_at AS paid_at',
+        'r.period_key AS period_key',
+        'r.settlement_id AS settlement_id',
+      ])
+      .orderBy('r.paid_at', 'ASC')
+      .getRawMany();
+
+    const records = recordRows.map((r) => ({
+      recordId: r.record_id as string,
+      transactionId: r.transaction_id as string,
+      playerId: r.player_id as string,
+      playerAccount: (r.player_account as string | null) ?? null,
+      level: (Number(r.level) === 2 ? 2 : 1) as 1 | 2,
+      baseAmount: Number(r.base_amount),
+      rateSnapshot: Number(r.rate_snapshot),
+      commissionAmount: Number(r.commission_amount),
+      paidAt: new Date(r.paid_at),
+      periodKey: r.period_key as string,
+      settlementId: (r.settlement_id as string | null) ?? null,
+    }));
+
+    // ② 加減項（退款沖銷 / 手動 / 補發）：透過 settlement 反查 agent + period
+    const adjRows = await this.adjustmentRepo
+      .createQueryBuilder('adj')
+      .innerJoin('commission_settlements', 's', 's.id = adj.settlement_id')
+      .where('s.agent_id = :agentId', { agentId })
+      .andWhere('s.period_key = :periodKey', { periodKey })
+      .orderBy('adj.created_at', 'ASC')
+      .select([
+        'adj.id AS id',
+        'adj.amount AS amount',
+        'adj.reason AS reason',
+        'adj.source_type AS source_type',
+        'adj.source_transaction_id AS source_transaction_id',
+        'adj.created_at AS created_at',
+      ])
+      .getRawMany();
+
+    const adjustments = adjRows.map((a) => ({
+      id: a.id as string,
+      amount: Number(a.amount),
+      reason: a.reason as string,
+      sourceType: a.source_type as 'refund' | 'manual' | 'bonus',
+      sourceTransactionId: (a.source_transaction_id as string | null) ?? null,
+      createdAt: new Date(a.created_at),
+    }));
+
+    // ③ 可選期別：該代理有 commission_records 或 settlements 紀錄的所有 periodKey
+    const recordPeriods = await this.recordRepo
+      .createQueryBuilder('r')
+      .select('DISTINCT r.period_key', 'period_key')
+      .where('r.agent_id = :agentId', { agentId })
+      .getRawMany();
+
+    const settlementPeriods = await this.settlementRepo
+      .createQueryBuilder('s')
+      .select('DISTINCT s.period_key', 'period_key')
+      .where('s.agent_id = :agentId', { agentId })
+      .getRawMany();
+
+    const availablePeriods = Array.from(
+      new Set<string>([
+        ...recordPeriods.map((p) => p.period_key as string),
+        ...settlementPeriods.map((p) => p.period_key as string),
+      ]),
+    ).sort((a, b) => (a < b ? 1 : -1));
+
+    // ④ summary
+    const totalBaseAmount =
+      Math.round(records.reduce((s, r) => s + r.baseAmount, 0) * 100) / 100;
+    const totalCommission =
+      Math.round(records.reduce((s, r) => s + r.commissionAmount, 0) * 100) / 100;
+    const totalAdjustment =
+      Math.round(adjustments.reduce((s, a) => s + a.amount, 0) * 100) / 100;
+    const netCommission =
+      Math.round((totalCommission + totalAdjustment) * 100) / 100;
+
+    return {
+      periodKey,
+      availablePeriods,
+      records,
+      adjustments,
+      summary: {
+        recordCount: records.length,
+        totalBaseAmount,
+        totalCommission,
+        totalAdjustment,
+        netCommission,
+      },
+    };
+  }
+
   /** 取單期詳情 + 加減項 */
   async getDetail(settlementId: string): Promise<{
     settlement: Settlement;

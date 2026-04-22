@@ -10,6 +10,7 @@ import type {
   CommissionSettlement,
   CommissionSettlementDetail,
   CommissionUnsettledPreview,
+  CommissionAgentRecords,
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
   CommissionPlayerTransaction,
@@ -222,6 +223,21 @@ export async function listSettlements(agentId: string): Promise<CommissionSettle
 export async function getSettlementDetail(id: string): Promise<CommissionSettlementDetail> {
   const { data } = await apiClient.get<ApiResponse<CommissionSettlementDetail>>(
     `${ADMIN}/settlements/${id}`,
+  );
+  return data.data;
+}
+
+/**
+ * 取某代理在某期的訂單明細（含分潤記錄 + 加減項 + 可選期別）
+ * 無論當期或歷史皆可用
+ */
+export async function getAgentRecords(
+  agentId: string,
+  periodKey: string,
+): Promise<CommissionAgentRecords> {
+  const { data } = await apiClient.get<ApiResponse<CommissionAgentRecords>>(
+    `${ADMIN}/settlements/records`,
+    { params: { agentId, periodKey } },
   );
   return data.data;
 }

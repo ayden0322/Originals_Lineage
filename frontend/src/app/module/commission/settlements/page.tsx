@@ -47,6 +47,7 @@ import type {
   CommissionUnsettledPreview,
   CommissionUnsettledPreviewItem,
 } from '@/lib/types';
+import AgentRecordsDrawer from './AgentRecordsDrawer';
 
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: '待確認', color: 'gold' },
@@ -71,6 +72,26 @@ export default function CommissionSettlementsPage() {
   // 當期預估
   const [preview, setPreview] = useState<CommissionUnsettledPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // 訂單明細 Drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerAgent, setDrawerAgent] = useState<{
+    id: string;
+    name: string;
+    code: string | null;
+    periodKey: string;
+  } | null>(null);
+
+  const openAgentRecordsDrawer = (row: CommissionUnsettledPreviewItem) => {
+    if (row.isSystem) return; // SYSTEM 不提供明細
+    setDrawerAgent({
+      id: row.agentId,
+      name: row.agentName ?? '(未命名)',
+      code: row.agentCode,
+      periodKey: row.periodKey,
+    });
+    setDrawerOpen(true);
+  };
 
   const fetchAgents = useCallback(async () => {
     const tree = await getAgentTree();
@@ -467,6 +488,11 @@ export default function CommissionSettlementsPage() {
               </span>
             </Tooltip>
           )}
+          <Tooltip title="點擊代理列可查看該代理當期的訂單明細">
+            <span style={{ color: '#999' }}>
+              <InfoCircleOutlined /> 點擊列可查看訂單明細
+            </span>
+          </Tooltip>
         </Space>
 
         <Table
@@ -481,6 +507,10 @@ export default function CommissionSettlementsPage() {
               <Empty description="目前沒有待結算的分潤紀錄" />
             ),
           }}
+          onRow={(row) => ({
+            onClick: () => openAgentRecordsDrawer(row),
+            style: { cursor: row.isSystem ? 'default' : 'pointer' },
+          })}
         />
       </>
     );
@@ -536,6 +566,15 @@ export default function CommissionSettlementsPage() {
             children: renderHistoryTab(),
           },
         ]}
+      />
+
+      <AgentRecordsDrawer
+        open={drawerOpen}
+        agentId={drawerAgent?.id ?? null}
+        agentName={drawerAgent?.name ?? ''}
+        agentCode={drawerAgent?.code ?? null}
+        initialPeriodKey={drawerAgent?.periodKey ?? ''}
+        onClose={() => setDrawerOpen(false)}
       />
 
       <Modal

@@ -263,6 +263,35 @@ export class AdminCommissionController {
     return this.settlement.listByAgent(agentId);
   }
 
+  /**
+   * 某代理在某期的訂單明細（含分潤記錄 + 加減項 + 可選期別）
+   * - 放在 /settlements/:id 之前，避免 Nest 把 'records' 當成 :id
+   * - 無論當期或歷史皆可用
+   */
+  @Get('settlements/records')
+  @RequirePermission('module.originals.commission.view')
+  getAgentRecords(
+    @Query('agentId') agentId: string,
+    @Query('periodKey') periodKey: string,
+  ) {
+    if (!agentId || !periodKey) {
+      return {
+        periodKey: periodKey || '',
+        availablePeriods: [],
+        records: [],
+        adjustments: [],
+        summary: {
+          recordCount: 0,
+          totalBaseAmount: 0,
+          totalCommission: 0,
+          totalAdjustment: 0,
+          netCommission: 0,
+        },
+      };
+    }
+    return this.settlement.getAgentRecordsByPeriod({ agentId, periodKey });
+  }
+
   @Get('settlements/:id')
   @RequirePermission('module.originals.commission.view')
   getSettlementDetail(@Param('id') id: string) {
