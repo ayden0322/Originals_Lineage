@@ -48,9 +48,12 @@ const { Text } = Typography;
 
 type AnyAgent = CommissionAgentTreeNode | (CommissionAgent & { currentRate: number });
 
+type StatusFilter = 'active' | 'suspended' | 'all';
+
 export default function CommissionAgentsPage() {
   const [tree, setTree] = useState<CommissionAgentTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
@@ -318,6 +321,20 @@ export default function CommissionAgentsPage() {
     },
   ];
 
+  // 依狀態篩選；「已停權」模式下，若 A 本身啟用但有停權的 B，仍保留 A 以便檢視其停權的 B
+  const filteredTree: CommissionAgentTreeNode[] = (() => {
+    if (statusFilter === 'all') return tree;
+    const matchStatus = (s: string) =>
+      statusFilter === 'active' ? s === 'active' : s !== 'active';
+    return tree
+      .map((a) => {
+        const children = (a.children ?? []).filter((b) => matchStatus(b.status));
+        const keep = matchStatus(a.status) || children.length > 0;
+        return keep ? { ...a, children } : null;
+      })
+      .filter((x): x is CommissionAgentTreeNode => x !== null);
+  })();
+
   const expandable: ExpandableConfig<AnyAgent> = {
     rowExpandable: (row) => 'children' in row && Array.isArray(row.children) && row.children.length > 0,
     expandedRowRender: (row) => {
@@ -365,16 +382,28 @@ export default function CommissionAgentsPage() {
     <Card
       title="代理管理"
       extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setCreateParentId(null);
-            setCreateOpen(true);
-          }}
-        >
-          新增代理
-        </Button>
+        <Space>
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 140 }}
+            options={[
+              { value: 'active', label: '啟用中' },
+              { value: 'suspended', label: '已停權' },
+              { value: 'all', label: '全部' },
+            ]}
+          />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setCreateParentId(null);
+              setCreateOpen(true);
+            }}
+          >
+            新增代理
+          </Button>
+        </Space>
       }
     >
       <Alert
@@ -404,7 +433,7 @@ export default function CommissionAgentsPage() {
         rowKey="id"
         loading={loading}
         columns={columns}
-        dataSource={tree}
+        dataSource={filteredTree}
         expandable={expandable}
         pagination={false}
         scroll={{ x: 960 }}
