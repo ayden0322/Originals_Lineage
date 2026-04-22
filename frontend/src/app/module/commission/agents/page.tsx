@@ -378,6 +378,22 @@ export default function CommissionAgentsPage() {
       }
     >
       <Alert
+        type="success"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="代理登入網址"
+        description={
+          <Typography.Link
+            href="https://originalslineage.zeabur.app/agent/login"
+            target="_blank"
+            rel="noopener noreferrer"
+            copyable={{ text: 'https://originalslineage.zeabur.app/agent/login' }}
+          >
+            https://originalslineage.zeabur.app/agent/login
+          </Typography.Link>
+        }
+      />
+      <Alert
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
