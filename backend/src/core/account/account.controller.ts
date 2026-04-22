@@ -13,6 +13,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AccountService } from './account.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequirePermission } from '../permission/decorators/require-permission.decorator';
 import { PermissionGuard } from '../../common/guards/permission.guard';
@@ -46,6 +47,12 @@ export class AccountController {
   @RequirePermission('platform.accounts.edit')
   update(@Param('id') id: string, @Body() dto: UpdateAccountDto) {
     return this.accountService.update(id, dto);
+  }
+
+  @Patch(':id/password')
+  @RequirePermission('platform.accounts.edit')
+  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.accountService.resetPassword(id, dto.password);
   }
 
   @Delete(':id')

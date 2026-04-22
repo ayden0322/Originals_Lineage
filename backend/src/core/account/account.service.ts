@@ -107,6 +107,13 @@ export class AccountService implements OnModuleInit {
     return this.sanitize(await this.accountRepo.save(account));
   }
 
+  async resetPassword(id: string, password: string) {
+    const account = await this.findById(id);
+    account.passwordHash = await bcrypt.hash(password, 10);
+    account.refreshTokenHash = null;
+    return this.sanitize(await this.accountRepo.save(account));
+  }
+
   async deactivate(id: string) {
     const account = await this.findById(id);
     account.isActive = false;

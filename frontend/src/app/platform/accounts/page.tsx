@@ -14,11 +14,11 @@ import {
   Popconfirm,
   message,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import type { ColumnsType } from 'antd/es/table';
 import type { Account, CreateAccountDto, UpdateAccountDto } from '@/lib/types';
-import { getAccounts, createAccount, updateAccount, deleteAccount } from '@/lib/api/accounts';
+import { getAccounts, createAccount, updateAccount, deleteAccount, resetAccountPassword } from '@/lib/api/accounts';
 
 export default function AccountsPage() {
   const router = useRouter();
@@ -38,6 +38,12 @@ export default function AccountsPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [editForm] = Form.useForm<UpdateAccountDto>();
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  // Reset password modal
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordForm] = Form.useForm<{ password: string; confirmPassword: string }>();
+  const [passwordAccount, setPasswordAccount] = useState<Account | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -103,6 +109,31 @@ export default function AccountsPage() {
     }
   };
 
+  // ── Reset Password ──────────────────────────────────────────
+  const openResetPassword = (account: Account) => {
+    setPasswordAccount(account);
+    passwordForm.resetFields();
+    setPasswordModalOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!passwordAccount) return;
+    try {
+      const values = await passwordForm.validateFields();
+      setPasswordLoading(true);
+      await resetAccountPassword(passwordAccount.id, values.password);
+      message.success('密碼已更新');
+      setPasswordModalOpen(false);
+      passwordForm.resetFields();
+      setPasswordAccount(null);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) return;
+      message.error('更新密碼失敗');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   // ── Delete ──────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
     try {
@@ -155,7 +186,7 @@ export default function AccountsPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 220,
+      width: 300,
       render: (_: unknown, record: Account) => (
         <Space>
           <Button
@@ -177,6 +208,16 @@ export default function AccountsPage() {
             }}
           >
             編輯
+          </Button>
+          <Button
+            icon={<LockOutlined />}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              openResetPassword(record);
+            }}
+          >
+            改密碼
           </Button>
           <Popconfirm
             title="確認刪除此帳號？"
@@ -312,6 +353,51 @@ export default function AccountsPage() {
           </Form.Item>
           <Form.Item name="isActive" label="帳號狀態" valuePropName="checked">
             <Switch checkedChildren="啟用" unCheckedChildren="停用" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* ── Reset Password Modal ────────────────────────────── */}
+      <Modal
+        title={passwordAccount ? `重設密碼 — ${passwordAccount.email}` : '重設密碼'}
+        open={passwordModalOpen}
+        onOk={handleResetPassword}
+        onCancel={() => {
+          setPasswordModalOpen(false);
+          passwordForm.resetFields();
+          setPasswordAccount(null);
+        }}
+        confirmLoading={passwordLoading}
+        okText="更新密碼"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Form form={passwordForm} layout="vertical">
+          <Form.Item
+            name="password"
+            label="新密碼"
+            rules={[
+              { required: true, message: '請輸入新密碼' },
+              { min: 6, message: '密碼至少 6 個字元' },
+            ]}
+          >
+            <Input.Password placeholder="至少 6 個字元" autoComplete="new-password" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="確認新密碼"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: '請再次輸入新密碼' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) return Promise.resolve();
+                  return Promise.reject(new Error('兩次輸入的密碼不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="再次輸入新密碼" autoComplete="new-password" />
           </Form.Item>
         </Form>
       </Modal>

@@ -24,3 +24,8 @@ export async function updateAccount(id: string, dto: UpdateAccountDto): Promise<
 export async function deleteAccount(id: string): Promise<void> {
   await apiClient.delete(`/accounts/${id}`);
 }
+
+export async function resetAccountPassword(id: string, password: string): Promise<Account> {
+  const { data } = await apiClient.patch<ApiResponse<Account>>(`/accounts/${id}/password`, { password });
+  return data.data;
+}
