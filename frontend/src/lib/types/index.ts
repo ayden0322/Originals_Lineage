@@ -320,6 +320,8 @@ export interface Product {
   description: string;
   contentHtml?: string | null;
   price: string;
+  // 最低購買金額（NT$）— 0 表示不限。決定前台是否顯示「自選數量」與最低數量門檻
+  minPurchaseAmount: string;
   category: ProductCategory;
   // 鑽石類專用
   diamondAmount: number;
@@ -350,6 +352,7 @@ export interface CreateProductDto {
   description?: string;
   contentHtml?: string;
   price: number;
+  minPurchaseAmount?: number;
   category: ProductCategory;
   diamondAmount?: number;
   gameItemId?: number;
@@ -897,6 +900,12 @@ export interface CommissionPlayerAttribution {
   linkedSource: 'cookie' | 'register' | 'manual' | 'system';
   linkedAt: string;
   updatedAt: string;
+  /** 遊戲帳號（website_users.game_account_name） */
+  gameAccountName?: string | null;
+  /** 遊戲角色名稱（一帳一角） */
+  charName?: string | null;
+  /** 血盟名稱；null 表示無血盟 */
+  clanName?: string | null;
 }
 
 export interface CommissionRecord {
@@ -1073,6 +1082,10 @@ export interface CommissionAttributionListItem {
   playerId: string;
   gameAccountName: string | null;
   email: string | null;
+  /** 遊戲角色名稱（一帳一角）；遊戲庫查不到為 null */
+  charName: string | null;
+  /** 血盟名稱；無血盟或查不到為 null */
+  clanName: string | null;
   agentId: string;
   agentCode: string;
   agentName: string;

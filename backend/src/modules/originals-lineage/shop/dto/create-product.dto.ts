@@ -45,6 +45,15 @@ export class CreateProductDto {
   @Min(1)
   price: number;
 
+  @ApiPropertyOptional({
+    example: 1000,
+    description: '最低購買金額（NT$），0 = 不限。例：價 1 元、最低 1000 元 → 至少需買 1000 個',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minPurchaseAmount?: number;
+
   @ApiProperty({ enum: ACTIVE_PRODUCT_CATEGORIES, example: 'diamond' })
   @IsIn(ACTIVE_PRODUCT_CATEGORIES as unknown as string[], {
     message: '目前僅支援 diamond（四海銀票）類別',

@@ -118,6 +118,7 @@ export default function ProductsPage() {
       category,
       stock: -1,
       accountLimit: 0,
+      minPurchaseAmount: 0,
       isActive: true,
       sortOrder: 0,
       contentHtml: '',
@@ -147,6 +148,7 @@ export default function ProductsPage() {
       description: record.description ?? undefined,
       contentHtml: record.contentHtml || '',
       price: Number(record.price),
+      minPurchaseAmount: Number(record.minPurchaseAmount ?? 0),
       category: 'diamond',
       diamondAmount: record.diamondAmount,
       imageUrl: record.imageUrl ?? undefined,
@@ -172,6 +174,7 @@ export default function ProductsPage() {
       description: values.description,
       contentHtml: values.contentHtml || undefined,
       price: values.price,
+      minPurchaseAmount: values.minPurchaseAmount ?? 0,
       category: 'diamond', // 固定 diamond（四海銀票）
       diamondAmount: values.diamondAmount,
       imageUrl: values.imageUrl || undefined,
@@ -486,6 +489,19 @@ export default function ProductsPage() {
 
           <Form.Item name="price" label="價格 (NT$)" rules={[{ required: true, message: '請輸入價格' }]}>
             <InputNumber min={0} style={{ width: '100%' }} addonBefore="NT$" />
+          </Form.Item>
+
+          <Form.Item
+            name="minPurchaseAmount"
+            label="最低購買金額 (NT$)"
+            tooltip="0 = 不限制。設定後前台會出現「自選數量」輸入框，要求總金額（單價 × 數量）≥ 此金額。例：1 元商品設 1000 → 玩家至少要買 1000 個"
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              addonBefore="NT$"
+              placeholder="0 表示不限制（固定數量 1）"
+            />
           </Form.Item>
 
           {/* 商品圖片（統一使用 ImageUpload + crop，與禮包頁一致） */}

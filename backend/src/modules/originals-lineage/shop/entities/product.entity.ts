@@ -26,6 +26,11 @@ export class Product {
   @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 
+  // 最低購買金額（NT$）— 0 或 null 表示不限制
+  // 用於「自選數量」型商品：例如 1 元商品設最低 1000 元 → 至少買 1000 個
+  @Column({ name: 'min_purchase_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  minPurchaseAmount: number;
+
   // 鑽石類專用：發放鑽石數量
   @Column({ name: 'diamond_amount', default: 0 })
   diamondAmount: number;

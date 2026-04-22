@@ -17,6 +17,7 @@ import {
   Radio,
   Alert,
   Divider,
+  InputNumber,
 } from 'antd';
 import { ShoppingCartOutlined, GiftOutlined } from '@ant-design/icons';
 
@@ -95,6 +96,7 @@ export default function ShopPage() {
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   // 購買 Modal 狀態
   const [buyingProduct, setBuyingProduct] = useState<Product | null>(null);
+  const [buyQuantity, setBuyQuantity] = useState<number>(1);
   const [paymentMethods, setPaymentMethods] = useState<PublicPaymentMethod[]>(
     [],
   );
@@ -162,21 +164,35 @@ export default function ShopPage() {
     </Text>
   );
 
+  function getMinQuantity(product: Product): number {
+    const minAmount = Number(product.minPurchaseAmount ?? 0);
+    const unitPrice = Number(product.price);
+    if (!Number.isFinite(minAmount) || minAmount <= 0) return 1;
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) return 1;
+    return Math.max(1, Math.ceil(minAmount / unitPrice));
+  }
+
   const openBuyModal = (product: Product) => {
     if (paymentMethods.length === 0) {
       message.error('目前沒有可用的付款方式，請聯絡管理者');
       return;
     }
     setBuyingProduct(product);
+    setBuyQuantity(getMinQuantity(product));
     setSelectedMethod(paymentMethods[0].method);
   };
 
   const handleConfirmBuy = async () => {
     if (!buyingProduct || !selectedMethod) return;
+    const minQty = getMinQuantity(buyingProduct);
+    if (buyQuantity < minQty) {
+      message.warning(`數量需至少 ${minQty} 個（最低購買金額 NT$ ${Number(buyingProduct.minPurchaseAmount).toLocaleString('zh-TW')}）`);
+      return;
+    }
     setPurchaseLoading(true);
     try {
       const result = await createOrder(
-        [{ productId: buyingProduct.id, quantity: 1 }],
+        [{ productId: buyingProduct.id, quantity: buyQuantity }],
         selectedMethod,
       );
       const { payment } = result;
@@ -509,20 +525,51 @@ export default function ShopPage() {
         okText="確認贊助"
         cancelText="取消"
       >
-        {buyingProduct && (
+        {buyingProduct && (() => {
+          const minQty = getMinQuantity(buyingProduct);
+          const hasMinAmount = Number(buyingProduct.minPurchaseAmount ?? 0) > 0;
+          const unitPrice = Number(buyingProduct.price);
+          const totalAmount = unitPrice * buyQuantity;
+          const totalDiamond = buyingProduct.diamondAmount * buyQuantity;
+          const belowMin = buyQuantity < minQty;
+          return (
           <div>
             <Paragraph>
               您即將贊助 <Text strong>{buyingProduct.name}</Text>
             </Paragraph>
-            <Paragraph>
-              金額：
-              <Text strong style={{ color: '#cf1322' }}>
-                {formatPrice(buyingProduct.price)}
+            <Paragraph style={{ marginBottom: 8 }}>
+              單價：{formatPrice(buyingProduct.price)}
+              {hasMinAmount && (
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  （最低購買金額 {formatPrice(buyingProduct.minPurchaseAmount)}，至少 {minQty} 個）
+                </Text>
+              )}
+            </Paragraph>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 16px' }}>
+              <Text strong>數量：</Text>
+              <InputNumber
+                min={1}
+                value={buyQuantity}
+                onChange={(v) => setBuyQuantity(typeof v === 'number' && v > 0 ? Math.floor(v) : 1)}
+                style={{ width: 140 }}
+              />
+              {hasMinAmount && belowMin && (
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  低於最低數量 {minQty}
+                </Text>
+              )}
+            </div>
+
+            <Paragraph style={{ marginBottom: 4 }}>
+              總金額：
+              <Text strong style={{ color: '#cf1322', fontSize: 18 }}>
+                {formatPrice(totalAmount)}
               </Text>
             </Paragraph>
             <Paragraph>
-              獲得：
-              <Currency amount={buyingProduct.diamondAmount} />
+              共獲得：
+              <Currency amount={totalDiamond} />
             </Paragraph>
             <div style={{ marginTop: 16 }}>
               <Text strong>付款方式：</Text>
@@ -543,7 +590,8 @@ export default function ShopPage() {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
       </Modal>
 
       <VirtualAccountModal

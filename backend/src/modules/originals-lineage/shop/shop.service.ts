@@ -432,6 +432,17 @@ export class ShopService {
           );
         }
 
+        // 最低購買金額門檻
+        const minAmount = Number(product.minPurchaseAmount ?? 0);
+        if (minAmount > 0) {
+          const subtotal = Number(product.price) * item.quantity;
+          if (subtotal < minAmount) {
+            throw new BadRequestException(
+              `商品「${product.name}」最低購買金額為 NT$ ${minAmount.toLocaleString('zh-TW')}（目前 NT$ ${subtotal.toLocaleString('zh-TW')}）`,
+            );
+          }
+        }
+
         // 限購（含等級、總/每日/每週/每月）
         await this.checkPurchaseLimits(product, memberBinding, item.quantity);
 
