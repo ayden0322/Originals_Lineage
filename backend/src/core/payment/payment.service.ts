@@ -138,6 +138,13 @@ export class PaymentService {
         where: { providerTransactionId: dataId, providerName: 'smilepay' },
       });
       orderId = tx?.orderId || '';
+    } else if (providerCode === 'tw92') {
+      // tw92 callback body 包含明文 TransactionCode（= orderNumber = providerTransactionId）
+      const transactionCode = (body.TransactionCode as string) || '';
+      tx = await this.txRepo.findOne({
+        where: { providerTransactionId: transactionCode, providerName: 'tw92' },
+      });
+      orderId = tx?.orderId || '';
     } else {
       orderId = (body.orderId as string) || '';
       tx = await this.txRepo.findOne({

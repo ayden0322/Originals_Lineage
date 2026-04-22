@@ -54,6 +54,12 @@ export class PaymentController {
       return;
     }
 
+    // tw92 回應純文字 OK（避免平台重送）
+    if (providerCode === 'tw92') {
+      res.type('text/plain').send('OK');
+      return;
+    }
+
     // 其他金流商回傳 JSON
     res.json(result);
   }

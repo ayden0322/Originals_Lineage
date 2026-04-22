@@ -9,6 +9,7 @@ import { EcpayPaymentProvider } from './providers/ecpay-payment.provider';
 import { SmilepayPaymentProvider } from './providers/smilepay-payment.provider';
 import { AntpayPaymentProvider } from './providers/antpay-payment.provider';
 import { Tx2PaymentProvider } from './providers/tx2-payment.provider';
+import { Tw92PaymentProvider } from './providers/tw92-payment.provider';
 
 /**
  * 第一期支援的付款方式
@@ -31,6 +32,7 @@ export class PaymentRouterService {
     private readonly smilepayProvider: SmilepayPaymentProvider,
     private readonly antpayProvider: AntpayPaymentProvider,
     private readonly tx2Provider: Tx2PaymentProvider,
+    private readonly tw92Provider: Tw92PaymentProvider,
   ) {
     // 註冊所有可用 Adapter
     this.adapterMap.set('mock', this.mockProvider);
@@ -38,6 +40,7 @@ export class PaymentRouterService {
     this.adapterMap.set('smilepay', this.smilepayProvider);
     this.adapterMap.set('antpay', this.antpayProvider);
     this.adapterMap.set('tx2', this.tx2Provider);
+    this.adapterMap.set('tw92', this.tw92Provider);
   }
 
   /**

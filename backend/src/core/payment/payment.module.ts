@@ -15,6 +15,7 @@ import { EcpayPaymentProvider } from './providers/ecpay-payment.provider';
 import { SmilepayPaymentProvider } from './providers/smilepay-payment.provider';
 import { AntpayPaymentProvider } from './providers/antpay-payment.provider';
 import { Tx2PaymentProvider } from './providers/tx2-payment.provider';
+import { Tw92PaymentProvider } from './providers/tw92-payment.provider';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { Tx2PaymentProvider } from './providers/tx2-payment.provider';
     SmilepayPaymentProvider,
     AntpayPaymentProvider,
     Tx2PaymentProvider,
+    Tw92PaymentProvider,
   ],
   exports: [
     PaymentService,

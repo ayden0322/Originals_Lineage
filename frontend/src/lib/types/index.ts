@@ -442,15 +442,24 @@ export interface PaymentTransaction {
   updatedAt: string;
 }
 
+export interface VirtualAccountInfo {
+  bankNumber: string;
+  bankName?: string;
+  accountNumber: string;
+  amount: number;
+  expireDate?: string;
+}
+
 export interface PaymentResult {
   transactionId: string;
   status: string;
   paymentUrl?: string;
   formAction?: string;
   formData?: Record<string, string>;
+  virtualAccount?: VirtualAccountInfo;
 }
 
-export type PaymentVendorType = 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+export type PaymentVendorType = 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'tw92' | 'mock';
 
 export type PaymentMethod = 'atm' | 'cvs' | 'credit_card';
 

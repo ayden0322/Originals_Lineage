@@ -15,14 +15,24 @@ export interface CreatePaymentParams {
   metadata?: Record<string, string>;
 }
 
+// ─── 虛擬帳戶資訊（tw92 Type 7 等使用）───────────
+export interface VirtualAccountInfo {
+  bankNumber: string;        // 銀行代碼
+  bankName?: string;         // 銀行名稱
+  accountNumber: string;     // 專屬虛擬帳號（每筆訂單唯一）
+  amount: number;            // 應繳金額
+  expireDate?: string;       // 繳費期限
+}
+
 // ─── 統一支付結果 ─────────────────────────────────
 export interface PaymentResult {
   transactionId: string;
   status: string;
-  // 兩種付款跳轉模式（依金流商而定）：
-  paymentUrl?: string;                    // 直接跳轉網址（Stripe 等）
+  // 三種付款跳轉模式（依金流商而定）：
+  paymentUrl?: string;                    // 直接跳轉網址（Stripe、tw92 Type 3/4/5/6 等）
   formAction?: string;                    // 表單提交網址（ECPay 等）
   formData?: Record<string, string>;      // 表單欄位
+  virtualAccount?: VirtualAccountInfo;    // 虛擬帳戶資訊（tw92 Type 7 等）
 }
 
 // ─── 統一回調結果 ─────────────────────────────────

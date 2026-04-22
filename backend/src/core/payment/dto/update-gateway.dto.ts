@@ -27,10 +27,10 @@ export class UpdateGatewayDto {
   @IsOptional()
   supportedMethods?: string[];
 
-  @ApiPropertyOptional({ enum: ['smilepay', 'ecpay', 'antpay', 'tx2', 'mock'] })
+  @ApiPropertyOptional({ enum: ['smilepay', 'ecpay', 'antpay', 'tx2', 'tw92', 'mock'] })
   @IsString()
   @IsOptional()
-  vendorType?: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+  vendorType?: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'tw92' | 'mock';
 
   @ApiPropertyOptional()
   @IsString()

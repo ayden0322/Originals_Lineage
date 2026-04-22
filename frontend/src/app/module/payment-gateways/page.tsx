@@ -55,6 +55,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   smilepay: '速買配 SmilePay',
   antpay: 'AntPay（待補文件）',
   tx2: 'TX2（待補文件）',
+  tw92: 'tw92 台灣金流',
   mock: 'Mock (測試用)',
 };
 

@@ -33,10 +33,10 @@ export class CreateGatewayDto {
   @IsOptional()
   supportedMethods?: string[];
 
-  @ApiPropertyOptional({ example: 'smilepay', enum: ['smilepay', 'ecpay', 'antpay', 'tx2', 'mock'] })
+  @ApiPropertyOptional({ example: 'smilepay', enum: ['smilepay', 'ecpay', 'antpay', 'tx2', 'tw92', 'mock'] })
   @IsString()
   @IsOptional()
-  vendorType?: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+  vendorType?: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'tw92' | 'mock';
 
   @ApiPropertyOptional({ example: '遊戲點數' })
   @IsString()

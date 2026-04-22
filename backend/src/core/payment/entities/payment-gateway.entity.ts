@@ -35,7 +35,7 @@ export class PaymentGateway {
     length: 32,
     default: 'mock',
   })
-  vendorType: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'mock';
+  vendorType: 'smilepay' | 'ecpay' | 'antpay' | 'tx2' | 'tw92' | 'mock';
 
   /** 顯示在金流商收銀台的商品名稱 */
   @Column({ name: 'product_name', type: 'varchar', length: 128, default: '' })

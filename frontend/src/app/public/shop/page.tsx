@@ -35,7 +35,8 @@ import {
 import { getAccessToken } from '@/lib/api/client';
 import { useShopConfig } from '@/components/providers/ShopConfigProvider';
 import PublicFooter from '@/components/public/PublicFooter';
-import type { Product, PaymentResult } from '@/lib/types';
+import VirtualAccountModal from '@/components/public/VirtualAccountModal';
+import type { Product, PaymentResult, VirtualAccountInfo } from '@/lib/types';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -100,6 +101,9 @@ export default function ShopPage() {
   const [selectedMethod, setSelectedMethod] = useState<
     'atm' | 'cvs' | 'credit_card' | null
   >(null);
+  const [virtualAccount, setVirtualAccount] = useState<VirtualAccountInfo | null>(
+    null,
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -176,9 +180,14 @@ export default function ShopPage() {
         selectedMethod,
       );
       const { payment } = result;
-      if (payment.formAction || payment.paymentUrl) {
+      if (payment.virtualAccount) {
+        // tw92 Type 7 虛擬帳戶：顯示專屬帳號資訊
+        setBuyingProduct(null);
+        setVirtualAccount(payment.virtualAccount);
+      } else if (payment.formAction || payment.paymentUrl) {
         message.loading('正在跳轉到付款頁面...', 3);
         setTimeout(() => handlePaymentRedirect(payment), 500);
+        setBuyingProduct(null);
       } else {
         const isMock = payment.transactionId?.startsWith('mock_');
         message.success(
@@ -187,8 +196,8 @@ export default function ShopPage() {
             : '訂單建立成功！',
           4,
         );
+        setBuyingProduct(null);
       }
-      setBuyingProduct(null);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       message.error(error?.response?.data?.message || '購買失敗，請稍後再試');
@@ -536,6 +545,12 @@ export default function ShopPage() {
           </div>
         )}
       </Modal>
+
+      <VirtualAccountModal
+        open={!!virtualAccount}
+        info={virtualAccount}
+        onClose={() => setVirtualAccount(null)}
+      />
 
       <PublicFooter />
 
