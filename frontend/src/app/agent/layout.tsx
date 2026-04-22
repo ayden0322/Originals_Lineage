@@ -97,6 +97,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
           { key: '/agent/subordinates', icon: <TeamOutlined />, label: '子代理' },
           baseMenu[2],
           baseMenu[3],
+          baseMenu[4],
         ]
       : baseMenu;
 
