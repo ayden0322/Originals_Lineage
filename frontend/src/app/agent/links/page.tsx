@@ -13,16 +13,21 @@ import {
   Switch,
   Tooltip,
   Typography,
+  Statistic,
+  Row,
+  Col,
 } from 'antd';
 import {
   PlusOutlined,
   CopyOutlined,
   QrcodeOutlined,
   DownloadOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   agentMyLinks,
+  agentMyPlayers,
   agentCreateMyLink,
   agentToggleMyLink,
 } from '@/lib/api/commission';
@@ -30,6 +35,7 @@ import type { CommissionReferralLink } from '@/lib/types';
 
 export default function AgentLinksPage() {
   const [list, setList] = useState<CommissionReferralLink[]>([]);
+  const [totalPlayers, setTotalPlayers] = useState(0);
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState('');
@@ -40,8 +46,13 @@ export default function AgentLinksPage() {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await agentMyLinks();
-      setList(data);
+      // 連結清單與玩家總數同時載入（僅取 total，故 limit=1）
+      const [links, players] = await Promise.all([
+        agentMyLinks(),
+        agentMyPlayers({ limit: 1 }),
+      ]);
+      setList(links);
+      setTotalPlayers(players.total);
     } catch {
       message.error('載入失敗');
     } finally {
@@ -168,6 +179,18 @@ export default function AgentLinksPage() {
         </Button>
       }
     >
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Card size="small">
+            <Statistic
+              title="累積推廣玩家數"
+              value={totalPlayers}
+              prefix={<TeamOutlined />}
+              suffix="位"
+            />
+          </Card>
+        </Col>
+      </Row>
       <Table
         scroll={{ x: 'max-content' }}
         rowKey="id"
