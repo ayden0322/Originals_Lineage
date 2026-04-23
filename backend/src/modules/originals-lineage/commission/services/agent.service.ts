@@ -143,10 +143,12 @@ export class AgentService {
 
     if (!agent.parentId) {
       // 是 A → 檢查旗下是否還有 B
-      const childCount = await this.agentRepo.count({ where: { parentId: id } });
+      const childCount = await this.agentRepo.count({
+        where: { parentId: id, status: 'active' },
+      });
       if (childCount > 0) {
         throw new BadRequestException(
-          `代理 ${agent.code} 底下仍有 ${childCount} 個子代理，請先轉移再停權`,
+          `代理 ${agent.code} 底下仍有 ${childCount} 個啟用中的子代理，請先轉移或停權再操作`,
         );
       }
     }
