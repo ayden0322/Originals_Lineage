@@ -1115,6 +1115,28 @@ export interface CommissionClanStatsResult {
   items: CommissionClanStatItem[];
 }
 
+export interface CommissionClanRecordItem {
+  recordId: string;
+  transactionId: string;
+  paidAt: string;
+  playerId: string;
+  playerAccount: string | null;
+  baseAmount: number;
+  agentId: string;
+  agentCode: string | null;
+  agentName: string | null;
+  agentIsSystem: boolean;
+  isRefunded: boolean;
+}
+
+export interface CommissionClanRecordsResult {
+  periodKey: string;
+  clanId: number | null;
+  clanName: string | null;
+  total: number;
+  items: CommissionClanRecordItem[];
+}
+
 export interface CommissionSubordinateReport {
   id: string;
   code: string;

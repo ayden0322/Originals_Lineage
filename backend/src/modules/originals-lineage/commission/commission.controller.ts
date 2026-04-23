@@ -288,6 +288,31 @@ export class AdminCommissionController {
     return this.settlement.getClanStats({ periodKey: periodKey || undefined });
   }
 
+  /**
+   * 單一血盟的儲值明細（drill-down）
+   * - clanId='none' → 無血盟 (SQL clan_id IS NULL)
+   * - 其他 → 以 integer 帶入查詢
+   */
+  @Get('settlements/clan-stats/records')
+  @RequirePermission('module.originals.commission.view')
+  getClanRecords(
+    @Query('periodKey') periodKey: string,
+    @Query('clanId') clanId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    if (!periodKey || !clanId) {
+      return { periodKey: periodKey || '', clanId: null, clanName: null, total: 0, items: [] };
+    }
+    const parsedClanId = clanId === 'none' ? null : Number(clanId);
+    return this.settlement.getClanRecords({
+      periodKey,
+      clanId: Number.isNaN(parsedClanId as number) ? null : parsedClanId,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
   @Get('settlements')
   @RequirePermission('module.originals.commission.view')
   listSettlements(@Query('agentId') agentId?: string) {

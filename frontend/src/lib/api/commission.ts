@@ -11,6 +11,7 @@ import type {
   CommissionSettlementDetail,
   CommissionUnsettledPreview,
   CommissionClanStatsResult,
+  CommissionClanRecordsResult,
   CommissionAgentRecords,
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
@@ -235,6 +236,30 @@ export async function getCommissionClanStats(
   const { data } = await apiClient.get<ApiResponse<CommissionClanStatsResult>>(
     `${ADMIN}/settlements/clan-stats`,
     { params: periodKey ? { periodKey } : undefined },
+  );
+  return data.data;
+}
+
+/**
+ * 單一血盟的儲值明細（drill-down）
+ * - clanId 傳 null 會被轉成 'none'（SQL clan_id IS NULL）
+ */
+export async function getCommissionClanRecords(params: {
+  periodKey: string;
+  clanId: number | null;
+  limit?: number;
+  offset?: number;
+}): Promise<CommissionClanRecordsResult> {
+  const { data } = await apiClient.get<ApiResponse<CommissionClanRecordsResult>>(
+    `${ADMIN}/settlements/clan-stats/records`,
+    {
+      params: {
+        periodKey: params.periodKey,
+        clanId: params.clanId === null ? 'none' : params.clanId,
+        ...(params.limit != null ? { limit: params.limit } : {}),
+        ...(params.offset != null ? { offset: params.offset } : {}),
+      },
+    },
   );
   return data.data;
 }

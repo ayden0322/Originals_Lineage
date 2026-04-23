@@ -51,6 +51,7 @@ import type {
   CommissionClanStatItem,
 } from '@/lib/types';
 import AgentRecordsDrawer from './AgentRecordsDrawer';
+import ClanRecordsDrawer from './ClanRecordsDrawer';
 
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: '待確認', color: 'gold' },
@@ -80,6 +81,24 @@ export default function CommissionSettlementsPage() {
   const [clanStats, setClanStats] = useState<CommissionClanStatsResult | null>(null);
   const [clanStatsLoading, setClanStatsLoading] = useState(false);
   const [clanPeriodKey, setClanPeriodKey] = useState<string | undefined>(undefined);
+
+  // 血盟儲值明細 Drawer
+  const [clanDrawerOpen, setClanDrawerOpen] = useState(false);
+  const [clanDrawerTarget, setClanDrawerTarget] = useState<{
+    clanId: number | null;
+    clanName: string | null;
+    periodKey: string;
+  } | null>(null);
+
+  const openClanRecordsDrawer = (row: CommissionClanStatItem) => {
+    if (!clanStats?.periodKey) return;
+    setClanDrawerTarget({
+      clanId: row.clanId,
+      clanName: row.clanName,
+      periodKey: clanStats.periodKey,
+    });
+    setClanDrawerOpen(true);
+  };
 
   // 訂單明細 Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -715,6 +734,13 @@ export default function CommissionSettlementsPage() {
           </Col>
         </Row>
 
+        <Space style={{ marginBottom: 8 }}>
+          <Tooltip title="點擊血盟列可查看該血盟該期的儲值紀錄（按時間新→舊）">
+            <span style={{ color: '#999' }}>
+              <InfoCircleOutlined /> 點擊列可查看明細
+            </span>
+          </Tooltip>
+        </Space>
         <Table
           scroll={{ x: 'max-content' }}
           rowKey={(r) =>
@@ -727,6 +753,10 @@ export default function CommissionSettlementsPage() {
           locale={{
             emptyText: <Empty description="此期別沒有血盟儲值紀錄" />,
           }}
+          onRow={(row) => ({
+            onClick: () => openClanRecordsDrawer(row),
+            style: { cursor: 'pointer' },
+          })}
         />
       </>
     );
@@ -796,6 +826,14 @@ export default function CommissionSettlementsPage() {
         agentCode={drawerAgent?.code ?? null}
         initialPeriodKey={drawerAgent?.periodKey ?? ''}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <ClanRecordsDrawer
+        open={clanDrawerOpen}
+        periodKey={clanDrawerTarget?.periodKey ?? ''}
+        clanId={clanDrawerTarget?.clanId ?? null}
+        clanName={clanDrawerTarget?.clanName ?? null}
+        onClose={() => setClanDrawerOpen(false)}
       />
 
       <Modal

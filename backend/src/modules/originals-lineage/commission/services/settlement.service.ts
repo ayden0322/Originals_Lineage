@@ -68,6 +68,32 @@ export interface ClanStatsResult {
 }
 
 /**
+ * 血盟儲值紀錄（drill-down）：單一血盟在某期的交易明細
+ */
+export interface ClanRecordItem {
+  recordId: string;
+  transactionId: string;
+  paidAt: Date;
+  playerId: string;
+  playerAccount: string | null;
+  baseAmount: number;
+  agentId: string;
+  agentCode: string | null;
+  agentName: string | null;
+  agentIsSystem: boolean;
+  /** 該筆交易是否已被退款沖銷 */
+  isRefunded: boolean;
+}
+
+export interface ClanRecordsResult {
+  periodKey: string;
+  clanId: number | null;
+  clanName: string | null;
+  total: number;
+  items: ClanRecordItem[];
+}
+
+/**
  * 當期預估：全體聚合 + 每代理明細
  */
 export interface UnsettledPreviewResult {
@@ -581,6 +607,106 @@ export class SettlementService {
       periodKey,
       availablePeriods,
       summary,
+      items,
+    };
+  }
+
+  /**
+   * 血盟儲值明細（drill-down）
+   *
+   * 用途：血盟統計點擊某血盟後，列出該血盟在該期的所有儲值交易
+   * - level=1 去重（避免 Case 1 雙記錄）
+   * - clanId === null 代表「無血盟」(SQL `clan_id IS NULL`)
+   * - paid_at DESC 排序
+   * - isRefunded 透過 ref_adj 對齊（per-agent）：只要該 transaction 在該代理
+   *   身上有 refund adjustment 就標為已退款
+   * - 支援分頁（limit/offset）
+   */
+  async getClanRecords(params: {
+    periodKey: string;
+    clanId: number | null;
+    limit?: number;
+    offset?: number;
+  }): Promise<ClanRecordsResult> {
+    const { periodKey } = params;
+    const limit = Math.min(Math.max(params.limit ?? 50, 1), 500);
+    const offset = Math.max(params.offset ?? 0, 0);
+    const isNoClan = params.clanId === null;
+
+    const baseQb = () => {
+      const qb = this.recordRepo
+        .createQueryBuilder('cr')
+        .where('cr.period_key = :periodKey', { periodKey })
+        .andWhere('cr.level = 1');
+      if (isNoClan) {
+        qb.andWhere('cr.clan_id IS NULL');
+      } else {
+        qb.andWhere('cr.clan_id = :clanId', { clanId: params.clanId });
+      }
+      return qb;
+    };
+
+    const totalRow = await baseQb()
+      .select('COUNT(cr.id)', 'cnt')
+      .getRawOne();
+    const total = Number(totalRow?.cnt ?? 0);
+
+    const rows = await baseQb()
+      .leftJoin('website_users', 'u', 'u.id = cr.player_id')
+      .leftJoin('commission_agents', 'a', 'a.id = cr.agent_id')
+      .leftJoin(
+        'commission_settlement_adjustments',
+        'ref_adj',
+        `ref_adj.source_type = 'refund'
+         AND ref_adj.source_transaction_id = cr.transaction_id
+         AND EXISTS (
+           SELECT 1 FROM commission_settlements s2
+           WHERE s2.id = ref_adj.settlement_id AND s2.agent_id = cr.agent_id
+         )`,
+      )
+      .select([
+        'cr.id AS record_id',
+        'cr.transaction_id AS transaction_id',
+        'cr.paid_at AS paid_at',
+        'cr.player_id AS player_id',
+        'u.game_account_name AS player_account',
+        'cr.base_amount AS base_amount',
+        'cr.agent_id AS agent_id',
+        'a.code AS agent_code',
+        'a.name AS agent_name',
+        'a.is_system AS agent_is_system',
+        'ref_adj.id AS refund_id',
+        // 為 clan_name 填入，讓回傳值 reflect 實際的血盟名稱 snapshot
+        'cr.clan_name AS clan_name',
+      ])
+      .orderBy('cr.paid_at', 'DESC')
+      .limit(limit)
+      .offset(offset)
+      .getRawMany();
+
+    const items: ClanRecordItem[] = rows.map((r) => ({
+      recordId: r.record_id as string,
+      transactionId: r.transaction_id as string,
+      paidAt: new Date(r.paid_at),
+      playerId: r.player_id as string,
+      playerAccount: (r.player_account as string | null) ?? null,
+      baseAmount: Number(r.base_amount),
+      agentId: r.agent_id as string,
+      agentCode: (r.agent_code as string | null) ?? null,
+      agentName: (r.agent_name as string | null) ?? null,
+      agentIsSystem: !!r.agent_is_system,
+      isRefunded: r.refund_id !== null && r.refund_id !== undefined,
+    }));
+
+    // 回傳血盟名稱：若有資料就用 snapshot；否則 null（UI 會顯示「無血盟」）
+    const clanName =
+      !isNoClan && rows.length > 0 ? (rows[0].clan_name as string | null) : null;
+
+    return {
+      periodKey,
+      clanId: params.clanId,
+      clanName,
+      total,
       items,
     };
   }
