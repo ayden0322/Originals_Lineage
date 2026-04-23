@@ -691,27 +691,30 @@ export class ShopService {
         throw new Error(`找不到商品 ${item.productId}`);
       }
 
-      for (let i = 0; i < item.quantity; i++) {
-        if (product.category === 'diamond') {
-          const diamonds = product.diamondAmount;
-          const insertId = await this.gameDbService.insertDiamondTopup(
-            accountName,
-            diamonds,
-          );
-          deliveredEntries.push({
-            type: 'diamond',
-            table: '贊助_儲值記錄',
-            insertId,
-            account: accountName,
-            count: diamonds,
-          });
-        } else if (
-          product.category === 'game_item' ||
-          product.category === 'monthly_card'
-        ) {
-          if (!product.gameItemId || !product.gameItemName) {
-            throw new Error(`商品「${product.name}」未設定遊戲物品`);
-          }
+      if (product.category === 'diamond') {
+        // 鑽石類合併成一筆 INSERT（count = 單包鑽數 × 購買數量）
+        // 避免「1 元 1 鑽」禮包買 1000 元時產生 1000 筆 INSERT
+        const totalDiamonds = product.diamondAmount * item.quantity;
+        const insertId = await this.gameDbService.insertDiamondTopup(
+          accountName,
+          totalDiamonds,
+        );
+        deliveredEntries.push({
+          type: 'diamond',
+          table: '贊助_儲值記錄',
+          insertId,
+          account: accountName,
+          count: totalDiamonds,
+        });
+      } else if (
+        product.category === 'game_item' ||
+        product.category === 'monthly_card'
+      ) {
+        // 禮包/月卡維持逐筆：每張月卡在遊戲內通常是獨立信件/道具
+        if (!product.gameItemId || !product.gameItemName) {
+          throw new Error(`商品「${product.name}」未設定遊戲物品`);
+        }
+        for (let i = 0; i < item.quantity; i++) {
           const insertId = await this.gameDbService.insertGiftReward(
             accountName,
             product.gameItemId,
@@ -727,9 +730,9 @@ export class ShopService {
             itemName: product.gameItemName,
             quantity: product.gameItemQuantity || 1,
           });
-        } else {
-          throw new Error(`未知商品分類：${String(product.category)}`);
         }
+      } else {
+        throw new Error(`未知商品分類：${String(product.category)}`);
       }
     }
 
