@@ -11,18 +11,51 @@ import {
   Space,
   message,
   Typography,
+  Select,
+  DatePicker,
+  Card,
+  Drawer,
+  Statistic,
+  Row,
+  Col,
+  Tooltip,
 } from 'antd';
-import { LockOutlined, HistoryOutlined } from '@ant-design/icons';
+import {
+  LockOutlined,
+  HistoryOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  DollarOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import {
   getMembers,
+  getMemberOrders,
   adminResetSecondPassword,
   getSecondPasswordLogs,
 } from '@/lib/api/members';
-import type { WebsiteUser, SecondPasswordLog } from '@/lib/types';
+import type {
+  WebsiteUser,
+  SecondPasswordLog,
+  MemberOrder,
+  MemberOrderList,
+} from '@/lib/types';
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
+
+const orderStatusLabel: Record<
+  MemberOrder['status'],
+  { text: string; color: string }
+> = {
+  pending: { text: '待付款', color: 'default' },
+  paid: { text: '已付款', color: 'green' },
+  delivering: { text: '發貨中', color: 'blue' },
+  completed: { text: '已完成', color: 'cyan' },
+  failed: { text: '失敗', color: 'red' },
+  refunded: { text: '已退款', color: 'orange' },
+};
 
 export default function MembersPage() {
   const [data, setData] = useState<WebsiteUser[]>([]);
@@ -30,6 +63,13 @@ export default function MembersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
+
+  // Filters
+  const [keyword, setKeyword] = useState('');
+  const [isActive, setIsActive] = useState<boolean | undefined>();
+  const [registeredRange, setRegisteredRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
 
   // Reset second password modal
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -43,10 +83,27 @@ export default function MembersPage() {
   const [logs, setLogs] = useState<SecondPasswordLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
+  // Orders drawer
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [ordersTarget, setOrdersTarget] = useState<WebsiteUser | null>(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersData, setOrdersData] = useState<MemberOrderList | null>(null);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersRange, setOrdersRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getMembers(page, pageSize);
+      const res = await getMembers({
+        page,
+        limit: pageSize,
+        keyword: keyword.trim() || undefined,
+        isActive,
+        registeredFrom: registeredRange?.[0]?.toISOString(),
+        registeredTo: registeredRange?.[1]?.toISOString(),
+      });
       setData(res.items);
       setTotal(res.total);
     } catch {
@@ -54,11 +111,23 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, keyword, isActive, registeredRange]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleSearch = () => {
+    setPage(1);
+    fetchData();
+  };
+
+  const handleResetFilters = () => {
+    setKeyword('');
+    setIsActive(undefined);
+    setRegisteredRange(null);
+    setPage(1);
+  };
 
   // ─── Reset Second Password ─────────────────────────────────
   const openResetModal = (user: WebsiteUser) => {
@@ -74,7 +143,7 @@ export default function MembersPage() {
       await adminResetSecondPassword(resetTarget.id, values.newSecondPassword);
       message.success(`已重設 ${resetTarget.gameAccountName} 的第二組密碼`);
       setResetModalOpen(false);
-      fetchData(); // refresh table
+      fetchData();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       message.error(error?.response?.data?.message || '重設失敗');
@@ -96,6 +165,49 @@ export default function MembersPage() {
     } finally {
       setLogsLoading(false);
     }
+  };
+
+  // ─── Orders Drawer ─────────────────────────────────────────
+  const fetchOrders = useCallback(
+    async (user: WebsiteUser, p: number, range: [Dayjs | null, Dayjs | null] | null) => {
+      setOrdersLoading(true);
+      try {
+        const res = await getMemberOrders(user.id, {
+          page: p,
+          limit: 10,
+          from: range?.[0]?.toISOString(),
+          to: range?.[1]?.toISOString(),
+        });
+        setOrdersData(res);
+      } catch {
+        message.error('載入儲值紀錄失敗');
+      } finally {
+        setOrdersLoading(false);
+      }
+    },
+    [],
+  );
+
+  const openOrdersDrawer = async (user: WebsiteUser) => {
+    setOrdersTarget(user);
+    setOrdersOpen(true);
+    setOrdersPage(1);
+    setOrdersRange(null);
+    setOrdersData(null);
+    await fetchOrders(user, 1, null);
+  };
+
+  const handleOrdersRangeChange = (
+    r: [Dayjs | null, Dayjs | null] | null,
+  ) => {
+    setOrdersRange(r);
+    setOrdersPage(1);
+    if (ordersTarget) fetchOrders(ordersTarget, 1, r);
+  };
+
+  const handleOrdersPageChange = (p: number) => {
+    setOrdersPage(p);
+    if (ordersTarget) fetchOrders(ordersTarget, p, ordersRange);
   };
 
   const logColumns: ColumnsType<SecondPasswordLog> = [
@@ -137,18 +249,105 @@ export default function MembersPage() {
     },
   ];
 
+  const orderColumns: ColumnsType<MemberOrder> = [
+    {
+      title: '訂單編號',
+      dataIndex: 'orderNumber',
+      key: 'orderNumber',
+      width: 180,
+      render: (val: string) => <Text code>{val}</Text>,
+    },
+    {
+      title: '商品',
+      key: 'items',
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          {record.items.map((i, idx) => (
+            <span key={idx} style={{ fontSize: 12 }}>
+              {i.productName} × {i.quantity}
+              {i.diamondAmount > 0 && (
+                <Text type="secondary" style={{ marginLeft: 4 }}>
+                  （{i.diamondAmount * i.quantity} 鑽）
+                </Text>
+              )}
+            </span>
+          ))}
+        </Space>
+      ),
+    },
+    {
+      title: '金額',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
+      width: 100,
+      align: 'right',
+      render: (val: number) => <strong>NT$ {val.toFixed(0)}</strong>,
+    },
+    {
+      title: '狀態',
+      dataIndex: 'status',
+      key: 'status',
+      width: 90,
+      render: (val: MemberOrder['status']) => {
+        const cfg = orderStatusLabel[val];
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: '下單時間',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 150,
+      render: (val: string) => dayjs(val).format('YYYY-MM-DD HH:mm'),
+    },
+  ];
+
   const columns: ColumnsType<WebsiteUser> = [
     {
       title: '遊戲帳號',
       dataIndex: 'gameAccountName',
       key: 'gameAccountName',
-      width: 180,
+      width: 160,
+    },
+    {
+      title: '角色名稱',
+      dataIndex: 'charName',
+      key: 'charName',
+      width: 130,
+      render: (val: string | null | undefined) =>
+        val ? (
+          <Tag color="blue" style={{ margin: 0 }}>
+            {val}
+          </Tag>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            未建角
+          </Text>
+        ),
+    },
+    {
+      title: '血盟',
+      dataIndex: 'clanName',
+      key: 'clanName',
+      width: 130,
+      render: (val: string | null | undefined, record) => {
+        if (!record.charName) return <Text type="secondary">-</Text>;
+        return val ? (
+          <Tag color="purple" style={{ margin: 0 }}>
+            {val}
+          </Tag>
+        ) : (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            無血盟
+          </Text>
+        );
+      },
     },
     {
       title: '第二組密碼',
       dataIndex: 'secondPasswordPlain',
       key: 'secondPasswordPlain',
-      width: 140,
+      width: 120,
       render: (val: string | null) =>
         val ? <Text code>{val}</Text> : <Text type="secondary">-</Text>,
     },
@@ -156,7 +355,7 @@ export default function MembersPage() {
       title: '帳號狀態',
       dataIndex: 'isActive',
       key: 'isActive',
-      width: 100,
+      width: 90,
       render: (val: boolean) => (
         <Tag color={val ? 'green' : 'red'}>{val ? '啟用' : '停用'}</Tag>
       ),
@@ -165,7 +364,7 @@ export default function MembersPage() {
       title: '最後登入',
       dataIndex: 'lastLoginAt',
       key: 'lastLoginAt',
-      width: 160,
+      width: 140,
       render: (val: string | null) =>
         val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
     },
@@ -173,15 +372,25 @@ export default function MembersPage() {
       title: '註冊時間',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
+      width: 140,
       render: (val: string) => dayjs(val).format('YYYY-MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 200,
+      width: 280,
+      fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" wrap>
+          <Tooltip title="儲值紀錄">
+            <Button
+              size="small"
+              icon={<DollarOutlined />}
+              onClick={() => openOrdersDrawer(record)}
+            >
+              儲值
+            </Button>
+          </Tooltip>
           <Button
             size="small"
             icon={<LockOutlined />}
@@ -204,6 +413,50 @@ export default function MembersPage() {
   return (
     <div>
       <h2>會員管理</h2>
+
+      {/* 篩選列 */}
+      <Card size="small" style={{ marginTop: 16 }}>
+        <Space wrap>
+          <Input
+            placeholder="搜尋：帳號 / Email / 角色 / 血盟"
+            prefix={<SearchOutlined />}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={handleSearch}
+            style={{ width: 260 }}
+            allowClear
+          />
+          <Select
+            placeholder="帳號狀態"
+            style={{ width: 120 }}
+            allowClear
+            value={isActive}
+            onChange={(v) => {
+              setIsActive(v);
+              setPage(1);
+            }}
+            options={[
+              { label: '啟用', value: true },
+              { label: '停用', value: false },
+            ]}
+          />
+          <RangePicker
+            placeholder={['註冊起始', '註冊結束']}
+            value={registeredRange}
+            onChange={(r) => {
+              setRegisteredRange(r as [Dayjs | null, Dayjs | null] | null);
+              setPage(1);
+            }}
+          />
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+            查詢
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleResetFilters}>
+            重設
+          </Button>
+        </Space>
+      </Card>
+
       <Table
         rowKey="id"
         columns={columns}
@@ -221,7 +474,7 @@ export default function MembersPage() {
           },
         }}
         style={{ marginTop: 16 }}
-        scroll={{ x: 900 }}
+        scroll={{ x: 1200 }}
       />
 
       {/* Reset Second Password Modal */}
@@ -282,6 +535,62 @@ export default function MembersPage() {
           locale={{ emptyText: '尚無變更紀錄' }}
         />
       </Modal>
+
+      {/* Orders Drawer */}
+      <Drawer
+        title={`儲值紀錄 — ${ordersTarget?.gameAccountName || ''}`}
+        open={ordersOpen}
+        onClose={() => setOrdersOpen(false)}
+        width={900}
+        destroyOnClose
+      >
+        <Space style={{ marginBottom: 16 }} wrap>
+          <RangePicker
+            placeholder={['下單起始', '下單結束']}
+            value={ordersRange}
+            onChange={handleOrdersRangeChange}
+          />
+        </Space>
+
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={12}>
+            <Card size="small">
+              <Statistic
+                title="已付款總額"
+                value={ordersData?.summary.totalPaid ?? 0}
+                precision={0}
+                prefix="NT$"
+              />
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card size="small">
+              <Statistic
+                title="已付款筆數"
+                value={ordersData?.summary.paidCount ?? 0}
+                suffix="筆"
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Table
+          rowKey="id"
+          columns={orderColumns}
+          dataSource={ordersData?.items ?? []}
+          loading={ordersLoading}
+          pagination={{
+            current: ordersPage,
+            pageSize: 10,
+            total: ordersData?.total ?? 0,
+            showSizeChanger: false,
+            showTotal: (t) => `共 ${t} 筆`,
+            onChange: handleOrdersPageChange,
+          }}
+          scroll={{ x: 820 }}
+          locale={{ emptyText: '尚無儲值紀錄' }}
+        />
+      </Drawer>
     </div>
   );
 }

@@ -6,13 +6,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  Repository,
+  In,
+  Brackets,
+  Between,
+  MoreThanOrEqual,
+  LessThan,
+} from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 
 import { WebsiteUser } from './entities/website-user.entity';
 import { MemberBinding } from './entities/member-binding.entity';
+import { Order } from '../shop/entities/order.entity';
+import { Product } from '../shop/entities/product.entity';
 import { GameDbService } from '../game-db/game-db.service';
 import { SystemLogService } from '../../../core/system-log/system-log.service';
 import { AttributionService } from '../commission/services/attribution.service';
@@ -20,6 +29,7 @@ import { CreateWebsiteUserDto } from './dto/create-website-user.dto';
 import { BindGameAccountDto } from './dto/bind-game-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeSecondPasswordDto } from './dto/change-second-password.dto';
+import { ListMembersQueryDto } from './dto/list-members-query.dto';
 import { encryptPassword } from './utils/password-crypto';
 
 @Injectable()
@@ -30,6 +40,12 @@ export class MemberService {
 
     @InjectRepository(MemberBinding)
     private readonly bindingRepo: Repository<MemberBinding>,
+
+    @InjectRepository(Order)
+    private readonly orderRepo: Repository<Order>,
+
+    @InjectRepository(Product)
+    private readonly productRepo: Repository<Product>,
 
     private readonly gameDbService: GameDbService,
     private readonly systemLogService: SystemLogService,
@@ -288,28 +304,198 @@ export class MemberService {
 
   // ─── Admin: List All Members ──────────────────────────────────────
 
-  async findAllMembers(page: number = 1, limit: number = 20) {
-    const [users, total] = await this.userRepo.findAndCount({
+  async findAllMembers(query: ListMembersQueryDto = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const keyword = query.keyword?.trim();
+
+    const qb = this.userRepo.createQueryBuilder('u');
+
+    // 狀態篩選
+    if (query.isActive === 'true') {
+      qb.andWhere('u.is_active = :active', { active: true });
+    } else if (query.isActive === 'false') {
+      qb.andWhere('u.is_active = :active', { active: false });
+    }
+
+    // 註冊時間區間
+    if (query.registeredFrom) {
+      qb.andWhere('u.created_at >= :rFrom', { rFrom: query.registeredFrom });
+    }
+    if (query.registeredTo) {
+      qb.andWhere('u.created_at < :rTo', { rTo: query.registeredTo });
+    }
+
+    // 關鍵字：先比主庫欄位；若可能匹配角色/血盟，反查遊戲庫取得帳號清單後 union
+    if (keyword) {
+      const gameAccountMatches =
+        await this.gameDbService.findAccountNamesByCharOrClan(keyword);
+
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub
+            .where('u.game_account_name ILIKE :kw', { kw: `%${keyword}%` })
+            .orWhere('u.email ILIKE :kw', { kw: `%${keyword}%` })
+            .orWhere('u.display_name ILIKE :kw', { kw: `%${keyword}%` });
+          if (gameAccountMatches.length > 0) {
+            sub.orWhere('u.game_account_name IN (:...accts)', {
+              accts: gameAccountMatches,
+            });
+          }
+        }),
+      );
+    }
+
+    qb.orderBy('u.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [users, total] = await qb.getManyAndCount();
+
+    // 批次查角色/血盟（一帳號一角色）
+    const accountNames = users.map((u) => u.gameAccountName).filter(Boolean);
+    const charClanMap = await this.gameDbService.findCharacterClanByAccounts(
+      Array.from(new Set(accountNames)),
+    );
+
+    const items = users.map((user) => {
+      const {
+        passwordHash,
+        passwordEncrypted,
+        refreshTokenHash,
+        secondPasswordHash,
+        ...safeUser
+      } = user;
+      const hit = charClanMap.get(user.gameAccountName);
+      return {
+        ...safeUser,
+        charName: hit?.charName ?? null,
+        clanName: hit?.clanName ?? null,
+      };
+    });
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // ─── Admin: Member Recharge / Order History ────────────────────
+
+  async findMemberOrders(
+    userId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      from?: string;
+      to?: string;
+      status?: string;
+    } = {},
+  ) {
+    const page = options.page ?? 1;
+    const limit = options.limit ?? 20;
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('使用者不存在');
+    }
+
+    const binding = await this.bindingRepo.findOne({
+      where: { websiteAccountId: userId },
+    });
+
+    if (!binding) {
+      return {
+        items: [],
+        total: 0,
+        page,
+        limit,
+        summary: { totalPaid: 0, paidCount: 0 },
+      };
+    }
+
+    const where: Record<string, unknown> = { memberBindingId: binding.id };
+    if (options.status) {
+      where.status = options.status;
+    }
+    if (options.from && options.to) {
+      where.createdAt = Between(new Date(options.from), new Date(options.to));
+    } else if (options.from) {
+      where.createdAt = MoreThanOrEqual(new Date(options.from));
+    } else if (options.to) {
+      where.createdAt = LessThan(new Date(options.to));
+    }
+
+    const [orders, total] = await this.orderRepo.findAndCount({
+      where,
+      relations: ['items'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
 
+    // 商品名稱填充
+    const productIds = Array.from(
+      new Set(orders.flatMap((o) => o.items.map((i) => i.productId))),
+    );
+    const productMap = new Map<string, string>();
+    if (productIds.length > 0) {
+      const products = await this.productRepo.find({
+        where: { id: In(productIds) },
+      });
+      for (const p of products) {
+        productMap.set(p.id, p.name);
+      }
+    }
+
+    // 已付款統計（不受分頁/狀態篩選影響，用同樣 from/to 範圍的 paid 總額）
+    const summaryWhere: Record<string, unknown> = {
+      memberBindingId: binding.id,
+      status: 'paid',
+    };
+    if (options.from && options.to) {
+      summaryWhere.createdAt = Between(
+        new Date(options.from),
+        new Date(options.to),
+      );
+    } else if (options.from) {
+      summaryWhere.createdAt = MoreThanOrEqual(new Date(options.from));
+    } else if (options.to) {
+      summaryWhere.createdAt = LessThan(new Date(options.to));
+    }
+    const paidOrders = await this.orderRepo.find({ where: summaryWhere });
+    const totalPaid = paidOrders.reduce(
+      (sum, o) => sum + Number(o.totalAmount),
+      0,
+    );
+
     return {
-      items: users.map((user) => {
-        const {
-          passwordHash,
-          passwordEncrypted,
-          refreshTokenHash,
-          secondPasswordHash,
-          ...safeUser
-        } = user;
-        return safeUser;
-      }),
+      items: orders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        totalAmount: Number(o.totalAmount),
+        status: o.status,
+        paymentTransactionId: o.paymentTransactionId,
+        deliveryStatus: o.deliveryStatus,
+        createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          productId: i.productId,
+          productName: productMap.get(i.productId) ?? '(已刪除商品)',
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          diamondAmount: i.diamondAmount,
+        })),
+      })),
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      summary: {
+        totalPaid,
+        paidCount: paidOrders.length,
+      },
     };
   }
 

@@ -1,9 +1,58 @@
 import apiClient from './client';
-import type { ApiResponse, PaginatedResponse, MemberBinding, WebsiteUser, SecondPasswordLog } from '../types';
+import type {
+  ApiResponse,
+  PaginatedResponse,
+  MemberBinding,
+  WebsiteUser,
+  SecondPasswordLog,
+  MemberOrderList,
+} from '../types';
 
 // Admin
-export async function getMembers(page = 1, limit = 10): Promise<PaginatedResponse<WebsiteUser>> {
-  const { data } = await apiClient.get<ApiResponse<PaginatedResponse<WebsiteUser>>>('/modules/originals/members', { params: { page, limit } });
+export interface GetMembersParams {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+  isActive?: boolean;
+  registeredFrom?: string;
+  registeredTo?: string;
+}
+
+export async function getMembers(
+  params: GetMembersParams = {},
+): Promise<PaginatedResponse<WebsiteUser>> {
+  const query: Record<string, string | number> = {
+    page: params.page ?? 1,
+    limit: params.limit ?? 10,
+  };
+  if (params.keyword) query.keyword = params.keyword;
+  if (params.isActive !== undefined) query.isActive = String(params.isActive);
+  if (params.registeredFrom) query.registeredFrom = params.registeredFrom;
+  if (params.registeredTo) query.registeredTo = params.registeredTo;
+
+  const { data } = await apiClient.get<ApiResponse<PaginatedResponse<WebsiteUser>>>(
+    '/modules/originals/members',
+    { params: query },
+  );
+  return data.data;
+}
+
+export interface GetMemberOrdersParams {
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+  status?: string;
+}
+
+export async function getMemberOrders(
+  userId: string,
+  params: GetMemberOrdersParams = {},
+): Promise<MemberOrderList> {
+  const { data } = await apiClient.get<ApiResponse<MemberOrderList>>(
+    `/modules/originals/members/${userId}/orders`,
+    { params },
+  );
   return data.data;
 }
 

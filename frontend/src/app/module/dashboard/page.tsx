@@ -27,7 +27,7 @@ const statCards: StatCard[] = [
     title: '會員數',
     permission: 'module.originals.members.view',
     icon: <UserOutlined />,
-    fetch: async () => (await getMembers(1, 1)).total,
+    fetch: async () => (await getMembers({ page: 1, limit: 1 })).total,
   },
   {
     key: 'reservations',

@@ -14,7 +14,6 @@ import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../../common/guards/permission.guard';
 import { RequirePermission } from '../../../core/permission/decorators/require-permission.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { MemberService } from './member.service';
 import { CreateWebsiteUserDto } from './dto/create-website-user.dto';
 import { BindGameAccountDto } from './dto/bind-game-account.dto';
@@ -23,6 +22,7 @@ import { CheckGameAccountDto } from './dto/check-game-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeSecondPasswordDto } from './dto/change-second-password.dto';
 import { AdminResetSecondPasswordDto } from './dto/admin-reset-second-password.dto';
+import { ListMembersQueryDto } from './dto/list-members-query.dto';
 
 // ═══════════════════════════════════════════════════════════════════
 // Admin Controller — requires JWT + Permission guards
@@ -37,8 +37,27 @@ export class MemberController {
 
   @Get()
   @RequirePermission('module.originals.members.view')
-  findAll(@Query() query: PaginationDto) {
-    return this.memberService.findAllMembers(query.page, query.limit);
+  findAll(@Query() query: ListMembersQueryDto) {
+    return this.memberService.findAllMembers(query);
+  }
+
+  @Get(':id/orders')
+  @RequirePermission('module.originals.members.view')
+  getMemberOrders(
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.memberService.findMemberOrders(id, {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      from,
+      to,
+      status,
+    });
   }
 
   @Get(':id')
