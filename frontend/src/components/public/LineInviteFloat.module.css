@@ -151,6 +151,15 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+a.qrBox:hover {
+  border-color: #06C755;
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.18);
+  transform: translateY(-1px);
 }
 
 .qrHint {
@@ -176,6 +185,18 @@
   gap: 8px;
   flex: 1 1 140px;
   min-width: 140px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+
+a.qrItem:hover .qrBox {
+  border-color: #06C755;
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.18);
+}
+
+a.qrItem:hover .qrCaption {
+  color: #06C755;
 }
 
 .qrCaption {

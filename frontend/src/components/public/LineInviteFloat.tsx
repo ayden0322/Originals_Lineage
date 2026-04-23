@@ -127,7 +127,12 @@ export default function LineInviteFloat() {
             {config.showQrCode && (
               hasBoth ? (
                 <div className={styles.qrRow}>
-                  <div className={styles.qrItem}>
+                  <a
+                    className={styles.qrItem}
+                    href={inviteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <div className={styles.qrBox}>
                       <QRCodeSVG
                         value={inviteUrl}
@@ -139,8 +144,13 @@ export default function LineInviteFloat() {
                       />
                     </div>
                     <p className={styles.qrCaption}>{inviteCaption}</p>
-                  </div>
-                  <div className={styles.qrItem}>
+                  </a>
+                  <a
+                    className={styles.qrItem}
+                    href={tradingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <div className={styles.qrBox}>
                       <QRCodeSVG
                         value={tradingUrl}
@@ -152,10 +162,15 @@ export default function LineInviteFloat() {
                       />
                     </div>
                     <p className={styles.qrCaption}>{tradingCaption}</p>
-                  </div>
+                  </a>
                 </div>
               ) : (
-                <div className={styles.qrBox}>
+                <a
+                  className={styles.qrBox}
+                  href={primaryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <QRCodeSVG
                     value={primaryUrl}
                     size={isMobile ? 180 : 200}
@@ -167,7 +182,7 @@ export default function LineInviteFloat() {
                   <p className={styles.qrHint}>
                     {inviteUrl ? inviteCaption : tradingCaption}
                   </p>
-                </div>
+                </a>
               )
             )}
 
