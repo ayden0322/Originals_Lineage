@@ -745,6 +745,13 @@ export interface SiteSettings {
   changelogBannerUrl?: string;
   changelogCategorySlug?: string;
   changelogPageTitle?: string;
+  changelogPageSubtitle?: string;
+  changelogLayout?: 'magazine' | 'timeline' | 'masonry';
+  changelogPerPage?: number;
+  changelogDefaultSort?: 'newest' | 'popular' | 'pinned';
+  changelogShowCover?: boolean;
+  changelogShowViewCount?: boolean;
+  changelogShowSearch?: boolean;
   // Support page
   lineOfficialUrl?: string;
   lineOfficialCaption?: string;

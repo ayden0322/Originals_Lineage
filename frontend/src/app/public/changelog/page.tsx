@@ -1,275 +1,337 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Spin } from 'antd';
+import { useEffect, useState, useCallback } from 'react';
+import { Spin, Input, Pagination } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import Link from 'next/link';
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { getPublicArticles } from '@/lib/api/content';
 import type { Article } from '@/lib/types';
 import PublicFooter from '@/components/public/PublicFooter';
-
-const COLORS = {
-  bg: '#0a0a0a',
-  textPrimary: '#ffffff',
-  textMuted: 'rgba(255,255,255,0.4)',
-  accent: '#c4a24e',
-  cardBg: 'rgba(255,255,255,0.03)',
-};
-
-const PAGE_SIZE = 10;
+import dayjs from 'dayjs';
 
 export default function ChangelogPage() {
-  const router = useRouter();
   const { config, loading: configLoading } = useSiteConfig();
 
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const settings = config?.settings;
+  const bannerUrl = settings?.changelogBannerUrl || '';
+  const categorySlug = settings?.changelogCategorySlug || '';
+  const pageTitle = settings?.changelogPageTitle || '更新歷程';
+  const pageSubtitle = settings?.changelogPageSubtitle || '';
+  const layout = settings?.changelogLayout || 'timeline';
+  const pageSize = settings?.changelogPerPage || 12;
+  const showCover = settings?.changelogShowCover !== false;
+  const showViewCount = settings?.changelogShowViewCount !== false;
+  const showSearch = settings?.changelogShowSearch === true;
 
-  const bannerUrl = config?.settings?.changelogBannerUrl || '';
-  const categorySlug = config?.settings?.changelogCategorySlug || '';
-  const pageTitle = config?.settings?.changelogPageTitle || '更新歷程';
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   const fetchArticles = useCallback(
-    async (p: number, append = false) => {
-      if (!categorySlug) return;
+    async (p: number) => {
+      if (!categorySlug) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       try {
-        if (append) setLoadingMore(true);
-        else setLoading(true);
-
-        const result = await getPublicArticles(p, PAGE_SIZE, categorySlug);
-        setArticles((prev) => (append ? [...prev, ...result.items] : result.items));
+        const result = await getPublicArticles(p, pageSize, categorySlug);
+        setArticles(result.items);
         setTotal(result.total);
-        setPage(p);
       } catch {
         // silently fail
       } finally {
         setLoading(false);
-        setLoadingMore(false);
       }
     },
-    [categorySlug],
+    [categorySlug, pageSize],
   );
 
   useEffect(() => {
-    // categorySlug 準備好就立刻拉（可能來自 localStorage 快取，不用等 API）
     if (categorySlug) {
-      fetchArticles(1);
+      fetchArticles(page);
     } else if (!configLoading) {
-      // config 已載入但仍無 categorySlug，結束 loading
       setLoading(false);
     }
-  }, [configLoading, categorySlug, fetchArticles]);
+  }, [page, categorySlug, configLoading, fetchArticles]);
 
-  const hasMore = articles.length < total;
+  const filteredArticles = search
+    ? articles.filter((a) => a.title.toLowerCase().includes(search.toLowerCase()))
+    : articles;
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchArticles(page + 1, true);
-    }
+  const getExcerpt = (content: string, len = 100) => {
+    const plain = content.replace(/<[^>]*>/g, '');
+    return plain.length > len ? plain.substring(0, len) + '...' : plain;
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}/${m}/${day}`;
-  };
+  const heroArticle = layout === 'magazine' ? filteredArticles.find((a) => a.isPinned) || filteredArticles[0] : null;
+  const gridArticles = layout === 'magazine' && heroArticle
+    ? filteredArticles.filter((a) => a.id !== heroArticle.id)
+    : filteredArticles;
 
-  // 注意：不再 block 整頁的 configLoading，讓 header / banner 先渲染
+  const groupedByMonth = filteredArticles.reduce<Record<string, Article[]>>((acc, a) => {
+    const month = dayjs(a.publishedAt || a.createdAt).format('YYYY / MM');
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(a);
+    return acc;
+  }, {});
 
   return (
-    <div style={{ background: COLORS.bg, minHeight: '100vh', color: COLORS.textPrimary, paddingTop: 'var(--header-total-height, 89px)' }}>
+    <div style={{ minHeight: '100vh', paddingTop: 'var(--header-total-height, 89px)' }}>
       {/* Banner */}
       <div
         style={{
-          position: 'relative',
-          width: '100%',
-          height: 'clamp(140px, 28vw, 200px)',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          height: 220,
+          background: bannerUrl
+            ? `linear-gradient(rgba(0,0,0,0.5), rgba(10,10,10,0.9)), url(${bannerUrl}) center/cover`
+            : 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          position: 'relative', overflow: 'hidden',
         }}
       >
-        {bannerUrl && (
-          <img
-            src={bannerUrl}
-            alt={pageTitle}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
-        )}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.55)',
-          }}
-        />
-        <h1
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            fontSize: 32,
-            fontWeight: 700,
-            letterSpacing: 2,
-            color: COLORS.textPrimary,
-            margin: 0,
-            textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-          }}
-        >
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 50%, rgba(196,162,78,0.06), transparent 70%)' }} />
+        <h1 style={{ fontSize: 36, fontWeight: 300, letterSpacing: 4, color: '#fff', fontFamily: 'var(--font-heading)', position: 'relative', zIndex: 1 }}>
           {pageTitle}
         </h1>
+        {pageSubtitle && (
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 8, position: 'relative', zIndex: 1 }}>
+            {pageSubtitle}
+          </p>
+        )}
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(24px, 6vw, 48px) clamp(16px, 4vw, 24px) 64px' }}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <Spin size="large" />
-          </div>
-        ) : articles.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              color: COLORS.textMuted,
-              fontSize: 16,
-              padding: '80px 0',
-            }}
-          >
-            暫無更新記錄
-          </div>
-        ) : (
-          <div style={{ position: 'relative', paddingLeft: 36 }}>
-            {/* Vertical timeline line */}
-            <div
-              style={{
-                position: 'absolute',
-                left: 4,
-                top: 0,
-                bottom: 0,
-                width: 2,
-                background: COLORS.accent,
-              }}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+        {/* Search bar (optional) */}
+        {showSearch && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
+            <Input
+              prefix={<SearchOutlined style={{ color: 'rgba(255,255,255,0.3)' }} />}
+              placeholder="搜尋文章..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: 220, background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.15)' }}
             />
-
-            {articles.map((article) => (
-              <div key={article.id} style={{ position: 'relative', marginBottom: 32 }}>
-                {/* Timeline node */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: -36 + 4 - 4,
-                    top: 6,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    background: COLORS.accent,
-                    boxShadow: `0 0 8px ${COLORS.accent}`,
-                  }}
-                />
-
-                {/* Content card */}
-                <div
-                  style={{
-                    background: COLORS.cardBg,
-                    borderRadius: 8,
-                    padding: '16px 20px',
-                  }}
-                >
-                  <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 6 }}>
-                    {formatDate(article.publishedAt || article.createdAt)}
-                  </div>
-
-                  <div
-                    onClick={() => router.push(`/public/news/${article.slug}`)}
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 600,
-                      color: COLORS.textPrimary,
-                      cursor: 'pointer',
-                      transition: 'color 0.2s',
-                      lineHeight: 1.4,
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = COLORS.accent;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = COLORS.textPrimary;
-                    }}
-                  >
-                    {article.title}
-                  </div>
-
-                  {article.summary && (
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 14,
-                        color: COLORS.textMuted,
-                        whiteSpace: 'pre-line',
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {article.summary}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
-        {/* Load more */}
-        {hasMore && (
+        {/* Loading / Empty */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
+        ) : filteredArticles.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}>
+            {!categorySlug ? '尚未設定更新歷程分類，請至後台「更新頁面管理」綁定分類' : '暫無更新紀錄'}
+          </div>
+        ) : (
+          <>
+            {/* ═══ Magazine Layout ═══ */}
+            {layout === 'magazine' && (
+              <>
+                {heroArticle && (
+                  <Link
+                    href={`/public/news/${heroArticle.slug}`}
+                    aria-label={heroArticle.title}
+                    style={{
+                      display: 'block', position: 'relative', borderRadius: 12, overflow: 'hidden',
+                      height: 400, marginBottom: 24, cursor: 'pointer',
+                      textDecoration: 'none',
+                      background: heroArticle.coverImageUrl && showCover
+                        ? `linear-gradient(transparent 30%, rgba(0,0,0,0.85)), url(${heroArticle.coverImageUrl}) center/cover`
+                        : 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 40 }}>
+                      <div style={{ fontSize: 28, fontWeight: 600, color: '#fff', marginBottom: 8, lineHeight: 1.3 }}>
+                        {heroArticle.title}
+                      </div>
+                      <div style={{ color: '#999', fontSize: 13 }}>
+                        {dayjs(heroArticle.publishedAt || heroArticle.createdAt).format('YYYY-MM-DD')}
+                        {showViewCount && ` · ${heroArticle.viewCount} 次瀏覽`}
+                        {heroArticle.isPinned && ' · 置頂'}
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+                  {gridArticles.map((a) => (
+                    <MagazineCard key={a.id} article={a} showCover={showCover} showViewCount={showViewCount} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ═══ Timeline Layout ═══ */}
+            {layout === 'timeline' && (
+              <div style={{ position: 'relative', paddingLeft: 60, marginLeft: 80 }}>
+                <div style={{ position: 'absolute', left: 28, top: 0, bottom: 0, width: 2, background: 'linear-gradient(to bottom, #c4a24e, #333, #c4a24e)' }} />
+                {Object.entries(groupedByMonth).map(([month, items]) => (
+                  <div key={month}>
+                    <div style={{ position: 'relative', marginBottom: 24, padding: '8px 0' }}>
+                      <span style={{
+                        position: 'absolute', left: -52, background: '#c4a24e', color: '#000',
+                        padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, letterSpacing: 1,
+                      }}>
+                        {month}
+                      </span>
+                    </div>
+                    {items.map((a) => (
+                      <Link
+                        key={a.id}
+                        href={`/public/news/${a.slug}`}
+                        aria-label={a.title}
+                        style={{
+                          display: 'block',
+                          position: 'relative', marginBottom: 24, padding: 24,
+                          background: '#141414', borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          cursor: 'pointer', transition: 'all 0.2s',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(196,162,78,0.3)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
+                      >
+                        <div style={{ position: 'absolute', left: -40, top: 28, width: 12, height: 12, borderRadius: '50%', background: '#c4a24e', border: '2px solid #0a0a0a' }} />
+                        <div style={{ position: 'absolute', left: -100, top: 24, color: '#666', fontSize: 13, textAlign: 'right', width: 50 }}>
+                          {dayjs(a.publishedAt || a.createdAt).format('MM-DD')}
+                        </div>
+                        <div style={{ display: 'flex', gap: 20 }}>
+                          {showCover && a.coverImageUrl && (
+                            <div style={{ width: 160, height: 100, borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}>
+                              <img src={a.coverImageUrl} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 18, fontWeight: 500, color: '#eee', marginBottom: 8, lineHeight: 1.4 }}>
+                              {a.title}
+                            </div>
+                            <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                              {a.summary || getExcerpt(a.content, 150)}
+                            </div>
+                            {showViewCount && (
+                              <div style={{ fontSize: 12, color: '#555', marginTop: 8 }}>{a.viewCount} 次瀏覽</div>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══ Masonry Layout ═══ */}
+            {layout === 'masonry' && (
+              <div style={{ columns: 3, columnGap: 20 }}>
+                {filteredArticles.map((a, i) => {
+                  const heights = [260, 180, 220, 160, 280, 200, 190, 240, 170];
+                  const imgH = showCover && a.coverImageUrl ? heights[i % heights.length] : 0;
+                  return (
+                    <Link
+                      key={a.id}
+                      href={`/public/news/${a.slug}`}
+                      aria-label={a.title}
+                      style={{
+                        display: 'block',
+                        breakInside: 'avoid' as const, marginBottom: 20,
+                        background: '#141414', borderRadius: 8, overflow: 'hidden',
+                        cursor: 'pointer', transition: 'transform 0.2s',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        textDecoration: 'none',
+                        color: 'inherit',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                    >
+                      {imgH > 0 && a.coverImageUrl && (
+                        <img src={a.coverImageUrl} alt={a.title} style={{ width: '100%', height: imgH, objectFit: 'cover' }} />
+                      )}
+                      {imgH > 0 && !a.coverImageUrl && (
+                        <div style={{ width: '100%', height: imgH, background: 'linear-gradient(135deg, #1a1a2e, #0f3460)' }} />
+                      )}
+                      <div style={{ padding: 16 }}>
+                        <div style={{ fontSize: 15, fontWeight: 500, color: '#eee', marginBottom: 8, lineHeight: 1.4 }}>
+                          {a.title}
+                        </div>
+                        {i % 3 !== 1 && (
+                          <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 8 }}>
+                            {a.summary || getExcerpt(a.content, 80)}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12, color: '#555' }}>
+                          {dayjs(a.publishedAt || a.createdAt).format('YYYY-MM-DD')}
+                          {showViewCount && ` · ${a.viewCount} 次瀏覽`}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Pagination */}
+        {total > pageSize && (
           <div style={{ textAlign: 'center', marginTop: 32 }}>
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              style={{
-                background: 'transparent',
-                border: `1px solid ${COLORS.accent}`,
-                color: COLORS.accent,
-                padding: '10px 36px',
-                borderRadius: 6,
-                fontSize: 15,
-                cursor: loadingMore ? 'not-allowed' : 'pointer',
-                opacity: loadingMore ? 0.6 : 1,
-                transition: 'all 0.2s',
-                letterSpacing: 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!loadingMore) {
-                  (e.currentTarget as HTMLElement).style.background = COLORS.accent;
-                  (e.currentTarget as HTMLElement).style.color = '#000';
-                }
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = 'transparent';
-                (e.currentTarget as HTMLElement).style.color = COLORS.accent;
-              }}
-            >
-              {loadingMore ? '載入中...' : '載入更多'}
-            </button>
+            <Pagination
+              current={page} total={total} pageSize={pageSize}
+              onChange={(p) => setPage(p)} showSizeChanger={false}
+            />
           </div>
         )}
       </div>
 
       <PublicFooter />
     </div>
+  );
+}
+
+// ═══ Magazine Card Component ═══
+function MagazineCard({
+  article, showCover, showViewCount,
+}: {
+  article: Article; showCover: boolean; showViewCount: boolean;
+}) {
+  return (
+    <Link
+      href={`/public/news/${article.slug}`}
+      aria-label={article.title}
+      style={{
+        display: 'block',
+        background: '#141414', borderRadius: 8, overflow: 'hidden',
+        cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
+        border: '1px solid rgba(255,255,255,0.06)',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+    >
+      {showCover && (
+        <div style={{
+          width: '100%', height: 180,
+          background: article.coverImageUrl
+            ? `url(${article.coverImageUrl}) center/cover`
+            : 'linear-gradient(135deg, #1a1a2e, #0f3460)',
+        }} />
+      )}
+      <div style={{ padding: 16 }}>
+        <div style={{
+          fontSize: 15, fontWeight: 500, color: '#eee', marginBottom: 8, lineHeight: 1.4,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+        }}>
+          {article.title}
+        </div>
+        <div style={{ fontSize: 12, color: '#666' }}>
+          {dayjs(article.publishedAt || article.createdAt).format('YYYY-MM-DD')}
+          {showViewCount && ` · ${article.viewCount} 次瀏覽`}
+        </div>
+      </div>
+    </Link>
   );
 }

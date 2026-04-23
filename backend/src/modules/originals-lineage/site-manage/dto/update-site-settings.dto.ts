@@ -244,6 +244,41 @@ export class UpdateSiteSettingsDto {
   @IsString()
   changelogPageTitle?: string;
 
+  @ApiPropertyOptional({ example: '掌握每一次改版的軌跡', description: '更新歷程頁副標題' })
+  @IsOptional()
+  @IsString()
+  changelogPageSubtitle?: string;
+
+  @ApiPropertyOptional({ example: 'timeline', description: '更新歷程頁佈局模式' })
+  @IsOptional()
+  @IsString()
+  changelogLayout?: 'magazine' | 'timeline' | 'masonry';
+
+  @ApiPropertyOptional({ default: 12, description: '每頁顯示數量' })
+  @IsOptional()
+  @IsNumber()
+  changelogPerPage?: number;
+
+  @ApiPropertyOptional({ example: 'newest', description: '預設排序方式' })
+  @IsOptional()
+  @IsString()
+  changelogDefaultSort?: 'newest' | 'popular' | 'pinned';
+
+  @ApiPropertyOptional({ default: true, description: '是否顯示封面圖' })
+  @IsOptional()
+  @IsBoolean()
+  changelogShowCover?: boolean;
+
+  @ApiPropertyOptional({ default: true, description: '是否顯示瀏覽數' })
+  @IsOptional()
+  @IsBoolean()
+  changelogShowViewCount?: boolean;
+
+  @ApiPropertyOptional({ default: false, description: '是否顯示搜尋欄' })
+  @IsOptional()
+  @IsBoolean()
+  changelogShowSearch?: boolean;
+
   // ─── Support Page Settings ────────────────────────────────
   @ApiPropertyOptional({ example: 'https://line.me/R/ti/p/@xxx', description: '官方 Line 連結' })
   @IsOptional()

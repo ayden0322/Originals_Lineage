@@ -144,6 +144,7 @@ export default function PublicHeader() {
   const mainNav = [
     { label: '首頁', path: '/public' },
     { label: '最新消息', path: '/public/news' },
+    { label: '更新歷程', path: '/public/changelog' },
     ...(reserveEnabled ? [{ label: '新兵報到', path: '/public/reserve' }] : []),
     { label: '禮包內容', path: '/public/packages' },
     { label: '掉落查詢', path: '/public/drops' },
