@@ -10,6 +10,7 @@ import type {
   CommissionSettlement,
   CommissionSettlementDetail,
   CommissionUnsettledPreview,
+  CommissionClanStatsResult,
   CommissionAgentRecords,
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
@@ -220,6 +221,20 @@ export async function listPlayerTransactions(
 export async function getUnsettledPreview(): Promise<CommissionUnsettledPreview> {
   const { data } = await apiClient.get<ApiResponse<CommissionUnsettledPreview>>(
     `${ADMIN}/settlements/preview`,
+  );
+  return data.data;
+}
+
+/**
+ * 血盟儲值統計（按期別聚合，血盟歸屬以儲值當下 snapshot 為準）
+ * periodKey 不傳 → 後端回傳最新一期
+ */
+export async function getCommissionClanStats(
+  periodKey?: string,
+): Promise<CommissionClanStatsResult> {
+  const { data } = await apiClient.get<ApiResponse<CommissionClanStatsResult>>(
+    `${ADMIN}/settlements/clan-stats`,
+    { params: periodKey ? { periodKey } : undefined },
   );
   return data.data;
 }

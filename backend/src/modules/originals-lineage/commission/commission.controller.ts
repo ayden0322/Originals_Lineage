@@ -277,6 +277,17 @@ export class AdminCommissionController {
     return this.settlement.getUnsettledPreview();
   }
 
+  /**
+   * 血盟儲值統計
+   * - period_key 不傳 → 回傳最新一期（連同 availablePeriods 供前端下拉）
+   * - 血盟歸屬以 commission_records.clan_id / clan_name 的 snapshot 為準
+   */
+  @Get('settlements/clan-stats')
+  @RequirePermission('module.originals.commission.view')
+  getClanStats(@Query('periodKey') periodKey?: string) {
+    return this.settlement.getClanStats({ periodKey: periodKey || undefined });
+  }
+
   @Get('settlements')
   @RequirePermission('module.originals.commission.view')
   listSettlements(@Query('agentId') agentId?: string) {

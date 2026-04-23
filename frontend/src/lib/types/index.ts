@@ -137,6 +137,38 @@ export interface WebsiteUser {
   createdAt: string;
   updatedAt: string;
   secondPasswordPlain?: string | null;
+  charName?: string | null;
+  clanName?: string | null;
+}
+
+export interface MemberOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  diamondAmount: number;
+}
+
+export interface MemberOrder {
+  id: string;
+  orderNumber: string;
+  totalAmount: number;
+  status: 'pending' | 'paid' | 'delivering' | 'completed' | 'failed' | 'refunded';
+  paymentTransactionId: string | null;
+  deliveryStatus: 'pending' | 'processing' | 'delivered' | 'failed';
+  createdAt: string;
+  items: MemberOrderItem[];
+}
+
+export interface MemberOrderList {
+  items: MemberOrder[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    totalPaid: number;
+    paidCount: number;
+  };
 }
 
 export interface PlayerProfile {
@@ -1052,6 +1084,35 @@ export interface CommissionUnsettledPreview {
     totalNetCommission: number;
   };
   items: CommissionUnsettledPreviewItem[];
+}
+
+export interface CommissionClanStatItem {
+  /** 血盟 id；null = 無血盟或查不到遊戲角色 */
+  clanId: number | null;
+  /** 血盟名稱 snapshot；null 時 UI 顯示「無血盟」 */
+  clanName: string | null;
+  /** 原始儲值金額（未扣退款） */
+  totalBaseAmount: number;
+  /** 已退款金額 */
+  refundedBaseAmount: number;
+  /** 淨儲值 = total - refunded */
+  netBaseAmount: number;
+  playerCount: number;
+  transactionCount: number;
+}
+
+export interface CommissionClanStatsResult {
+  periodKey: string;
+  availablePeriods: string[];
+  summary: {
+    totalClans: number;
+    totalBaseAmount: number;
+    totalRefundedBaseAmount: number;
+    totalNetBaseAmount: number;
+    totalPlayers: number;
+    totalTransactions: number;
+  };
+  items: CommissionClanStatItem[];
 }
 
 export interface CommissionSubordinateReport {

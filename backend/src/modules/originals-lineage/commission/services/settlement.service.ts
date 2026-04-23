@@ -34,6 +34,40 @@ export interface UnsettledPreviewAgentItem {
 }
 
 /**
+ * 血盟儲值統計：單一血盟聚合
+ */
+export interface ClanStatItem {
+  /** 血盟 id（snapshot at recharge）；null = 無血盟或查不到角色 */
+  clanId: number | null;
+  /** 血盟名稱（snapshot）；null 時 UI 顯示「無血盟」 */
+  clanName: string | null;
+  /** 該血盟這期原始儲值總額（未扣退款） */
+  totalBaseAmount: number;
+  /** 已退款的儲值金額（gross refunded base） */
+  refundedBaseAmount: number;
+  /** 淨儲值 = totalBaseAmount - refundedBaseAmount */
+  netBaseAmount: number;
+  /** 該期在此血盟儲值的獨立玩家數 */
+  playerCount: number;
+  /** 該期在此血盟的交易筆數（已 dedupe，不含同交易的 A/B 雙記錄） */
+  transactionCount: number;
+}
+
+export interface ClanStatsResult {
+  periodKey: string;
+  availablePeriods: string[];
+  summary: {
+    totalClans: number;
+    totalBaseAmount: number;
+    totalRefundedBaseAmount: number;
+    totalNetBaseAmount: number;
+    totalPlayers: number;
+    totalTransactions: number;
+  };
+  items: ClanStatItem[];
+}
+
+/**
  * 當期預估：全體聚合 + 每代理明細
  */
 export interface UnsettledPreviewResult {
@@ -415,6 +449,137 @@ export class SettlementService {
         periodStart: cur.periodStart,
         periodEnd: cur.periodEnd,
       },
+      summary,
+      items,
+    };
+  }
+
+  /**
+   * 血盟儲值統計（按 period 聚合）
+   *
+   * - clan_id / clan_name 是 commission_records 在儲值當下的 snapshot
+   * - level=1 過濾避免 Case 1 的 A/B 兩筆記錄重複計入交易金額（兩筆 base_amount 相同）
+   * - 退款沖銷比照 attribution.service 的 ref_adj LEFT JOIN 模式
+   * - 無血盟（clan_id / clan_name 皆 NULL）會合併成一行，UI 顯示「無血盟」
+   */
+  async getClanStats(params: {
+    periodKey?: string;
+  } = {}): Promise<ClanStatsResult> {
+    // 先取所有可選期別
+    const periodRows = await this.recordRepo
+      .createQueryBuilder('r')
+      .select('DISTINCT r.period_key', 'period_key')
+      .orderBy('r.period_key', 'DESC')
+      .getRawMany();
+    const availablePeriods = periodRows.map((p) => p.period_key as string);
+
+    // 無 period 指定時取最新的一期
+    const periodKey =
+      params.periodKey && availablePeriods.includes(params.periodKey)
+        ? params.periodKey
+        : (availablePeriods[0] ?? '');
+
+    if (!periodKey) {
+      return {
+        periodKey: '',
+        availablePeriods,
+        summary: {
+          totalClans: 0,
+          totalBaseAmount: 0,
+          totalRefundedBaseAmount: 0,
+          totalNetBaseAmount: 0,
+          totalPlayers: 0,
+          totalTransactions: 0,
+        },
+        items: [],
+      };
+    }
+
+    const rows = await this.recordRepo
+      .createQueryBuilder('cr')
+      // 退款沖銷：對齊該代理對該交易的 refund adjustment（per-agent unique）
+      .leftJoin(
+        'commission_settlement_adjustments',
+        'ref_adj',
+        `ref_adj.source_type = 'refund'
+         AND ref_adj.source_transaction_id = cr.transaction_id
+         AND EXISTS (
+           SELECT 1 FROM commission_settlements s2
+           WHERE s2.id = ref_adj.settlement_id AND s2.agent_id = cr.agent_id
+         )`,
+      )
+      .where('cr.period_key = :periodKey', { periodKey })
+      // level=1 避免 Case 1 同交易 A/B 雙記錄重複加總 base_amount
+      .andWhere('cr.level = 1')
+      .groupBy('cr.clan_id')
+      .addGroupBy('cr.clan_name')
+      .select([
+        'cr.clan_id AS clan_id',
+        'cr.clan_name AS clan_name',
+        'COALESCE(SUM(cr.base_amount), 0) AS total_base',
+        'COUNT(DISTINCT cr.player_id) AS player_count',
+        'COUNT(cr.id) AS tx_count',
+        `COALESCE(SUM(CASE WHEN ref_adj.id IS NOT NULL THEN cr.base_amount ELSE 0 END), 0) AS refunded_base`,
+      ])
+      .getRawMany();
+
+    const items: ClanStatItem[] = rows.map((r) => {
+      const totalBase = Number(r.total_base);
+      const refundedBase = Number(r.refunded_base);
+      return {
+        clanId: r.clan_id === null || r.clan_id === undefined ? null : Number(r.clan_id),
+        clanName: (r.clan_name as string | null) ?? null,
+        totalBaseAmount: Math.round(totalBase * 100) / 100,
+        refundedBaseAmount: Math.round(refundedBase * 100) / 100,
+        netBaseAmount: Math.round((totalBase - refundedBase) * 100) / 100,
+        playerCount: Number(r.player_count),
+        transactionCount: Number(r.tx_count),
+      };
+    });
+
+    // 排序：淨儲值 DESC；無血盟排最後
+    items.sort((a, b) => {
+      const aNull = a.clanId === null && a.clanName === null;
+      const bNull = b.clanId === null && b.clanName === null;
+      if (aNull !== bNull) return aNull ? 1 : -1;
+      return b.netBaseAmount - a.netBaseAmount;
+    });
+
+    const summary = items.reduce(
+      (acc, it) => {
+        acc.totalBaseAmount += it.totalBaseAmount;
+        acc.totalRefundedBaseAmount += it.refundedBaseAmount;
+        acc.totalNetBaseAmount += it.netBaseAmount;
+        acc.totalTransactions += it.transactionCount;
+        return acc;
+      },
+      {
+        totalClans: items.length,
+        totalBaseAmount: 0,
+        totalRefundedBaseAmount: 0,
+        totalNetBaseAmount: 0,
+        totalPlayers: 0,
+        totalTransactions: 0,
+      },
+    );
+    summary.totalBaseAmount = Math.round(summary.totalBaseAmount * 100) / 100;
+    summary.totalRefundedBaseAmount =
+      Math.round(summary.totalRefundedBaseAmount * 100) / 100;
+    summary.totalNetBaseAmount =
+      Math.round(summary.totalNetBaseAmount * 100) / 100;
+
+    // 玩家數：跨血盟去重（同玩家在 A B 兩個血盟都儲值會被計為 1 人）
+    const distinctPlayers = await this.recordRepo
+      .createQueryBuilder('cr')
+      .where('cr.period_key = :periodKey', { periodKey })
+      .andWhere('cr.level = 1')
+      .select('COUNT(DISTINCT cr.player_id)', 'cnt')
+      .getRawOne();
+    summary.totalPlayers = Number(distinctPlayers?.cnt ?? 0);
+
+    return {
+      periodKey,
+      availablePeriods,
       summary,
       items,
     };

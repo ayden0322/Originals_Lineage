@@ -22,6 +22,7 @@ import {
 @Index('idx_commission_records_settlement', ['settlementId'])
 @Index('idx_commission_records_period', ['periodKey'])
 @Index('idx_commission_records_agent_settlement', ['agentId', 'settlementId'])
+@Index('idx_commission_records_period_clan', ['periodKey', 'clanId'])
 export class CommissionRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -75,6 +76,18 @@ export class CommissionRecord {
 
   @Column({ name: 'paid_at', type: 'timestamp' })
   paidAt: Date;
+
+  /**
+   * 血盟歸屬 snapshot（儲值當下的角色所在血盟）
+   * - clan_id：遊戲庫 characters.ClanID；無血盟或查不到遊戲庫 → NULL
+   * - clan_name：遊戲庫 clan_data.clan_name；用來避免血盟改名後歷史資料錯亂
+   * - 既有資料由 backfill 腳本補上（以執行當下的血盟狀態為準）
+   */
+  @Column({ name: 'clan_id', type: 'int', nullable: true })
+  clanId: number | null;
+
+  @Column({ name: 'clan_name', type: 'varchar', length: 64, nullable: true })
+  clanName: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

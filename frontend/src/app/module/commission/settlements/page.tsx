@@ -39,6 +39,7 @@ import {
   confirmSettlement,
   markSettlementPaid,
   getUnsettledPreview,
+  getCommissionClanStats,
 } from '@/lib/api/commission';
 import type {
   CommissionAgentTreeNode,
@@ -46,6 +47,8 @@ import type {
   CommissionSettlementDetail,
   CommissionUnsettledPreview,
   CommissionUnsettledPreviewItem,
+  CommissionClanStatsResult,
+  CommissionClanStatItem,
 } from '@/lib/types';
 import AgentRecordsDrawer from './AgentRecordsDrawer';
 
@@ -72,6 +75,11 @@ export default function CommissionSettlementsPage() {
   // 當期預估
   const [preview, setPreview] = useState<CommissionUnsettledPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // 血盟統計
+  const [clanStats, setClanStats] = useState<CommissionClanStatsResult | null>(null);
+  const [clanStatsLoading, setClanStatsLoading] = useState(false);
+  const [clanPeriodKey, setClanPeriodKey] = useState<string | undefined>(undefined);
 
   // 訂單明細 Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -123,10 +131,25 @@ export default function CommissionSettlementsPage() {
     }
   }, []);
 
+  const fetchClanStats = useCallback(async (periodKey?: string) => {
+    setClanStatsLoading(true);
+    try {
+      const data = await getCommissionClanStats(periodKey);
+      setClanStats(data);
+      // 後端會回傳實際使用的 periodKey（第一次載入時是最新一期）
+      if (!periodKey && data.periodKey) setClanPeriodKey(data.periodKey);
+    } catch {
+      message.error('載入血盟統計失敗');
+    } finally {
+      setClanStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAgents();
     fetchPreview();
-  }, [fetchAgents, fetchPreview]);
+    fetchClanStats();
+  }, [fetchAgents, fetchPreview, fetchClanStats]);
 
   useEffect(() => {
     fetchList();
@@ -516,6 +539,199 @@ export default function CommissionSettlementsPage() {
     );
   };
 
+  const clanColumns: ColumnsType<CommissionClanStatItem> = [
+    {
+      title: '血盟',
+      key: 'clan',
+      render: (_, r) => {
+        const isNoClan = r.clanId === null && r.clanName === null;
+        if (isNoClan) {
+          return (
+            <Tooltip title="該玩家儲值當下不屬於任何血盟（或遊戲庫查不到角色）">
+              <Tag>無血盟</Tag>
+            </Tooltip>
+          );
+        }
+        return (
+          <Space>
+            <strong>{r.clanName}</strong>
+            {r.clanId !== null && (
+              <span style={{ color: '#999' }}>#{r.clanId}</span>
+            )}
+          </Space>
+        );
+      },
+    },
+    {
+      title: '玩家數',
+      dataIndex: 'playerCount',
+      width: 90,
+      align: 'right',
+    },
+    {
+      title: '交易筆數',
+      dataIndex: 'transactionCount',
+      width: 100,
+      align: 'right',
+    },
+    {
+      title: (
+        <Tooltip title="原始儲值總額（未扣退款）">
+          <span>儲值總額</span>
+        </Tooltip>
+      ),
+      dataIndex: 'totalBaseAmount',
+      width: 140,
+      align: 'right',
+      render: (v: number) => Number(v).toFixed(2),
+    },
+    {
+      title: (
+        <Tooltip title="該血盟下已退款的儲值金額">
+          <span>已退款</span>
+        </Tooltip>
+      ),
+      dataIndex: 'refundedBaseAmount',
+      width: 120,
+      align: 'right',
+      render: (v: number) => {
+        const n = Number(v);
+        if (n === 0) return <span style={{ color: '#999' }}>0.00</span>;
+        return <span style={{ color: '#cf1322' }}>-{n.toFixed(2)}</span>;
+      },
+    },
+    {
+      title: (
+        <Tooltip title="淨儲值 = 儲值總額 - 已退款">
+          <span>淨儲值</span>
+        </Tooltip>
+      ),
+      dataIndex: 'netBaseAmount',
+      width: 140,
+      align: 'right',
+      render: (v: number) => (
+        <strong style={{ color: '#3f8600' }}>{Number(v).toFixed(2)}</strong>
+      ),
+    },
+  ];
+
+  const renderClanStatsTab = () => {
+    const periods = clanStats?.availablePeriods ?? [];
+    const activePeriod = clanPeriodKey ?? clanStats?.periodKey ?? '';
+
+    return (
+      <>
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="info"
+          showIcon
+          message="血盟歸屬以「儲值當下」的血盟 snapshot 為準"
+          description="玩家換血盟後，既有儲值紀錄仍歸在舊血盟；新儲值才會記入新血盟。若同一玩家在兩個血盟都有儲值，兩個血盟都會各自計算。歷史資料由 backfill 腳本以執行當天的血盟狀態回填，不是精確的歷史快照。"
+        />
+
+        <Space style={{ marginBottom: 16 }}>
+          <span>期別：</span>
+          <Select
+            style={{ width: 160 }}
+            value={activePeriod || undefined}
+            placeholder="選擇期別"
+            onChange={(v) => {
+              setClanPeriodKey(v);
+              fetchClanStats(v);
+            }}
+            options={periods.map((p) => ({ label: p, value: p }))}
+            disabled={periods.length === 0}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchClanStats(activePeriod || undefined)}
+            loading={clanStatsLoading}
+          >
+            重新整理
+          </Button>
+        </Space>
+
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="血盟數"
+                value={clanStats?.summary.totalClans ?? 0}
+                suffix="個"
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="玩家數"
+                value={clanStats?.summary.totalPlayers ?? 0}
+                suffix="位"
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="交易筆數"
+                value={clanStats?.summary.totalTransactions ?? 0}
+                suffix="筆"
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="儲值總額"
+                value={clanStats?.summary.totalBaseAmount ?? 0}
+                precision={2}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="已退款"
+                value={clanStats?.summary.totalRefundedBaseAmount ?? 0}
+                precision={2}
+                valueStyle={{
+                  color:
+                    (clanStats?.summary.totalRefundedBaseAmount ?? 0) > 0
+                      ? '#cf1322'
+                      : undefined,
+                }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} md={4}>
+            <Card size="small">
+              <Statistic
+                title="淨儲值"
+                value={clanStats?.summary.totalNetBaseAmount ?? 0}
+                precision={2}
+                valueStyle={{ color: '#3f8600', fontWeight: 700 }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Table
+          scroll={{ x: 'max-content' }}
+          rowKey={(r) =>
+            r.clanId !== null ? `id-${r.clanId}` : `name-${r.clanName ?? 'none'}`
+          }
+          loading={clanStatsLoading}
+          columns={clanColumns}
+          dataSource={clanStats?.items ?? []}
+          pagination={{ pageSize: 20 }}
+          locale={{
+            emptyText: <Empty description="此期別沒有血盟儲值紀錄" />,
+          }}
+        />
+      </>
+    );
+  };
+
   const renderHistoryTab = () => (
     <>
       <Space style={{ marginBottom: 16 }}>
@@ -559,6 +775,11 @@ export default function CommissionSettlementsPage() {
             key: 'preview',
             label: '當期預估',
             children: renderPreviewTab(),
+          },
+          {
+            key: 'clan',
+            label: '血盟統計',
+            children: renderClanStatsTab(),
           },
           {
             key: 'history',

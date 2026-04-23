@@ -8,6 +8,7 @@ import { RateService } from './rate.service';
 import { AttributionService } from './attribution.service';
 import { CommissionSettingsService } from './commission-settings.service';
 import { getCurrentPeriod } from '../utils/period.util';
+import { GameDbService } from '../../game-db/game-db.service';
 
 /**
  * 儲值成功事件 payload（由外部儲值模組發出）
@@ -56,7 +57,38 @@ export class CommissionEngineService {
     private readonly attribution: AttributionService,
     private readonly settings: CommissionSettingsService,
     private readonly dataSource: DataSource,
+    private readonly gameDb: GameDbService,
   ) {}
+
+  /**
+   * 取玩家儲值當下的血盟 snapshot
+   * - 一帳號一角色，查不到或無血盟 → 皆回 null（血盟統計頁把 NULL 視為「無血盟」）
+   * - 遊戲庫斷線時 gameDb 會優雅回空 Map，這裡也回 null，不阻斷分潤寫入
+   */
+  private async resolvePlayerClanSnapshot(
+    playerId: string,
+  ): Promise<{ clanId: number | null; clanName: string | null }> {
+    try {
+      const rows = (await this.dataSource.query(
+        'SELECT game_account_name FROM website_users WHERE id = $1',
+        [playerId],
+      )) as Array<{ game_account_name: string | null }>;
+      const accountName = rows[0]?.game_account_name ?? null;
+      if (!accountName) return { clanId: null, clanName: null };
+
+      const map = await this.gameDb.findCharacterClanByAccounts([accountName]);
+      const hit = map.get(accountName);
+      return {
+        clanId: hit?.clanId ?? null,
+        clanName: hit?.clanName ?? null,
+      };
+    } catch (err) {
+      this.logger.warn(
+        `血盟 snapshot 查詢失敗 player=${playerId}: ${(err as Error).message}`,
+      );
+      return { clanId: null, clanName: null };
+    }
+  }
 
   /**
    * 事件監聽入口：外部儲值模組完成交易後 emit 'commission.recharge.paid'
@@ -101,9 +133,12 @@ export class CommissionEngineService {
     const settlementDay = await this.settings.get<number>('settlement_day', 5);
     const periodKey = getCurrentPeriod(event.paidAt, settlementDay).periodKey;
 
+    // 儲值當下血盟 snapshot（寫入後不再變動，血盟改名/換血盟都不影響歷史）
+    const clanSnap = await this.resolvePlayerClanSnapshot(event.playerId);
+
     // ─── Case 3: 歸屬 SYSTEM（無歸屬） ─────────────────
     if (owner.isSystem) {
-      await this.writeSystemRecord(event, owner.id, periodKey);
+      await this.writeSystemRecord(event, owner.id, periodKey, clanSnap);
       return;
     }
 
@@ -117,7 +152,7 @@ export class CommissionEngineService {
 
     if (ownerSuspended || parentSuspended) {
       const systemId = await this.attribution.getSystemAgentId();
-      await this.writeSystemRecord(event, systemId, periodKey);
+      await this.writeSystemRecord(event, systemId, periodKey, clanSnap);
       return;
     }
 
@@ -145,6 +180,8 @@ export class CommissionEngineService {
             periodKey,
             settlementId: null,
             paidAt: event.paidAt,
+            clanId: clanSnap.clanId,
+            clanName: clanSnap.clanName,
           },
           {
             transactionId: event.transactionId,
@@ -158,6 +195,8 @@ export class CommissionEngineService {
             periodKey,
             settlementId: null,
             paidAt: event.paidAt,
+            clanId: clanSnap.clanId,
+            clanName: clanSnap.clanName,
           },
         ]);
       });
@@ -185,6 +224,8 @@ export class CommissionEngineService {
       periodKey,
       settlementId: null,
       paidAt: event.paidAt,
+      clanId: clanSnap.clanId,
+      clanName: clanSnap.clanName,
     });
 
     this.logger.log(
@@ -197,6 +238,7 @@ export class CommissionEngineService {
     event: RechargePaidEvent,
     systemAgentId: string,
     periodKey: string,
+    clanSnap: { clanId: number | null; clanName: string | null },
   ) {
     await this.recordRepo.insert({
       transactionId: event.transactionId,
@@ -210,6 +252,8 @@ export class CommissionEngineService {
       periodKey,
       settlementId: null,
       paidAt: event.paidAt,
+      clanId: clanSnap.clanId,
+      clanName: clanSnap.clanName,
     });
     this.logger.log(`分潤 tx=${event.transactionId} amount=${event.amount} → SYSTEM`);
   }

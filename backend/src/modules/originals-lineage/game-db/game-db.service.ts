@@ -362,16 +362,21 @@ export class GameDbService implements OnModuleInit {
   }
 
   /**
-   * 批次查角色 + 血盟名稱（供玩家歸屬列表顯示）
-   * 一個遊戲帳號只有一個角色，回傳 Map<account_name, { charName, clanName }>
+   * 批次查角色 + 血盟 id/名稱（供玩家歸屬列表顯示、分潤血盟 snapshot 用）
+   * 一個遊戲帳號只有一個角色，回傳 Map<account_name, { charName, clanId, clanName }>
    * 遊戲庫未連線時回傳空 Map（不拋錯，讓上游優雅降級）
    */
   async findCharacterClanByAccounts(
     accountNames: string[],
-  ): Promise<Map<string, { charName: string; clanName: string | null }>> {
+  ): Promise<
+    Map<
+      string,
+      { charName: string; clanId: number | null; clanName: string | null }
+    >
+  > {
     const result = new Map<
       string,
-      { charName: string; clanName: string | null }
+      { charName: string; clanId: number | null; clanName: string | null }
     >();
     if (!this.isConnected || accountNames.length === 0) return result;
 
@@ -379,7 +384,7 @@ export class GameDbService implements OnModuleInit {
     const placeholders = accountNames.map(() => '?').join(',');
     try {
       const rows = (await ds.query(
-        `SELECT c.account_name, c.char_name, cl.clan_name
+        `SELECT c.account_name, c.char_name, c.ClanID AS clan_id, cl.clan_name
          FROM characters c
          LEFT JOIN clan_data cl ON cl.clan_id = c.ClanID
          WHERE c.account_name IN (${placeholders})`,
@@ -387,12 +392,19 @@ export class GameDbService implements OnModuleInit {
       )) as Array<{
         account_name: string;
         char_name: string;
+        clan_id: number | null;
         clan_name: string | null;
       }>;
 
       for (const row of rows) {
+        const rawClanId = row.clan_id;
+        const normalizedClanId =
+          rawClanId === null || rawClanId === undefined || Number(rawClanId) <= 0
+            ? null
+            : Number(rawClanId);
         result.set(row.account_name, {
           charName: row.char_name,
+          clanId: normalizedClanId,
           clanName: row.clan_name ?? null,
         });
       }
@@ -402,6 +414,31 @@ export class GameDbService implements OnModuleInit {
       );
     }
     return result;
+  }
+
+  /**
+   * 反查：依角色名 / 血盟名模糊搜尋 → 回傳對應的 account_name 清單
+   * 供會員管理頁的關鍵字搜尋使用（遊戲庫未連線時回傳空陣列）
+   */
+  async findAccountNamesByCharOrClan(keyword: string): Promise<string[]> {
+    if (!this.isConnected || !keyword.trim()) return [];
+    const ds = this.dataSource!;
+    try {
+      const rows = (await ds.query(
+        `SELECT DISTINCT c.account_name
+           FROM characters c
+           LEFT JOIN clan_data cl ON cl.clan_id = c.ClanID
+          WHERE c.char_name LIKE ? OR cl.clan_name LIKE ?
+          LIMIT 500`,
+        [`%${keyword}%`, `%${keyword}%`],
+      )) as Array<{ account_name: string }>;
+      return rows.map((r) => r.account_name).filter(Boolean);
+    } catch (err) {
+      this.logger.warn(
+        `findAccountNamesByCharOrClan failed: ${(err as Error).message}`,
+      );
+      return [];
+    }
   }
 
   // ─── Shop / 商城專用 ─────────────────────────────────────
