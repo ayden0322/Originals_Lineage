@@ -254,6 +254,20 @@ export default function ProfilePage() {
                 {profile.isActive ? '啟用' : '停用'}
               </Tag>
             </Descriptions.Item>
+            <Descriptions.Item label="角色名稱">
+              {profile.charName ? (
+                <Text strong>{profile.charName}</Text>
+              ) : (
+                <Text type="secondary">尚無角色</Text>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="所屬血盟">
+              {profile.clanName ? (
+                <Tag color="blue">{profile.clanName}</Tag>
+              ) : (
+                <Text type="secondary">無血盟</Text>
+              )}
+            </Descriptions.Item>
             <Descriptions.Item label="最後登入">
               {profile.lastLoginAt
                 ? dayjs(profile.lastLoginAt).format('YYYY-MM-DD HH:mm')

@@ -551,6 +551,13 @@ export class MemberService {
     if (!user) {
       throw new NotFoundException('使用者不存在');
     }
+
+    // 遊戲庫未連線時會回空 Map，charName/clanName 會是 null（降級）
+    const charClanMap = await this.gameDbService.findCharacterClanByAccounts(
+      [user.gameAccountName],
+    );
+    const hit = charClanMap.get(user.gameAccountName);
+
     return {
       id: user.id,
       gameAccountName: user.gameAccountName,
@@ -558,6 +565,8 @@ export class MemberService {
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
+      charName: hit?.charName ?? null,
+      clanName: hit?.clanName ?? null,
     };
   }
 

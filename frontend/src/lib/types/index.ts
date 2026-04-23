@@ -178,6 +178,8 @@ export interface PlayerProfile {
   isActive: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  charName: string | null;
+  clanName: string | null;
 }
 
 export interface CheckGameAccountResult {
