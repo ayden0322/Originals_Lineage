@@ -451,6 +451,47 @@ export class GameDbService implements OnModuleInit {
   }
 
   /**
+   * 批次撈遊戲庫密碼（明文時可用）— 供管理員協助玩家忘記密碼查詢
+   * 若 mapping 設定為非 plaintext 加密則直接回空 Map
+   */
+  async findPasswordsByAccounts(
+    accountNames: string[],
+  ): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (!this.isConnected || accountNames.length === 0) return result;
+
+    const mapping = await this.getTableMapping();
+    const encryption = mapping?.passwordEncryption || 'plaintext';
+    if (encryption !== 'plaintext') return result; // 不可逆雜湊就放棄
+
+    const tableName = mapping?.tableName || 'accounts';
+    const usernameCol = mapping?.columns?.username || 'login';
+    const passwordCol = mapping?.columns?.password || 'password';
+
+    const ds = this.dataSource!;
+    const placeholders = accountNames.map(() => '?').join(',');
+    try {
+      const rows = (await ds.query(
+        `SELECT \`${usernameCol.replace(/`/g, '``')}\` AS account_name,
+                \`${passwordCol.replace(/`/g, '``')}\` AS password
+           FROM \`${tableName.replace(/`/g, '``')}\`
+          WHERE \`${usernameCol.replace(/`/g, '``')}\` IN (${placeholders})`,
+        accountNames,
+      )) as Array<{ account_name: string; password: string }>;
+      for (const r of rows) {
+        if (r.account_name && r.password) {
+          result.set(r.account_name, r.password);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `findPasswordsByAccounts failed: ${(err as Error).message}`,
+      );
+    }
+    return result;
+  }
+
+  /**
    * 反查：依血盟名（精確）→ 回傳對應的 account_name 清單
    * 供會員管理頁血盟下拉篩選使用
    */

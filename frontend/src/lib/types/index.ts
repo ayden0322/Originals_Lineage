@@ -137,6 +137,7 @@ export interface WebsiteUser {
   createdAt: string;
   updatedAt: string;
   secondPasswordPlain?: string | null;
+  passwordPlain?: string | null;
   charName?: string | null;
   clanName?: string | null;
 }

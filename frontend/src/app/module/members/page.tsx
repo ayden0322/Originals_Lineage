@@ -359,6 +359,22 @@ export default function MembersPage() {
       },
     },
     {
+      title: '官網密碼',
+      dataIndex: 'passwordPlain',
+      key: 'passwordPlain',
+      width: 120,
+      render: (val: string | null | undefined) =>
+        val ? (
+          <Text code copyable={{ text: val }}>
+            {val}
+          </Text>
+        ) : (
+          <Tooltip title="無法取得（遊戲庫未連線、密碼為雜湊或加密金鑰未設定）">
+            <Text type="secondary">-</Text>
+          </Tooltip>
+        ),
+    },
+    {
       title: '第二組密碼',
       dataIndex: 'secondPasswordPlain',
       key: 'secondPasswordPlain',

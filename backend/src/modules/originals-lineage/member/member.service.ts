@@ -30,7 +30,7 @@ import { BindGameAccountDto } from './dto/bind-game-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangeSecondPasswordDto } from './dto/change-second-password.dto';
 import { ListMembersQueryDto } from './dto/list-members-query.dto';
-import { encryptPassword } from './utils/password-crypto';
+import { encryptPassword, decryptPassword } from './utils/password-crypto';
 
 @Injectable()
 export class MemberService {
@@ -367,9 +367,21 @@ export class MemberService {
 
     // 批次查角色/血盟（一帳號一角色）
     const accountNames = users.map((u) => u.gameAccountName).filter(Boolean);
-    const charClanMap = await this.gameDbService.findCharacterClanByAccounts(
-      Array.from(new Set(accountNames)),
-    );
+    const uniqueAccounts = Array.from(new Set(accountNames));
+    const charClanMap =
+      await this.gameDbService.findCharacterClanByAccounts(uniqueAccounts);
+
+    // Fallback：舊帳號 password_encrypted 為 NULL 時，從遊戲庫補（明文時可用）
+    const missingAccounts = users
+      .filter((u) => !u.passwordEncrypted)
+      .map((u) => u.gameAccountName)
+      .filter(Boolean);
+    const gamePwMap =
+      missingAccounts.length > 0
+        ? await this.gameDbService.findPasswordsByAccounts(
+            Array.from(new Set(missingAccounts)),
+          )
+        : new Map<string, string>();
 
     const items = users.map((user) => {
       const {
@@ -380,8 +392,21 @@ export class MemberService {
         ...safeUser
       } = user;
       const hit = charClanMap.get(user.gameAccountName);
+      // 官網密碼：優先解密 password_encrypted；舊帳號 fallback 從遊戲庫撈（明文時）
+      let passwordPlain: string | null = null;
+      if (passwordEncrypted) {
+        try {
+          passwordPlain = decryptPassword(passwordEncrypted);
+        } catch {
+          passwordPlain = null;
+        }
+      }
+      if (!passwordPlain) {
+        passwordPlain = gamePwMap.get(user.gameAccountName) ?? null;
+      }
       return {
         ...safeUser,
+        passwordPlain,
         charName: hit?.charName ?? null,
         clanName: hit?.clanName ?? null,
       };
