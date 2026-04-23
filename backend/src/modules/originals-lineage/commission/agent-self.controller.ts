@@ -225,12 +225,14 @@ export class AgentSelfController {
     @Req() req: Request,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('joinedMonth') joinedMonth?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
     return this.report.getMyPlayersList(this.getMe(req).id, {
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      joinedMonth,
       limit: limit ? Number(limit) : undefined,
       offset: offset ? Number(offset) : undefined,
     });

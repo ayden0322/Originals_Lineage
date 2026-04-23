@@ -10,6 +10,9 @@ import {
   Tag,
   message,
   Alert,
+  Statistic,
+  Row,
+  Col,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ReloadOutlined } from '@ant-design/icons';
@@ -28,8 +31,10 @@ const SOURCE_LABEL: Record<CommissionMyPlayerItem['linkedSource'], { text: strin
 
 export default function AgentPlayersPage() {
   const [list, setList] = useState<CommissionMyPlayerItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [joinedMonth, setJoinedMonth] = useState<Dayjs | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
 
@@ -39,16 +44,18 @@ export default function AgentPlayersPage() {
       const data = await agentMyPlayers({
         from: range?.[0]?.toISOString(),
         to: range?.[1]?.toISOString(),
+        joinedMonth: joinedMonth ? joinedMonth.format('YYYY-MM') : undefined,
         limit: pageSize,
         offset: (page - 1) * pageSize,
       });
-      setList(data);
+      setList(data.items);
+      setTotal(data.total);
     } catch {
       message.error('載入失敗');
     } finally {
       setLoading(false);
     }
-  }, [range, page, pageSize]);
+  }, [range, joinedMonth, page, pageSize]);
 
   useEffect(() => {
     fetch();
@@ -123,7 +130,27 @@ export default function AgentPlayersPage() {
         message="顯示透過你的推廣連結/QR code 註冊、或被歸屬到你（及旗下子代理）名下的所有玩家。"
         description="玩家帳號已遮罩（僅顯示首個英文字母與末位數字）；尚未消費的玩家累積儲值為 0。"
       />
-      <Space style={{ marginBottom: 16 }}>
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={8}>
+          <Card size="small">
+            <Statistic
+              title={joinedMonth ? `${joinedMonth.format('YYYY-MM')} 加入玩家數` : '玩家總數'}
+              value={total}
+              suffix="位"
+            />
+          </Card>
+        </Col>
+      </Row>
+      <Space style={{ marginBottom: 16 }} wrap>
+        <DatePicker
+          picker="month"
+          placeholder="加入月份"
+          value={joinedMonth}
+          onChange={(v) => {
+            setJoinedMonth(v);
+            setPage(1);
+          }}
+        />
         <RangePicker
           showTime
           placeholder={['消費起始', '消費結束']}
@@ -146,12 +173,9 @@ export default function AgentPlayersPage() {
           current: page,
           pageSize,
           onChange: setPage,
-          // 後端目前不回 total，用簡化分頁（有滿頁就猜還有下一頁）
-          total:
-            list.length === pageSize
-              ? page * pageSize + 1
-              : (page - 1) * pageSize + list.length,
+          total,
           showSizeChanger: false,
+          showTotal: (t) => `共 ${t} 位玩家`,
         }}
       />
     </Card>

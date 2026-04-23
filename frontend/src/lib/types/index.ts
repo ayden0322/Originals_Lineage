@@ -1247,6 +1247,11 @@ export interface CommissionMyPlayerItem {
   agentId: string;
 }
 
+export interface CommissionMyPlayersResponse {
+  items: CommissionMyPlayerItem[];
+  total: number;
+}
+
 export interface CommissionAgentSelf {
   id: string;
   code: string;

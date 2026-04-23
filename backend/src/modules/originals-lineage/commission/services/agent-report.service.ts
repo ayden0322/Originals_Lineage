@@ -232,7 +232,13 @@ export class AgentReportService {
    */
   async getMyPlayersList(
     agentId: string,
-    options: { from?: Date; to?: Date; limit?: number; offset?: number } = {},
+    options: {
+      from?: Date;
+      to?: Date;
+      joinedMonth?: string; // YYYY-MM，以 pa.linked_at 為準
+      limit?: number;
+      offset?: number;
+    } = {},
   ) {
     const me = await this.agentRepo.findOne({ where: { id: agentId } });
     if (!me) throw new ForbiddenException();
@@ -247,6 +253,15 @@ export class AgentReportService {
     const limit = options.limit ?? 50;
     const offset = options.offset ?? 0;
 
+    // 解析加入月份 → [joinedFrom, joinedTo)
+    let joinedFrom: Date | undefined;
+    let joinedTo: Date | undefined;
+    if (options.joinedMonth && /^\d{4}-\d{2}$/.test(options.joinedMonth)) {
+      const [y, m] = options.joinedMonth.split('-').map(Number);
+      joinedFrom = new Date(Date.UTC(y, m - 1, 1));
+      joinedTo = new Date(Date.UTC(y, m, 1));
+    }
+
     // LEFT JOIN commission_records：沒消費的玩家聚合值會是 NULL → 用 COALESCE 歸零
     // 條件 cr.agent_id = pa.agent_id 確保只算該代理自己領到的分潤，不會混到上下線
     const qb = this.attributionRepo
@@ -259,8 +274,16 @@ export class AgentReportService {
           (options.from ? ' AND cr.paid_at >= :from' : '') +
           (options.to ? ' AND cr.paid_at < :to' : ''),
       )
-      .where('pa.agent_id IN (:...ids)', { ids })
-      .groupBy('pa.player_id')
+      .where('pa.agent_id IN (:...ids)', { ids });
+
+    if (joinedFrom && joinedTo) {
+      qb.andWhere('pa.linked_at >= :joinedFrom AND pa.linked_at < :joinedTo', {
+        joinedFrom,
+        joinedTo,
+      });
+    }
+
+    qb.groupBy('pa.player_id')
       .addGroupBy('pa.agent_id')
       .addGroupBy('pa.linked_at')
       .addGroupBy('pa.linked_source')
@@ -283,9 +306,24 @@ export class AgentReportService {
     if (options.from) qb.setParameter('from', options.from);
     if (options.to) qb.setParameter('to', options.to);
 
+    // 總筆數：以加入月份為主的玩家數（不受 cr.paid_at 範圍影響，計算的是符合加入條件的玩家總數）
+    const countQb = this.attributionRepo
+      .createQueryBuilder('pa')
+      .where('pa.agent_id IN (:...ids)', { ids });
+    if (joinedFrom && joinedTo) {
+      countQb.andWhere('pa.linked_at >= :joinedFrom AND pa.linked_at < :joinedTo', {
+        joinedFrom,
+        joinedTo,
+      });
+    }
+    const totalRaw = await countQb
+      .select('COUNT(DISTINCT pa.player_id)', 'cnt')
+      .getRawOne<{ cnt: string }>();
+    const total = Number(totalRaw?.cnt ?? 0);
+
     const rows = await qb.getRawMany();
 
-    return rows.map((row) => ({
+    const items = rows.map((row) => ({
       playerId: row.player_id,
       gameAccountMasked: this.maskAccountName(row.game_account_name),
       linkedAt: row.linked_at,
@@ -296,6 +334,8 @@ export class AgentReportService {
       lastPaidAt: row.last_paid_at,
       agentId: row.agent_id,
     }));
+
+    return { items, total };
   }
 
   /**

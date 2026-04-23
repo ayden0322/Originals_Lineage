@@ -16,7 +16,7 @@ import type {
   CommissionCurrentPeriodSummary,
   CommissionSubordinateReport,
   CommissionPlayerTransaction,
-  CommissionMyPlayerItem,
+  CommissionMyPlayersResponse,
   CommissionAttributionListItem,
   CommissionAgentSelf,
   AgentLoginResponse,
@@ -440,10 +440,11 @@ export async function agentExportSettlement(id: string): Promise<Blob> {
 export async function agentMyPlayers(params?: {
   from?: string;
   to?: string;
+  joinedMonth?: string;
   limit?: number;
   offset?: number;
-}): Promise<CommissionMyPlayerItem[]> {
-  const { data } = await apiClient.get<ApiResponse<CommissionMyPlayerItem[]>>(
+}): Promise<CommissionMyPlayersResponse> {
+  const { data } = await apiClient.get<ApiResponse<CommissionMyPlayersResponse>>(
     `${AGENT}/me/players`,
     { params },
   );
