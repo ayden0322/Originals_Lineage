@@ -326,7 +326,7 @@ export class MemberService {
       qb.andWhere('u.created_at < :rTo', { rTo: query.registeredTo });
     }
 
-    // 關鍵字：先比主庫欄位；若可能匹配角色/血盟，反查遊戲庫取得帳號清單後 union
+    // 關鍵字：先比主庫欄位；若可能匹配角色名，反查遊戲庫取得帳號清單後 union
     if (keyword) {
       const gameAccountMatches =
         await this.gameDbService.findAccountNamesByCharOrClan(keyword);
@@ -344,6 +344,19 @@ export class MemberService {
           }
         }),
       );
+    }
+
+    // 血盟篩選（精確）：反查遊戲庫拿到帳號清單後限定範圍
+    if (query.clanName) {
+      const clanAccounts =
+        await this.gameDbService.findAccountNamesByClan(query.clanName);
+      if (clanAccounts.length === 0) {
+        // 該血盟無人 → 直接回空
+        return { items: [], total: 0, page, limit, totalPages: 0 };
+      }
+      qb.andWhere('u.game_account_name IN (:...clanAccts)', {
+        clanAccts: clanAccounts,
+      });
     }
 
     qb.orderBy('u.created_at', 'DESC')
@@ -381,6 +394,12 @@ export class MemberService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  // ─── Admin: List Clans (for filter dropdown) ──────────────────
+
+  async listClans() {
+    return this.gameDbService.findAllClans();
   }
 
   // ─── Admin: Member Recharge / Order History ────────────────────

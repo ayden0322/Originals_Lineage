@@ -417,6 +417,64 @@ export class GameDbService implements OnModuleInit {
   }
 
   /**
+   * 列出所有血盟（含成員人數）— 供前端下拉選單使用
+   * 只回傳目前有角色掛在底下的血盟，避免列出空殼血盟
+   */
+  async findAllClans(): Promise<
+    Array<{ clanId: number; clanName: string; memberCount: number }>
+  > {
+    if (!this.isConnected) return [];
+    const ds = this.dataSource!;
+    try {
+      const rows = (await ds.query(
+        `SELECT cl.clan_id AS clan_id,
+                cl.clan_name AS clan_name,
+                COUNT(c.account_name) AS member_count
+           FROM clan_data cl
+           INNER JOIN characters c ON c.ClanID = cl.clan_id
+          GROUP BY cl.clan_id, cl.clan_name
+          ORDER BY cl.clan_name ASC`,
+      )) as Array<{
+        clan_id: number;
+        clan_name: string;
+        member_count: number | string;
+      }>;
+      return rows.map((r) => ({
+        clanId: Number(r.clan_id),
+        clanName: r.clan_name,
+        memberCount: Number(r.member_count),
+      }));
+    } catch (err) {
+      this.logger.warn(`findAllClans failed: ${(err as Error).message}`);
+      return [];
+    }
+  }
+
+  /**
+   * 反查：依血盟名（精確）→ 回傳對應的 account_name 清單
+   * 供會員管理頁血盟下拉篩選使用
+   */
+  async findAccountNamesByClan(clanName: string): Promise<string[]> {
+    if (!this.isConnected || !clanName) return [];
+    const ds = this.dataSource!;
+    try {
+      const rows = (await ds.query(
+        `SELECT DISTINCT c.account_name
+           FROM characters c
+           INNER JOIN clan_data cl ON cl.clan_id = c.ClanID
+          WHERE cl.clan_name = ?`,
+        [clanName],
+      )) as Array<{ account_name: string }>;
+      return rows.map((r) => r.account_name).filter(Boolean);
+    } catch (err) {
+      this.logger.warn(
+        `findAccountNamesByClan failed: ${(err as Error).message}`,
+      );
+      return [];
+    }
+  }
+
+  /**
    * 反查：依角色名 / 血盟名模糊搜尋 → 回傳對應的 account_name 清單
    * 供會員管理頁的關鍵字搜尋使用（遊戲庫未連線時回傳空陣列）
    */

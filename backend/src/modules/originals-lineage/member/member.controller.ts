@@ -41,6 +41,12 @@ export class MemberController {
     return this.memberService.findAllMembers(query);
   }
 
+  @Get('clans')
+  @RequirePermission('module.originals.members.view')
+  listClans() {
+    return this.memberService.listClans();
+  }
+
   @Get(':id/orders')
   @RequirePermission('module.originals.members.view')
   getMemberOrders(

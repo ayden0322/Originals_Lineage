@@ -24,10 +24,15 @@ export class ListMembersQueryDto {
   @Min(1)
   limit?: number = 20;
 
-  @ApiPropertyOptional({ description: '關鍵字：遊戲帳號 / Email / 顯示名稱 / 角色名 / 血盟名' })
+  @ApiPropertyOptional({ description: '關鍵字：遊戲帳號 / Email / 顯示名稱 / 角色名' })
   @IsOptional()
   @IsString()
   keyword?: string;
+
+  @ApiPropertyOptional({ description: '血盟名（精確匹配，由下拉選單帶入）' })
+  @IsOptional()
+  @IsString()
+  clanName?: string;
 
   @ApiPropertyOptional({ description: '帳號狀態：true=啟用, false=停用' })
   @IsOptional()

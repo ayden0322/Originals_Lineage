@@ -32,8 +32,10 @@ import dayjs, { Dayjs } from 'dayjs';
 import {
   getMembers,
   getMemberOrders,
+  getMemberClans,
   adminResetSecondPassword,
   getSecondPasswordLogs,
+  type MemberClanOption,
 } from '@/lib/api/members';
 import type {
   WebsiteUser,
@@ -70,6 +72,8 @@ export default function MembersPage() {
   const [registeredRange, setRegisteredRange] = useState<
     [Dayjs | null, Dayjs | null] | null
   >(null);
+  const [clanName, setClanName] = useState<string | undefined>();
+  const [clanOptions, setClanOptions] = useState<MemberClanOption[]>([]);
 
   // Reset second password modal
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -103,6 +107,7 @@ export default function MembersPage() {
         isActive,
         registeredFrom: registeredRange?.[0]?.toISOString(),
         registeredTo: registeredRange?.[1]?.toISOString(),
+        clanName,
       });
       setData(res.items);
       setTotal(res.total);
@@ -111,11 +116,20 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, isActive, registeredRange]);
+  }, [page, pageSize, keyword, isActive, registeredRange, clanName]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 血盟下拉選項：頁面載入時打一次，後續血盟新增也會即時反映
+  useEffect(() => {
+    getMemberClans()
+      .then(setClanOptions)
+      .catch(() => {
+        /* 遊戲庫離線時 silent fail，下拉就空著 */
+      });
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
@@ -126,6 +140,7 @@ export default function MembersPage() {
     setKeyword('');
     setIsActive(undefined);
     setRegisteredRange(null);
+    setClanName(undefined);
     setPage(1);
   };
 
@@ -418,13 +433,30 @@ export default function MembersPage() {
       <Card size="small" style={{ marginTop: 16 }}>
         <Space wrap>
           <Input
-            placeholder="搜尋：帳號 / Email / 角色 / 血盟"
+            placeholder="搜尋：帳號 / Email / 角色"
             prefix={<SearchOutlined />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onPressEnter={handleSearch}
-            style={{ width: 260 }}
+            style={{ width: 240 }}
             allowClear
+          />
+          <Select
+            placeholder="血盟"
+            style={{ width: 200 }}
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            value={clanName}
+            onChange={(v) => {
+              setClanName(v);
+              setPage(1);
+            }}
+            options={clanOptions.map((c) => ({
+              label: `${c.clanName}（${c.memberCount}）`,
+              value: c.clanName,
+            }))}
+            notFoundContent="尚無血盟資料"
           />
           <Select
             placeholder="帳號狀態"

@@ -16,6 +16,20 @@ export interface GetMembersParams {
   isActive?: boolean;
   registeredFrom?: string;
   registeredTo?: string;
+  clanName?: string;
+}
+
+export interface MemberClanOption {
+  clanId: number;
+  clanName: string;
+  memberCount: number;
+}
+
+export async function getMemberClans(): Promise<MemberClanOption[]> {
+  const { data } = await apiClient.get<ApiResponse<MemberClanOption[]>>(
+    '/modules/originals/members/clans',
+  );
+  return data.data;
 }
 
 export async function getMembers(
@@ -29,6 +43,7 @@ export async function getMembers(
   if (params.isActive !== undefined) query.isActive = String(params.isActive);
   if (params.registeredFrom) query.registeredFrom = params.registeredFrom;
   if (params.registeredTo) query.registeredTo = params.registeredTo;
+  if (params.clanName) query.clanName = params.clanName;
 
   const { data } = await apiClient.get<ApiResponse<PaginatedResponse<WebsiteUser>>>(
     '/modules/originals/members',
