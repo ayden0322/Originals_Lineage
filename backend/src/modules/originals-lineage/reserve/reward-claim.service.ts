@@ -96,7 +96,7 @@ export class RewardClaimService {
   // ─── Admin: 查詢發放狀況 ────────────────────────────────────────
 
   /**
-   * 里程碑發放總覽：每個里程碑有多少 pending / sent / failed
+   * 里程碑發放總覽：每個里程碑有多少 pending / processing / sent / failed
    */
   async getDistributionSummary(): Promise<
     Array<{
@@ -104,6 +104,7 @@ export class RewardClaimService {
       rewardName: string;
       threshold: number;
       pending: number;
+      processing: number;
       sent: number;
       failed: number;
       total: number;
@@ -122,31 +123,38 @@ export class RewardClaimService {
       .addGroupBy('c.status')
       .getRawMany<{ milestoneId: string; status: RewardClaimStatus; count: string }>();
 
-    const byMilestone = new Map<
-      string,
-      { pending: number; sent: number; failed: number }
-    >();
+    type StatusCounts = {
+      pending: number;
+      processing: number;
+      sent: number;
+      failed: number;
+    };
+    const emptyCounts = (): StatusCounts => ({
+      pending: 0,
+      processing: 0,
+      sent: 0,
+      failed: 0,
+    });
+
+    const byMilestone = new Map<string, StatusCounts>();
 
     for (const row of rows) {
-      const entry = byMilestone.get(row.milestoneId) ?? {
-        pending: 0,
-        sent: 0,
-        failed: 0,
-      };
+      const entry = byMilestone.get(row.milestoneId) ?? emptyCounts();
       entry[row.status] = parseInt(row.count, 10);
       byMilestone.set(row.milestoneId, entry);
     }
 
     return milestones.map((m) => {
-      const s = byMilestone.get(m.id) ?? { pending: 0, sent: 0, failed: 0 };
+      const s = byMilestone.get(m.id) ?? emptyCounts();
       return {
         milestoneId: m.id,
         rewardName: m.rewardName,
         threshold: m.threshold,
         pending: s.pending,
+        processing: s.processing,
         sent: s.sent,
         failed: s.failed,
-        total: s.pending + s.sent + s.failed,
+        total: s.pending + s.processing + s.sent + s.failed,
       };
     });
   }
