@@ -202,6 +202,14 @@ export class ReserveService {
     });
   }
 
+  async findMilestoneById(id: string): Promise<ReservationMilestone> {
+    const milestone = await this.milestoneRepo.findOne({ where: { id } });
+    if (!milestone) {
+      throw new NotFoundException('里程碑不存在');
+    }
+    return milestone;
+  }
+
   async createMilestone(dto: CreateMilestoneDto): Promise<ReservationMilestone> {
     const milestone = this.milestoneRepo.create(dto);
     return this.milestoneRepo.save(milestone);

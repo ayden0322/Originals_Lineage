@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsInt, IsString, IsOptional, IsBoolean, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateMilestoneDto {
@@ -29,4 +29,23 @@ export class CreateMilestoneDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  /** 綁定遊戲道具 etcitem.item_id，未綁不可發放 */
+  @ApiPropertyOptional({ example: 60000001 })
+  @IsOptional()
+  @IsInt()
+  gameItemId?: number;
+
+  /** 綁定時的道具名稱快照（淨化顏色碼後） */
+  @ApiPropertyOptional({ example: '事前預約-第一階段獎勵' })
+  @IsOptional()
+  @IsString()
+  gameItemName?: string;
+
+  /** 每人發放數量，預設 1 */
+  @ApiPropertyOptional({ example: 1, default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  gameItemQuantity?: number;
 }

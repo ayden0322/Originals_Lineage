@@ -646,4 +646,47 @@ export class GameDbService implements OnModuleInit {
       return false;
     }
   }
+
+  /**
+   * 反查「輔助_獎勵發送」某筆 row 是否存在。
+   * 用於預約發獎後的雙重確認：INSERT 回傳 insertId 成功，仍再 SELECT 一次確保真正落盤。
+   * 假設 PK 欄位為 `id`（auto-increment）；若部署環境 PK 非此名稱，此方法會回 false，
+   * 實際寄送行為不受影響（只是多寫一筆重試紀錄）。
+   */
+  async verifyGiftRewardExists(insertId: number): Promise<boolean> {
+    if (!insertId || insertId <= 0) return false;
+    try {
+      const ds = this.ensureConnected();
+      const rows = (await ds.query(
+        'SELECT 1 FROM `輔助_獎勵發送` WHERE `id` = ? LIMIT 1',
+        [insertId],
+      )) as unknown[];
+      return rows.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 依 item_id 查詢遊戲道具名稱（etcitem），供里程碑綁定時預覽與最終寄送前驗證。
+   * 找不到回 null。
+   */
+  async findEtcItemById(
+    itemId: number,
+  ): Promise<{ itemId: number; name: string } | null> {
+    try {
+      const ds = this.ensureConnected();
+      const rows = (await ds.query(
+        'SELECT item_id, name FROM etcitem WHERE item_id = ? LIMIT 1',
+        [itemId],
+      )) as Array<{ item_id: number; name: string }>;
+      if (rows.length === 0) return null;
+      return {
+        itemId: rows[0].item_id,
+        name: (rows[0].name || '').replace(/\\f./g, ''),
+      };
+    } catch {
+      return null;
+    }
+  }
 }
