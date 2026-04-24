@@ -145,7 +145,13 @@ export class StorageService implements OnModuleInit {
         }
       });
       stream.on('end', () => resolve(items));
-      stream.on('error', (err) => reject(err));
+      stream.on('error', (err) => {
+        this.logger.error(
+          `listObjectsV2 failed (bucket="${this.bucket}", prefix="${prefix}"): ${(err as Error).message}`,
+          (err as Error).stack,
+        );
+        reject(err);
+      });
     });
   }
 
