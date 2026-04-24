@@ -1,6 +1,14 @@
 import { Injectable, OnModuleInit, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as Minio from 'minio';
+import {
+  S3Client,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  PutBucketPolicyCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { v4 as uuid } from 'uuid';
 import { execFile } from 'child_process';
 import { writeFile, readFile, unlink } from 'fs/promises';
@@ -17,7 +25,7 @@ const VIDEO_MIMETYPES = new Set([
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
-  private client: Minio.Client;
+  private client: S3Client;
   private bucket: string;
   private publicUrl: string;
   private isReady = false;
@@ -32,24 +40,33 @@ export class StorageService implements OnModuleInit {
     const endpoint = this.configService.get('MINIO_ENDPOINT', 'minio');
     const port = parseInt(this.configService.get('MINIO_PORT', '9000'), 10);
     const useSSL = this.configService.get('MINIO_USE_SSL', 'false') === 'true';
+    const scheme = useSSL ? 'https' : 'http';
 
-    this.logger.log(`MinIO config: endpoint=${endpoint}, port=${port}, ssl=${useSSL}, bucket=${this.bucket}`);
+    this.logger.log(`S3 config: endpoint=${endpoint}, port=${port}, ssl=${useSSL}, bucket=${this.bucket}`);
 
-    this.client = new Minio.Client({
-      endPoint: endpoint,
-      port,
-      useSSL,
-      accessKey: this.configService.get('MINIO_ACCESS_KEY', 'minioadmin'),
-      secretKey: this.configService.get('MINIO_SECRET_KEY', 'minioadmin'),
+    this.client = new S3Client({
+      endpoint: `${scheme}://${endpoint}:${port}`,
+      region: this.configService.get('MINIO_REGION', 'us-east-1'),
+      credentials: {
+        accessKeyId: this.configService.get('MINIO_ACCESS_KEY', 'minioadmin'),
+        secretAccessKey: this.configService.get('MINIO_SECRET_KEY', 'minioadmin'),
+      },
+      forcePathStyle: true, // MinIO 需要 path-style
     });
   }
 
   async onModuleInit() {
     try {
-      const exists = await this.client.bucketExists(this.bucket);
-      if (!exists) {
-        await this.client.makeBucket(this.bucket);
-        this.logger.log(`Bucket "${this.bucket}" created`);
+      try {
+        await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      } catch (err) {
+        const error = err as { $metadata?: { httpStatusCode?: number }; name?: string };
+        if (error.$metadata?.httpStatusCode === 404 || error.name === 'NotFound') {
+          await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+          this.logger.log(`Bucket "${this.bucket}" created`);
+        } else {
+          throw err;
+        }
       }
 
       // Set public read policy
@@ -64,15 +81,17 @@ export class StorageService implements OnModuleInit {
           },
         ],
       };
-      await this.client.setBucketPolicy(
-        this.bucket,
-        JSON.stringify(policy),
+      await this.client.send(
+        new PutBucketPolicyCommand({
+          Bucket: this.bucket,
+          Policy: JSON.stringify(policy),
+        }),
       );
       this.isReady = true;
-      this.logger.log(`MinIO ready: bucket="${this.bucket}", publicUrl="${this.publicUrl}"`);
+      this.logger.log(`S3 ready: bucket="${this.bucket}", publicUrl="${this.publicUrl}"`);
     } catch (error) {
       this.isReady = false;
-      this.logger.error(`MinIO init failed: ${(error as Error).message}`);
+      this.logger.error(`S3 init failed: ${(error as Error).message}`);
     }
   }
 
@@ -88,27 +107,27 @@ export class StorageService implements OnModuleInit {
     const objectName = `${folder}/${uuid()}.${ext}`;
 
     let buffer = file.buffer;
-    let size = file.size;
 
     // MP4/MOV 影片：自動做 faststart（將 moov atom 移到檔案開頭）
     if (VIDEO_MIMETYPES.has(file.mimetype)) {
       try {
         const result = await this.processVideoFaststart(file.buffer);
         buffer = result;
-        size = result.length;
-        this.logger.log(`Video faststart processed: ${file.originalname} (${file.size} → ${size} bytes)`);
+        this.logger.log(`Video faststart processed: ${file.originalname} (${file.size} → ${buffer.length} bytes)`);
       } catch (err) {
         this.logger.warn(`Video faststart failed, uploading original: ${(err as Error).message}`);
         // fallback: 上傳原始檔案
       }
     }
 
-    await this.client.putObject(
-      this.bucket,
-      objectName,
-      buffer,
-      size,
-      { 'Content-Type': file.mimetype },
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectName,
+        Body: buffer,
+        ContentType: file.mimetype,
+        ContentLength: buffer.length,
+      }),
     );
 
     return {
@@ -118,10 +137,15 @@ export class StorageService implements OnModuleInit {
   }
 
   async delete(objectName: string): Promise<void> {
-    await this.client.removeObject(this.bucket, objectName);
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: objectName,
+      }),
+    );
   }
 
-  /** 列出指定資料夾下的所有檔案 */
+  /** 列出指定資料夾下的所有檔案（自動分頁） */
   async listObjects(folder?: string): Promise<
     { objectName: string; url: string; size: number; lastModified: Date }[]
   > {
@@ -130,29 +154,38 @@ export class StorageService implements OnModuleInit {
     }
 
     const prefix = folder ? `${folder}/` : '';
-    const stream = this.client.listObjectsV2(this.bucket, prefix, true);
     const items: { objectName: string; url: string; size: number; lastModified: Date }[] = [];
+    let continuationToken: string | undefined;
 
-    return new Promise((resolve, reject) => {
-      stream.on('data', (obj) => {
-        if (obj.name) {
+    try {
+      do {
+        const res = await this.client.send(
+          new ListObjectsV2Command({
+            Bucket: this.bucket,
+            Prefix: prefix,
+            ContinuationToken: continuationToken,
+          }),
+        );
+        for (const obj of res.Contents ?? []) {
+          if (!obj.Key) continue;
           items.push({
-            objectName: obj.name,
-            url: this.getPublicUrl(obj.name),
-            size: obj.size,
-            lastModified: obj.lastModified,
+            objectName: obj.Key,
+            url: this.getPublicUrl(obj.Key),
+            size: obj.Size ?? 0,
+            lastModified: obj.LastModified ?? new Date(0),
           });
         }
-      });
-      stream.on('end', () => resolve(items));
-      stream.on('error', (err) => {
-        this.logger.error(
-          `listObjectsV2 failed (bucket="${this.bucket}", prefix="${prefix}"): ${(err as Error).message}`,
-          (err as Error).stack,
-        );
-        reject(err);
-      });
-    });
+        continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+      } while (continuationToken);
+
+      return items;
+    } catch (err) {
+      this.logger.error(
+        `listObjects failed (bucket="${this.bucket}", prefix="${prefix}"): ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+      throw err;
+    }
   }
 
   getPublicUrl(objectName: string): string {
