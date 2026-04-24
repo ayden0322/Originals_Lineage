@@ -637,6 +637,9 @@ export interface LineInviteSettingsDto {
   inviteCaption?: string;
   tradingGroupUrl?: string;
   tradingGroupCaption?: string;
+  iconUrl?: string;
+  iconSize?: number;
+  iconSizeMobile?: number;
 }
 
 export interface GameDbSettingsDto {

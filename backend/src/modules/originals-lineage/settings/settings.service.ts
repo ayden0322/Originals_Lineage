@@ -37,6 +37,9 @@ export class SettingsService {
         inviteCaption: '官方 LINE',
         tradingGroupUrl: '',
         tradingGroupCaption: '官方交易群',
+        iconUrl: '',
+        iconSize: 48,
+        iconSizeMobile: 44,
       },
       gameDb: config.configJson?.['gameDb'] || {},
       gameDbConnected: this.gameDbService.isConnected,
@@ -71,8 +74,21 @@ export class SettingsService {
         inviteCaption: '',
         tradingGroupUrl: '',
         tradingGroupCaption: '',
+        iconUrl: '',
+        iconSize: 48,
+        iconSizeMobile: 44,
       };
     }
+    const rawIconSize = Number(raw.iconSize);
+    const rawIconSizeMobile = Number(raw.iconSizeMobile);
+    const iconSize =
+      Number.isFinite(rawIconSize) && rawIconSize >= 36 && rawIconSize <= 96
+        ? Math.round(rawIconSize)
+        : 48;
+    const iconSizeMobile =
+      Number.isFinite(rawIconSizeMobile) && rawIconSizeMobile >= 32 && rawIconSizeMobile <= 80
+        ? Math.round(rawIconSizeMobile)
+        : 44;
     return {
       enabled: true,
       inviteUrl,
@@ -81,6 +97,9 @@ export class SettingsService {
       inviteCaption: (raw.inviteCaption as string) || '官方 LINE',
       tradingGroupUrl,
       tradingGroupCaption: (raw.tradingGroupCaption as string) || '官方交易群',
+      iconUrl: (raw.iconUrl as string) || '',
+      iconSize,
+      iconSizeMobile,
     };
   }
 

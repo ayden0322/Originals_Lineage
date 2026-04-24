@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateLineInviteSettingsDto {
@@ -41,4 +41,24 @@ export class UpdateLineInviteSettingsDto {
   @IsOptional()
   @MaxLength(100)
   tradingGroupCaption?: string;
+
+  @ApiPropertyOptional({ description: '自訂浮窗圖示 URL，留空則使用內建 LINE 圖示' })
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  iconUrl?: string;
+
+  @ApiPropertyOptional({ description: '桌面版 FAB 按鈕尺寸（px），範圍 36–96，預設 48' })
+  @IsInt()
+  @IsOptional()
+  @Min(36)
+  @Max(96)
+  iconSize?: number;
+
+  @ApiPropertyOptional({ description: '手機版 FAB 按鈕尺寸（px），範圍 32–80，預設 44' })
+  @IsInt()
+  @IsOptional()
+  @Min(32)
+  @Max(80)
+  iconSizeMobile?: number;
 }

@@ -6,9 +6,10 @@ import { UploadOutlined, DeleteOutlined, SoundOutlined, CustomerServiceOutlined 
 import ImageUpload from '@/components/ui/ImageUpload';
 import ColorPickerInput from '@/components/ui/ColorPickerInput';
 import { getSiteSettings, updateSiteSettings, uploadFile } from '@/lib/api/site-manage';
+import { getSettings, updateLineInviteSettings } from '@/lib/api/settings';
 import { getArticles } from '@/lib/api/content';
 import { SITE_FONT_OPTIONS } from '@/lib/fonts';
-import type { Article } from '@/lib/types';
+import type { Article, LineInviteSettingsDto } from '@/lib/types';
 
 const { Title } = Typography;
 
@@ -375,6 +376,10 @@ export default function SettingsPage() {
   const [pageBgm, setPageBgm] = useState<Record<string, string | null>>({});
   const watchedDefaultBgm = Form.useWatch('defaultBgm', form) as string | undefined;
 
+  // ─── LINE 邀請浮窗（獨立 Form，呼叫 /modules/originals/settings/line-invite） ───
+  const [lineInviteForm] = Form.useForm<LineInviteSettingsDto>();
+  const [lineInviteSubmitting, setLineInviteSubmitting] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       const [settings, articleData] = await Promise.all([
@@ -386,12 +391,32 @@ export default function SettingsPage() {
       setLogoUrl(settings.logoUrl || '');
       setPageBgm(settings.pageBgm || {});
       setArticles(articleData.items);
+
+      // 同步載入 LINE 邀請浮窗設定（失敗不阻塞主流程）
+      try {
+        const moduleSettings = await getSettings();
+        const lineInvite = (moduleSettings.lineInvite as Record<string, unknown>) || {};
+        lineInviteForm.setFieldsValue({
+          enabled: Boolean(lineInvite.enabled),
+          inviteUrl: (lineInvite.inviteUrl as string) || '',
+          showQrCode: lineInvite.showQrCode !== false,
+          tooltip: (lineInvite.tooltip as string) || '加入官方 LINE',
+          inviteCaption: (lineInvite.inviteCaption as string) || '官方 LINE',
+          tradingGroupUrl: (lineInvite.tradingGroupUrl as string) || '',
+          tradingGroupCaption: (lineInvite.tradingGroupCaption as string) || '官方交易群',
+          iconUrl: (lineInvite.iconUrl as string) || '',
+          iconSize: (lineInvite.iconSize as number) || 48,
+          iconSizeMobile: (lineInvite.iconSizeMobile as number) || 44,
+        });
+      } catch {
+        // 模組設定載入失敗時，使用預設值即可
+      }
     } catch {
       message.error('載入設定失敗');
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, lineInviteForm]);
 
   useEffect(() => {
     fetchData();
@@ -410,6 +435,19 @@ export default function SettingsPage() {
       message.error('儲存失敗');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleLineInviteSave = async () => {
+    try {
+      const values = await lineInviteForm.validateFields();
+      setLineInviteSubmitting(true);
+      await updateLineInviteSettings(values);
+      message.success('LINE 邀請浮窗設定已儲存');
+    } catch {
+      message.error('儲存失敗');
+    } finally {
+      setLineInviteSubmitting(false);
     }
   };
 
@@ -748,6 +786,120 @@ export default function SettingsPage() {
                   <Button type="primary" onClick={handleSave} loading={submitting}>
                     儲存設定
                   </Button>
+                </div>
+              ),
+            },
+            {
+              key: 'line-invite',
+              label: 'LINE 邀請浮窗',
+              children: (
+                <div style={{ maxWidth: 600 }}>
+                  <div style={{ marginBottom: 24, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                    設定前台右下角的 LINE 邀請浮窗：啟用/關閉、QR Code 連結、自訂圖示與尺寸。
+                  </div>
+                  <Form form={lineInviteForm} layout="vertical">
+                    <Form.Item
+                      name="enabled"
+                      label="啟用浮窗"
+                      valuePropName="checked"
+                      tooltip="關閉後前台右下角不會顯示 LINE 按鈕"
+                    >
+                      <Switch />
+                    </Form.Item>
+                    <Form.Item
+                      name="inviteUrl"
+                      label="官方 LINE 好友邀請連結"
+                      rules={[{ type: 'url', message: '請輸入有效的網址' }]}
+                      extra="例如：https://line.me/R/ti/p/@xxxxxx"
+                    >
+                      <Input placeholder="https://line.me/R/ti/p/@xxxxxx" />
+                    </Form.Item>
+                    <Form.Item
+                      name="inviteCaption"
+                      label="官方 LINE QR Code 下方說明文字"
+                      tooltip="顯示於浮窗彈出後，官方 LINE QR 圖片下方"
+                    >
+                      <Input placeholder="例如：官方 LINE" maxLength={100} />
+                    </Form.Item>
+                    <Form.Item
+                      name="tradingGroupUrl"
+                      label="官方交易群連結"
+                      rules={[{ type: 'url', message: '請輸入有效的網址' }]}
+                      extra="留空則浮窗僅顯示官方 LINE 一組 QR Code"
+                    >
+                      <Input placeholder="https://line.me/R/ti/g/xxxxxx" />
+                    </Form.Item>
+                    <Form.Item
+                      name="tradingGroupCaption"
+                      label="官方交易群 QR Code 下方說明文字"
+                      tooltip="顯示於浮窗彈出後，交易群 QR 圖片下方"
+                    >
+                      <Input placeholder="例如：官方交易群" maxLength={100} />
+                    </Form.Item>
+                    <Form.Item
+                      name="showQrCode"
+                      label="同時顯示 QR Code"
+                      valuePropName="checked"
+                      tooltip="關閉後彈窗僅顯示文字連結按鈕，不會顯示 QR Code"
+                    >
+                      <Switch />
+                    </Form.Item>
+                    <Form.Item name="tooltip" label="按鈕提示文字">
+                      <Input placeholder="加入官方 LINE" maxLength={100} />
+                    </Form.Item>
+
+                    <Typography.Title level={5} style={{ marginTop: 24 }}>
+                      浮窗圖示外觀
+                    </Typography.Title>
+
+                    <Form.Item
+                      name="iconUrl"
+                      label="自訂浮窗圖示"
+                      tooltip="建議使用 1:1 方形圖；留空則顯示內建 LINE 綠色圖示。上傳後會以圓形裁切顯示"
+                    >
+                      <ImageUpload
+                        folder="line-invite"
+                        previewWidth={96}
+                        crop
+                        aspect={1}
+                        cropAllowFreeAspect={false}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="iconSize"
+                      label="桌面版按鈕大小（px）"
+                      tooltip="範圍 36–96，預設 48"
+                    >
+                      <Slider
+                        min={36}
+                        max={96}
+                        step={1}
+                        marks={{ 36: '36', 48: '48', 64: '64', 96: '96' }}
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="iconSizeMobile"
+                      label="手機版按鈕大小（px）"
+                      tooltip="範圍 32–80，預設 44"
+                    >
+                      <Slider
+                        min={32}
+                        max={80}
+                        step={1}
+                        marks={{ 32: '32', 44: '44', 56: '56', 80: '80' }}
+                      />
+                    </Form.Item>
+
+                    <Button
+                      type="primary"
+                      onClick={handleLineInviteSave}
+                      loading={lineInviteSubmitting}
+                    >
+                      儲存 LINE 邀請浮窗設定
+                    </Button>
+                  </Form>
                 </div>
               ),
             },

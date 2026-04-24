@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import apiClient from '@/lib/api/client';
@@ -14,9 +15,14 @@ interface LineInviteConfig {
   inviteCaption?: string;
   tradingGroupUrl?: string;
   tradingGroupCaption?: string;
+  iconUrl?: string;
+  iconSize?: number;
+  iconSizeMobile?: number;
 }
 
 const MOBILE_BREAKPOINT = 768;
+const DEFAULT_ICON_SIZE_DESKTOP = 48;
+const DEFAULT_ICON_SIZE_MOBILE = 44;
 
 export default function LineInviteFloat() {
   const [config, setConfig] = useState<LineInviteConfig | null>(null);
@@ -89,17 +95,41 @@ export default function LineInviteFloat() {
     window.open(primaryUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const fabSize = isMobile
+    ? config.iconSizeMobile || DEFAULT_ICON_SIZE_MOBILE
+    : config.iconSize || DEFAULT_ICON_SIZE_DESKTOP;
+  const hasCustomIcon = !!config.iconUrl;
+  const fabStyle: CSSProperties = {
+    width: fabSize,
+    height: fabSize,
+    // 自訂圖片時：背景改白底、去除品牌綠，讓圖片完整呈現
+    ...(hasCustomIcon
+      ? { background: '#ffffff', padding: 0, overflow: 'hidden' }
+      : {}),
+  };
+  const innerIconSize = Math.round(fabSize * 0.55);
+
   return (
     <>
       <button
         ref={fabRef}
         type="button"
         className={styles.fab}
+        style={fabStyle}
         aria-label={config.tooltip || '加入官方 LINE'}
         title={config.tooltip || '加入官方 LINE'}
         onClick={handleToggle}
       >
-        <LineIcon />
+        {hasCustomIcon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={config.iconUrl}
+            alt={config.tooltip || '加入官方 LINE'}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+          />
+        ) : (
+          <LineIcon size={innerIconSize} />
+        )}
       </button>
 
       {open && isMobile && <div className={styles.overlay} onClick={() => setOpen(false)} />}
