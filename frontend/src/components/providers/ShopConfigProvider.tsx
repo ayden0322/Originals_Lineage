@@ -16,6 +16,11 @@ const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   currencyIconUrl: null,
   currencyColor: '#c4a24e',
   accentColor: '#c4a24e',
+  bonusTiers: [
+    { minAmount: 1000, ratio: 1.0 },
+    { minAmount: 5000, ratio: 1.1 },
+    { minAmount: 10000, ratio: 1.2 },
+  ],
 };
 
 interface ShopConfigContextType {

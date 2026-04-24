@@ -5,6 +5,11 @@ import { UpdateShopSettingsDto } from './dto/update-shop-settings.dto';
 const MODULE_CODE = 'originals-lineage';
 const SETTINGS_KEY = 'shopSettings';
 
+export interface BonusTier {
+  minAmount: number;
+  ratio: number;
+}
+
 /** 商城美編設定預設值 */
 export const DEFAULT_SHOP_SETTINGS = {
   // Hero
@@ -20,6 +25,12 @@ export const DEFAULT_SHOP_SETTINGS = {
   currencyColor: '#c4a24e',
   // 主色（Tag / 強調色）
   accentColor: '#c4a24e',
+  // 贊助加碼比值（前端顯示用，後端實際送出數量不受影響）
+  bonusTiers: [
+    { minAmount: 1000, ratio: 1.0 },
+    { minAmount: 5000, ratio: 1.1 },
+    { minAmount: 10000, ratio: 1.2 },
+  ] as BonusTier[],
 };
 
 export type ShopSettings = typeof DEFAULT_SHOP_SETTINGS;

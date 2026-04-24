@@ -878,6 +878,11 @@ export interface PublicSiteConfig {
 // Shop Manage (商城美編設定)
 // ═══════════════════════════════════════════════════════════════
 
+export interface BonusTier {
+  minAmount: number;
+  ratio: number;
+}
+
 export interface ShopSettings {
   // Hero
   heroEnabled: boolean;
@@ -892,6 +897,8 @@ export interface ShopSettings {
   currencyColor: string;
   // 主色
   accentColor: string;
+  // 贊助加碼比值（前端顯示用，後端不影響下單數量）
+  bonusTiers: BonusTier[];
 }
 
 export interface PublicShopConfig {

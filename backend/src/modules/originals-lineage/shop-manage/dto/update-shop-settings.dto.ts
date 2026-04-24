@@ -4,8 +4,25 @@ import {
   IsBoolean,
   IsNumber,
   ValidateIf,
+  ValidateNested,
+  IsArray,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+/** 贊助加碼比值區間（前端顯示用，後端不影響下單數量） */
+export class BonusTierDto {
+  @ApiPropertyOptional({ example: 5000, description: '金額下限（含）NT$' })
+  @IsNumber()
+  @Min(0)
+  minAmount!: number;
+
+  @ApiPropertyOptional({ example: 1.1, description: '倍率（1 代表不加碼）' })
+  @IsNumber()
+  @Min(0)
+  ratio!: number;
+}
 
 /**
  * 商城美編設定 DTO
@@ -71,4 +88,15 @@ export class UpdateShopSettingsDto {
   @IsOptional()
   @IsString()
   accentColor?: string;
+
+  // ─── 贊助加碼比值 ────────────────────────────────────────────
+  @ApiPropertyOptional({
+    type: [BonusTierDto],
+    description: '贊助加碼比值（前端顯示用，後端不影響下單數量）',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BonusTierDto)
+  bonusTiers?: BonusTierDto[];
 }

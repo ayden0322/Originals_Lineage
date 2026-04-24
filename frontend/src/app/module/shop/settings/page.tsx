@@ -15,7 +15,7 @@ import {
   Space,
   ColorPicker,
 } from 'antd';
-import { SaveOutlined, ShopOutlined } from '@ant-design/icons';
+import { SaveOutlined, ShopOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import ImageUpload from '@/components/ui/ImageUpload';
 import { getShopSettings, updateShopSettings } from '@/lib/api/shop-manage';
 import type { ShopSettings } from '@/lib/types';
@@ -56,6 +56,10 @@ export default function ShopSettingsPage() {
         heroTextColor: toHex(values.heroTextColor, '#ffffff'),
         currencyColor: toHex(values.currencyColor, '#c4a24e'),
         accentColor: toHex(values.accentColor, '#c4a24e'),
+        bonusTiers: (values.bonusTiers ?? [])
+          .filter((t) => t && Number.isFinite(Number(t.minAmount)) && Number.isFinite(Number(t.ratio)))
+          .map((t) => ({ minAmount: Number(t.minAmount), ratio: Number(t.ratio) }))
+          .sort((a, b) => a.minAmount - b.minAmount),
       };
       setSaving(true);
       const updated = await updateShopSettings(payload);
@@ -160,6 +164,58 @@ export default function ShopSettingsPage() {
           >
             <ColorPicker showText format="hex" />
           </Form.Item>
+
+          {/* ─── 贊助加碼比值 ──────────────────────────────── */}
+          <Divider orientation="left">贊助加碼比值</Divider>
+          <Paragraph type="secondary" style={{ marginTop: -8 }}>
+            前台贊助確認畫面會依「總金額」套用對應倍率顯示「共獲得」數量。
+            實際送出到後端/資料庫的數量不會被加碼（遊戲內有機制自動轉換）。
+            金額下限為「含」，由小到大依序套用，取符合條件的最高一檔。
+          </Paragraph>
+
+          <Form.List name="bonusTiers">
+            {(fields, { add, remove }) => (
+              <>
+                {fields.map((field) => (
+                  <Space
+                    key={field.key}
+                    align="baseline"
+                    style={{ display: 'flex', marginBottom: 8 }}
+                  >
+                    <Form.Item
+                      {...field}
+                      label="金額下限 NT$"
+                      name={[field.name, 'minAmount']}
+                      rules={[{ required: true, message: '必填' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber min={0} step={100} style={{ width: 140 }} />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      label="倍率"
+                      name={[field.name, 'ratio']}
+                      rules={[{ required: true, message: '必填' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber min={0} step={0.1} style={{ width: 120 }} />
+                    </Form.Item>
+                    <MinusCircleOutlined onClick={() => remove(field.name)} />
+                  </Space>
+                ))}
+                <Form.Item>
+                  <Button
+                    type="dashed"
+                    onClick={() => add({ minAmount: 0, ratio: 1 })}
+                    icon={<PlusOutlined />}
+                    block
+                  >
+                    新增區間
+                  </Button>
+                </Form.Item>
+              </>
+            )}
+          </Form.List>
 
           <Divider />
 

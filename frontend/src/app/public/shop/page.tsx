@@ -27,6 +27,43 @@ function formatPrice(value: number | string): string {
   if (!Number.isFinite(num)) return 'NT$ 0';
   return `NT$ ${Math.round(num).toLocaleString('zh-TW')}`;
 }
+
+/**
+ * 依總金額查找對應的加碼倍率（前端顯示用）
+ * 後端/資料庫發送的數量仍為基礎數量，遊戲內有機制自動依比值轉換。
+ * tiers 以 minAmount 由大到小比對，取第一筆符合（totalAmount ≥ minAmount）。
+ * 若無任何區間符合，回傳 1（不加碼）。
+ */
+function getBonusRatio(
+  totalAmount: number,
+  tiers: { minAmount: number; ratio: number }[] | undefined,
+): number {
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) return 1;
+  if (!tiers || tiers.length === 0) return 1;
+  const sorted = [...tiers].sort((a, b) => b.minAmount - a.minAmount);
+  for (const t of sorted) {
+    if (totalAmount >= t.minAmount) return t.ratio > 0 ? t.ratio : 1;
+  }
+  return 1;
+}
+
+/** 將 tiers 轉為人類可讀的文字，例如：NT$ 1,000~4,999 為 1.0 倍、NT$ 5,000 以上為 1.1 倍 */
+function formatBonusTiersHint(
+  tiers: { minAmount: number; ratio: number }[] | undefined,
+): string {
+  if (!tiers || tiers.length === 0) return '';
+  const sorted = [...tiers].sort((a, b) => a.minAmount - b.minAmount);
+  const fmt = (n: number) => `NT$ ${Math.round(n).toLocaleString('zh-TW')}`;
+  return sorted
+    .map((t, i) => {
+      const next = sorted[i + 1];
+      const range = next
+        ? `${fmt(t.minAmount)}~${fmt(next.minAmount - 1)}`
+        : `${fmt(t.minAmount)} 以上`;
+      return `${range} 為 ${t.ratio.toFixed(1)} 倍`;
+    })
+    .join('、');
+}
 import {
   getPublicProducts,
   createOrder,
@@ -530,7 +567,11 @@ export default function ShopPage() {
           const hasMinAmount = Number(buyingProduct.minPurchaseAmount ?? 0) > 0;
           const unitPrice = Number(buyingProduct.price);
           const totalAmount = unitPrice * buyQuantity;
-          const totalDiamond = buyingProduct.diamondAmount * buyQuantity;
+          const baseDiamond = buyingProduct.diamondAmount * buyQuantity;
+          const bonusRatio = getBonusRatio(totalAmount, settings.bonusTiers);
+          const totalDiamond = Math.floor(baseDiamond * bonusRatio);
+          const hasBonus = bonusRatio > 1;
+          const bonusHint = formatBonusTiersHint(settings.bonusTiers);
           const belowMin = buyQuantity < minQty;
           return (
           <div>
@@ -567,10 +608,20 @@ export default function ShopPage() {
                 {formatPrice(totalAmount)}
               </Text>
             </Paragraph>
-            <Paragraph>
+            <Paragraph style={{ marginBottom: 4 }}>
               共獲得：
               <Currency amount={totalDiamond} />
+              {hasBonus && (
+                <Tag color="gold" style={{ marginLeft: 8 }}>
+                  加碼 {bonusRatio.toFixed(1)} 倍
+                </Tag>
+              )}
             </Paragraph>
+            {bonusHint && (
+              <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 0 }}>
+                贊助加碼比值：{bonusHint}
+              </Paragraph>
+            )}
             <div style={{ marginTop: 16 }}>
               <Text strong>付款方式：</Text>
               <div style={{ marginTop: 12 }}>
