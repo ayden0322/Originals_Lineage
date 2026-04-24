@@ -427,11 +427,16 @@ export default function ReservePage() {
           </p>
           <div className={styles.myRewardsList}>
             {myRewards.map((r) => {
-              const statusMeta = {
+              const statusMetaMap: Record<
+                typeof r.status,
+                { label: string; cls: string }
+              > = {
                 pending: { label: '待發送', cls: styles.statusPending },
+                processing: { label: '寄送中', cls: styles.statusPending },
                 sent: { label: '已發送', cls: styles.statusSent },
                 failed: { label: '異常（請聯繫客服）', cls: styles.statusFailed },
-              }[r.status];
+              };
+              const statusMeta = statusMetaMap[r.status];
               return (
                 <div key={r.id} className={styles.myRewardItem}>
                   <div className={styles.myRewardName}>{r.rewardName}</div>

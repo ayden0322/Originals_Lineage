@@ -7,6 +7,11 @@ import type {
   RewardClaimStatus,
   MilestoneDistribution,
   MyReward,
+  GameItemOption,
+  MilestoneEditability,
+  MilestoneValidationResult,
+  StartDistributionResult,
+  DistributeAllReachedResult,
 } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -121,14 +126,21 @@ export async function getMilestones(): Promise<ReservationMilestone[]> {
   return data.data;
 }
 
-export async function createMilestone(dto: {
+export interface MilestoneFormDto {
   threshold: number;
   rewardName: string;
   rewardDescription?: string;
   imageUrl?: string;
   sortOrder?: number;
   isActive?: boolean;
-}): Promise<ReservationMilestone> {
+  gameItemId?: number | null;
+  gameItemName?: string | null;
+  gameItemQuantity?: number;
+}
+
+export async function createMilestone(
+  dto: MilestoneFormDto,
+): Promise<ReservationMilestone> {
   const { data } = await apiClient.post<ApiResponse<ReservationMilestone>>(
     '/modules/originals/reservations/milestones',
     dto,
@@ -138,14 +150,7 @@ export async function createMilestone(dto: {
 
 export async function updateMilestone(
   id: string,
-  dto: Partial<{
-    threshold: number;
-    rewardName: string;
-    rewardDescription: string;
-    imageUrl: string;
-    sortOrder: number;
-    isActive: boolean;
-  }>,
+  dto: Partial<MilestoneFormDto>,
 ): Promise<ReservationMilestone> {
   const { data } = await apiClient.patch<ApiResponse<ReservationMilestone>>(
     `/modules/originals/reservations/milestones/${id}`,
@@ -158,6 +163,24 @@ export async function deleteMilestone(id: string): Promise<void> {
   await apiClient.delete(`/modules/originals/reservations/milestones/${id}`);
 }
 
+export async function getMilestoneEditability(
+  id: string,
+): Promise<MilestoneEditability> {
+  const { data } = await apiClient.get<ApiResponse<MilestoneEditability>>(
+    `/modules/originals/reservations/milestones/${id}/editability`,
+  );
+  return data.data;
+}
+
+export async function searchGameItems(
+  params: { search?: string; page?: number; limit?: number } = {},
+): Promise<{ items: GameItemOption[]; total: number }> {
+  const { data } = await apiClient.get<
+    ApiResponse<{ items: GameItemOption[]; total: number }>
+  >('/modules/originals/reservations/game-items', { params });
+  return data.data;
+}
+
 // ─── Admin: 發獎批次 ─────────────────────────────────────────────
 
 export async function distributeMilestone(
@@ -166,6 +189,31 @@ export async function distributeMilestone(
   const { data } = await apiClient.post<
     ApiResponse<{ created: number; skipped: number; totalReservations: number }>
   >(`/modules/originals/reservations/milestones/${milestoneId}/distribute`);
+  return data.data;
+}
+
+export async function validateMilestoneForDistribution(
+  milestoneId: string,
+): Promise<MilestoneValidationResult> {
+  const { data } = await apiClient.get<
+    ApiResponse<MilestoneValidationResult>
+  >(`/modules/originals/reservations/milestones/${milestoneId}/validate`);
+  return data.data;
+}
+
+export async function startDistribution(
+  milestoneId: string,
+): Promise<StartDistributionResult> {
+  const { data } = await apiClient.post<ApiResponse<StartDistributionResult>>(
+    `/modules/originals/reservations/milestones/${milestoneId}/start-distribution`,
+  );
+  return data.data;
+}
+
+export async function distributeAllReached(): Promise<DistributeAllReachedResult> {
+  const { data } = await apiClient.post<
+    ApiResponse<DistributeAllReachedResult>
+  >('/modules/originals/reservations/distribute-all-reached');
   return data.data;
 }
 

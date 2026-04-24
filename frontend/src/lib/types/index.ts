@@ -291,6 +291,9 @@ export interface ReservationMilestone {
   imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
+  gameItemId: number | null;
+  gameItemName: string | null;
+  gameItemQuantity: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -308,7 +311,7 @@ export interface ReserveFieldConfig {
 
 // ─── 發獎系統 ────────────────────────────────────────────────────
 
-export type RewardClaimStatus = 'pending' | 'sent' | 'failed';
+export type RewardClaimStatus = 'pending' | 'processing' | 'sent' | 'failed';
 
 export interface RewardClaim {
   id: string;
@@ -329,9 +332,66 @@ export interface MilestoneDistribution {
   rewardName: string;
   threshold: number;
   pending: number;
+  processing: number;
   sent: number;
   failed: number;
   total: number;
+}
+
+export interface GameItemOption {
+  itemId: number;
+  name: string;
+}
+
+export interface MilestoneEditability {
+  canEdit: boolean;
+  reason: string | null;
+  pendingCount: number;
+  processingCount: number;
+  sentCount: number;
+  failedCount: number;
+}
+
+export type ValidationIssueCode =
+  | 'MILESTONE_NOT_FOUND'
+  | 'MILESTONE_INACTIVE'
+  | 'NO_ITEM_BOUND'
+  | 'ITEM_NOT_IN_GAMEDB'
+  | 'THRESHOLD_NOT_REACHED'
+  | 'DEADLINE_NOT_REACHED'
+  | 'GAME_DB_DOWN';
+
+export interface MilestoneValidationResult {
+  ok: boolean;
+  milestone: ReservationMilestone | null;
+  issues: Array<{
+    code: ValidationIssueCode;
+    message: string;
+    detail?: Record<string, unknown>;
+  }>;
+  context: {
+    actualReservationCount: number;
+    displayCount: number;
+    threshold: number | null;
+    deadlineAt: string | null;
+    isDistributionLocked: boolean;
+  };
+}
+
+export interface StartDistributionResult {
+  created: number;
+  skipped: number;
+  totalReservations: number;
+  queued: boolean;
+}
+
+export interface DistributeAllReachedResult {
+  startedMilestoneIds: string[];
+  perMilestone: Array<{
+    milestoneId: string;
+    created: number;
+    skipped: number;
+  }>;
 }
 
 export interface MyReward {
