@@ -88,8 +88,10 @@ import {
   VerticalAlignTopOutlined,
   VerticalAlignMiddleOutlined,
   VerticalAlignBottomOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
+import { TabsBlock, TABS_BLOCK_NODE_NAME } from './extensions/TabsBlock';
 
 interface RichTextEditorProps {
   value?: string;
@@ -97,6 +99,8 @@ interface RichTextEditorProps {
   folder?: string;
   placeholder?: string;
   minHeight?: number;
+  /** 是否啟用「分頁區塊」extension（預設 true；在分頁編輯 Modal 內傳 false 避免巢狀無限遞迴） */
+  enableTabsBlock?: boolean;
 }
 
 // 簡易 HTML 格式化：加入縮排與換行
@@ -404,6 +408,7 @@ export default function RichTextEditor({
   folder = 'editor',
   placeholder = '請輸入內容...',
   minHeight = 200,
+  enableTabsBlock = true,
 }: RichTextEditorProps) {
   const isInternalChange = useRef(false);
   const savedSelection = useRef<{ from: number; to: number } | null>(null);
@@ -428,6 +433,7 @@ export default function RichTextEditor({
       TableRow,
       CustomTableCell,
       CustomTableHeader,
+      ...(enableTabsBlock ? [TabsBlock] : []),
     ],
     content: value || '',
     onUpdate: ({ editor: ed }) => {
@@ -761,6 +767,32 @@ export default function RichTextEditor({
             />
           </Tooltip>
         </Popover>
+
+        {/* 分頁區塊 */}
+        {enableTabsBlock && (
+          <Tooltip title="插入分頁區塊">
+            <Button
+              type="text"
+              size="small"
+              icon={<AppstoreOutlined />}
+              onClick={() =>
+                editor
+                  .chain()
+                  .focus()
+                  .insertContent({
+                    type: TABS_BLOCK_NODE_NAME,
+                    attrs: {
+                      panels: [
+                        { title: '分頁 1', html: '<p>內容...</p>' },
+                        { title: '分頁 2', html: '<p>內容...</p>' },
+                      ],
+                    },
+                  })
+                  .run()
+              }
+            />
+          </Tooltip>
+        )}
 
         <Divider type="vertical" style={{ margin: '0 4px' }} />
 

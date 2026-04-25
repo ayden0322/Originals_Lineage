@@ -6,6 +6,7 @@ import { ArrowLeftOutlined, LeftOutlined, RightOutlined } from '@ant-design/icon
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useArticleMusic } from '@/components/providers/ArticleMusicProvider';
+import ArticleTabsHydrator from '@/components/ui/ArticleTabsHydrator';
 import type { Article } from '@/lib/types';
 
 interface AdjacentArticle {
@@ -113,10 +114,10 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginBottom: 40 }} />
 
-        <div
+        <ArticleTabsHydrator
+          html={article.content}
           className="article-content"
           style={{ fontSize: 16, lineHeight: 2, color: 'rgba(255,255,255,0.8)', display: 'flow-root' }}
-          dangerouslySetInnerHTML={{ __html: article.content }}
         />
         <style jsx global>{`
           .article-content img {
@@ -187,6 +188,55 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
           .article-content table td[style*="background-color"],
           .article-content table th[style*="background-color"] {
             background: none;
+          }
+
+          /* ────── 分頁區塊（TabsBlock） ────── */
+          .article-content [data-type="tabs"] {
+            margin: 1.5em 0;
+            border: 1px solid rgba(196, 162, 78, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            overflow: hidden;
+          }
+          .article-content .article-tabs-nav {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(196, 162, 78, 0.3);
+          }
+          .article-content .article-tabs-nav-item {
+            padding: 10px 18px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.15s;
+            user-select: none;
+            outline: none;
+          }
+          .article-content .article-tabs-nav-item:hover {
+            color: #f5d77a;
+            background: rgba(196, 162, 78, 0.08);
+          }
+          .article-content .article-tabs-nav-item.is-active {
+            color: #c4a24e;
+            background: rgba(196, 162, 78, 0.15);
+            border-bottom: 2px solid #c4a24e;
+            margin-bottom: -1px;
+            font-weight: 600;
+          }
+          .article-content .article-tabs-nav-item:focus-visible {
+            box-shadow: inset 0 0 0 2px #c4a24e;
+          }
+          .article-content [data-type="tab-panel"] {
+            padding: 16px 20px;
+          }
+          /* SSR 階段（JS 還沒接管前）顯示樣式：分頁標題用偽元素呈現 */
+          .article-content [data-type="tab-panel"]:not([style*="display"]) [data-type="tab-panel-fallback-title"] {
+            display: block;
           }
         `}</style>
 
