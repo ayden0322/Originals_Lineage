@@ -2,8 +2,14 @@ import apiClient from './client';
 import type { ApiResponse, PaginatedResponse, Article, Announcement, CreateArticleDto, CreateAnnouncementDto, ArticleCategory } from '../types';
 
 // Admin - Articles
-export async function getArticles(page = 1, limit = 10): Promise<PaginatedResponse<Article>> {
-  const { data } = await apiClient.get<ApiResponse<PaginatedResponse<Article>>>('/modules/originals/articles', { params: { page, limit } });
+export async function getArticles(
+  page = 1,
+  limit = 10,
+  filters?: { category?: string; status?: string },
+): Promise<PaginatedResponse<Article>> {
+  const { data } = await apiClient.get<ApiResponse<PaginatedResponse<Article>>>('/modules/originals/articles', {
+    params: { page, limit, ...(filters?.category ? { category: filters.category } : {}), ...(filters?.status ? { status: filters.status } : {}) },
+  });
   return data.data;
 }
 

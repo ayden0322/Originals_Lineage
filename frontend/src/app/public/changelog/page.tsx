@@ -10,6 +10,11 @@ import type { Article } from '@/lib/types';
 import PublicFooter from '@/components/public/PublicFooter';
 import dayjs from 'dayjs';
 
+function getExcerptText(content: string, len = 100) {
+  const plain = content.replace(/<[^>]*>/g, '');
+  return plain.length > len ? plain.substring(0, len) + '...' : plain;
+}
+
 export default function ChangelogPage() {
   const { config, loading: configLoading } = useSiteConfig();
 
@@ -62,10 +67,7 @@ export default function ChangelogPage() {
     ? articles.filter((a) => a.title.toLowerCase().includes(search.toLowerCase()))
     : articles;
 
-  const getExcerpt = (content: string, len = 100) => {
-    const plain = content.replace(/<[^>]*>/g, '');
-    return plain.length > len ? plain.substring(0, len) + '...' : plain;
-  };
+  const getExcerpt = getExcerptText;
 
   const heroArticle = layout === 'magazine' ? filteredArticles.find((a) => a.isPinned) || filteredArticles[0] : null;
   const gridArticles = layout === 'magazine' && heroArticle
@@ -148,6 +150,18 @@ export default function ChangelogPage() {
                       <div style={{ fontSize: 28, fontWeight: 600, color: '#fff', marginBottom: 8, lineHeight: 1.3 }}>
                         {heroArticle.title}
                       </div>
+                      {(heroArticle.summary || heroArticle.content) && (
+                        <div style={{
+                          color: '#ddd', fontSize: 14, lineHeight: 1.6, marginBottom: 12,
+                          whiteSpace: heroArticle.summary ? 'pre-line' as const : 'normal' as const,
+                          display: heroArticle.summary ? 'block' : '-webkit-box',
+                          WebkitLineClamp: heroArticle.summary ? undefined : 2,
+                          WebkitBoxOrient: heroArticle.summary ? undefined : 'vertical' as const,
+                          overflow: 'hidden',
+                        }}>
+                          {heroArticle.summary || getExcerpt(heroArticle.content, 120)}
+                        </div>
+                      )}
                       <div style={{ color: '#999', fontSize: 13 }}>
                         {dayjs(heroArticle.publishedAt || heroArticle.createdAt).format('YYYY-MM-DD')}
                         {showViewCount && ` · ${heroArticle.viewCount} 次瀏覽`}
@@ -260,7 +274,7 @@ export default function ChangelogPage() {
                         <div style={{ fontSize: 15, fontWeight: 500, color: '#eee', marginBottom: 8, lineHeight: 1.4 }}>
                           {a.title}
                         </div>
-                        {i % 3 !== 1 && (
+                        {(a.summary || a.content) && (
                           <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 8, whiteSpace: a.summary ? 'pre-line' as const : 'normal' as const }}>
                             {a.summary || getExcerpt(a.content, 80)}
                           </div>
@@ -330,6 +344,18 @@ function MagazineCard({
         }}>
           {article.title}
         </div>
+        {(article.summary || article.content) && (
+          <div style={{
+            fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 8,
+            whiteSpace: article.summary ? 'pre-line' as const : 'normal' as const,
+            display: article.summary ? 'block' : '-webkit-box',
+            WebkitLineClamp: article.summary ? undefined : 3,
+            WebkitBoxOrient: article.summary ? undefined : 'vertical' as const,
+            overflow: 'hidden',
+          }}>
+            {article.summary || getExcerptText(article.content, 80)}
+          </div>
+        )}
         <div style={{ fontSize: 12, color: '#666' }}>
           {dayjs(article.publishedAt || article.createdAt).format('YYYY-MM-DD')}
           {showViewCount && ` · ${article.viewCount} 次瀏覽`}

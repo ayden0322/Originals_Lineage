@@ -46,10 +46,11 @@ export class ContentAdminController {
   @RequirePermission('module.originals.content.view')
   findAllArticles(
     @Query('status') status?: string,
+    @Query('category') category?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return this.contentService.findAllArticles(+page, +limit, status);
+    return this.contentService.findAllArticles(+page, +limit, status, category);
   }
 
   @Get('articles/:id')

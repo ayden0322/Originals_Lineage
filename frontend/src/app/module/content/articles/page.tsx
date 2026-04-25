@@ -58,6 +58,8 @@ export default function ArticlesPage() {
   const [musicUrl, setMusicUrl] = useState('');
   const [musicUploading, setMusicUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string | undefined>(undefined);
+  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [form] = Form.useForm<CreateArticleDto>();
 
   // Find the changelog-related category slug (name contains "更新")
@@ -69,7 +71,7 @@ export default function ArticlesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getArticles(page, pageSize);
+      const res = await getArticles(page, pageSize, { category: filterCategory, status: filterStatus });
       setData(res.items);
       setTotal(res.total);
     } catch {
@@ -77,7 +79,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, filterCategory, filterStatus]);
 
   useEffect(() => {
     fetchData();
@@ -243,6 +245,34 @@ export default function ArticlesPage() {
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           新增文章
         </Button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+        <Select
+          allowClear
+          placeholder="篩選分類"
+          style={{ width: 200 }}
+          value={filterCategory}
+          onChange={(val) => { setFilterCategory(val); setPage(1); }}
+          options={categories.map((c) => ({ value: c.slug, label: c.name }))}
+        />
+        <Select
+          allowClear
+          placeholder="篩選狀態"
+          style={{ width: 160 }}
+          value={filterStatus}
+          onChange={(val) => { setFilterStatus(val); setPage(1); }}
+          options={[
+            { value: 'draft', label: '草稿' },
+            { value: 'published', label: '已發佈' },
+            { value: 'archived', label: '已封存' },
+          ]}
+        />
+        {(filterCategory || filterStatus) && (
+          <Button onClick={() => { setFilterCategory(undefined); setFilterStatus(undefined); setPage(1); }}>
+            清除篩選
+          </Button>
+        )}
       </div>
 
       <Table

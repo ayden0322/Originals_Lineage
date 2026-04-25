@@ -60,10 +60,13 @@ export class ContentService {
     return slug;
   }
 
-  async findAllArticles(page = 1, limit = 20, status?: string) {
+  async findAllArticles(page = 1, limit = 20, status?: string, category?: string) {
     const where: FindOptionsWhere<Article> = {};
     if (status) {
       where.status = status as Article['status'];
+    }
+    if (category) {
+      where.category = category;
     }
 
     const [items, total] = await this.articleRepo.findAndCount({
