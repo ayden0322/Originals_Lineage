@@ -209,7 +209,10 @@ export default function ChangelogPage() {
                             <div style={{ fontSize: 18, fontWeight: 500, color: '#eee', marginBottom: 8, lineHeight: 1.4 }}>
                               {a.title}
                             </div>
-                            <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
+                            <div style={a.summary
+                              ? { fontSize: 13, color: '#888', lineHeight: 1.6, whiteSpace: 'pre-line' as const }
+                              : { fontSize: 13, color: '#888', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }
+                            }>
                               {a.summary || getExcerpt(a.content, 150)}
                             </div>
                             {showViewCount && (
@@ -258,7 +261,7 @@ export default function ChangelogPage() {
                           {a.title}
                         </div>
                         {i % 3 !== 1 && (
-                          <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 8 }}>
+                          <div style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 8, whiteSpace: a.summary ? 'pre-line' as const : 'normal' as const }}>
                             {a.summary || getExcerpt(a.content, 80)}
                           </div>
                         )}
