@@ -581,15 +581,13 @@ export class RewardClaimService {
     page = 1,
     limit = 50,
   ): Promise<{
-    data: Array<RewardClaim & { websiteUserId?: string }>;
+    data: RewardClaim[];
     total: number;
     page: number;
     limit: number;
   }> {
     const qb = this.claimRepo
       .createQueryBuilder('c')
-      .leftJoin(Reservation, 'r', 'r.id = c.reservation_id')
-      .addSelect('r.website_user_id', 'c_websiteUserId')
       .where('c.milestone_id = :milestoneId', { milestoneId });
 
     if (status) {
