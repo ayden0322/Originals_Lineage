@@ -146,6 +146,7 @@ export default function PublicHeader() {
     { label: '最新消息', path: '/public/news' },
     { label: '更新歷程', path: '/public/changelog' },
     ...(reserveEnabled ? [{ label: '新兵報到', path: '/public/reserve' }] : []),
+    { label: '每日推廣', path: '/public/forum-push' },
     { label: '禮包內容', path: '/public/packages' },
     { label: '掉落查詢', path: '/public/drops' },
     { label: '贊助', path: '/public/shop' },

@@ -41,6 +41,8 @@ const PERMISSION_SEEDS = [
   { code: 'module.originals.logs.view', name: '查看操作日誌', backendLevel: 'module', moduleCode: 'originals-lineage', category: '操作日誌' },
   { code: 'module.originals.commission.view', name: '查看代理分潤', backendLevel: 'module', moduleCode: 'originals-lineage', category: '代理分潤' },
   { code: 'module.originals.commission.manage', name: '管理代理分潤', backendLevel: 'module', moduleCode: 'originals-lineage', category: '代理分潤' },
+  { code: 'module.originals.forum-push.view', name: '查看論壇推文審核', backendLevel: 'module', moduleCode: 'originals-lineage', category: '論壇推文' },
+  { code: 'module.originals.forum-push.manage', name: '審核論壇推文', backendLevel: 'module', moduleCode: 'originals-lineage', category: '論壇推文' },
 ];
 
 @Injectable()

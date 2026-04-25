@@ -18,6 +18,7 @@ import {
   PartitionOutlined,
   GiftOutlined,
   MenuOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { Spin } from 'antd';
@@ -103,6 +104,17 @@ const allMenuItems: MenuItem[] = [
       { key: '/module/content/categories', label: '分類管理', permission: 'module.originals.content.view' },
       { key: '/module/content/articles', label: '文章管理', permission: 'module.originals.content.view' },
       { key: '/module/content/announcements', label: '公告管理', permission: 'module.originals.content.view' },
+    ],
+  },
+  {
+    key: 'forum-push',
+    icon: <MessageOutlined />,
+    label: '每日推廣審核',
+    permission: 'module.originals.forum-push.view',
+    children: [
+      { key: '/module/forum-push', label: '推文審核' },
+      { key: '/module/forum-push/reward-config', label: '獎勵道具設定', permission: 'module.originals.settings.manage' },
+      { key: '/module/forum-push/settings', label: '審核設定', permission: 'module.originals.settings.manage' },
     ],
   },
   { key: '/module/logs', icon: <AuditOutlined />, label: '操作日誌', permission: 'module.originals.logs.view' },

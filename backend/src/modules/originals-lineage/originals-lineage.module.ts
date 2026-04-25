@@ -9,6 +9,7 @@ import { PackageManageModule } from './package-manage/package-manage.module';
 import { SettingsModule } from './settings/settings.module';
 import { SiteManageModule } from './site-manage/site-manage.module';
 import { CommissionModule } from './commission/commission.module';
+import { ForumPushModule } from './forum-push/forum-push.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CommissionModule } from './commission/commission.module';
     SettingsModule,
     SiteManageModule,
     CommissionModule,
+    ForumPushModule,
   ],
 })
 export class OriginalsLineageModule {}
