@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ModuleConfigService } from '../../../core/module-config/module-config.service';
+import { LineService } from '../../../core/line/line.service';
 import { GameDbService, GameDbConfig } from '../game-db/game-db.service';
 import { UpdatePaymentSettingsDto } from './dto/update-payment-settings.dto';
 import { UpdateLineBotSettingsDto } from './dto/update-line-bot-settings.dto';
@@ -16,6 +17,7 @@ export class SettingsService {
   constructor(
     private readonly moduleConfigService: ModuleConfigService,
     private readonly gameDbService: GameDbService,
+    private readonly lineService: LineService,
   ) {}
 
   async getSettings() {
@@ -116,9 +118,43 @@ export class SettingsService {
     const config = await this.moduleConfigService.findByCode(MODULE_CODE);
     if (!config) throw new NotFoundException('Module config not found');
 
-    const configJson = { ...config.configJson, lineBot: dto };
+    // 用 merge 取代 replace：避免前端只送部份欄位時，把其他欄位（例如 notifyGroups）洗掉
+    const current = (config.configJson?.['lineBot'] as Record<string, unknown>) || {};
+    const lineBot = { ...current, ...dto };
+    const configJson = { ...config.configJson, lineBot };
     await this.moduleConfigService.update(MODULE_CODE, { configJson });
     return this.getSettings();
+  }
+
+  /**
+   * 測試推送：對單一 groupId 發一則文字訊息，回傳成功/失敗
+   */
+  async testLinePush(groupId: string) {
+    if (!groupId) {
+      return { success: false, message: '請提供 groupId' };
+    }
+    try {
+      await this.lineService.push(MODULE_CODE, groupId, [
+        {
+          type: 'text',
+          text: '✅ 測試訊息：LINE Bot 已連線到無盡天堂後台',
+        },
+      ]);
+      return { success: true, message: '推送成功' };
+    } catch (error) {
+      return {
+        success: false,
+        message: (error as Error).message || '推送失敗',
+      };
+    }
+  }
+
+  /**
+   * 列出最近 webhook 收到的事件來源（給後台「我要新增群組」下拉用）
+   * 重啟即清空，僅作為輔助提示。
+   */
+  getRecentLineSources() {
+    return this.lineService.getRecentSources(MODULE_CODE);
   }
 
   async updateGameDbSettings(dto: UpdateGameDbSettingsDto) {

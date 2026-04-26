@@ -683,10 +683,32 @@ export interface PaymentSettingsDto {
   sandboxMode?: boolean;
 }
 
+export interface LineNotifyGroup {
+  groupId: string;
+  name: string;
+  events: string[]; // 目前支援 'recharge'
+}
+
 export interface LineBotSettingsDto {
   channelId?: string;
   channelSecret?: string;
   channelAccessToken?: string;
+  rechargeNotifyEnabled?: boolean;
+  notifyGroups?: LineNotifyGroup[];
+}
+
+export interface LineRecentSource {
+  type: 'group' | 'room' | 'user';
+  groupId?: string;
+  roomId?: string;
+  userId?: string;
+  eventType: string;
+  receivedAt: string;
+}
+
+export interface LineTestPushResult {
+  success: boolean;
+  message: string;
 }
 
 export interface LineInviteSettingsDto {

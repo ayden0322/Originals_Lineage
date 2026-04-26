@@ -5,6 +5,8 @@ import type {
   PaymentSettingsDto,
   LineBotSettingsDto,
   LineInviteSettingsDto,
+  LineRecentSource,
+  LineTestPushResult,
   GameDbSettingsDto,
   GameDbTestResult,
   GameTableMappingDto,
@@ -23,6 +25,21 @@ export async function updatePaymentSettings(dto: PaymentSettingsDto): Promise<Mo
 
 export async function updateLineBotSettings(dto: LineBotSettingsDto): Promise<ModuleSettings> {
   const { data } = await apiClient.put<ApiResponse<ModuleSettings>>('/modules/originals/settings/line-bot', dto);
+  return data.data;
+}
+
+export async function testLineBotPush(groupId: string): Promise<LineTestPushResult> {
+  const { data } = await apiClient.post<ApiResponse<LineTestPushResult>>(
+    '/modules/originals/settings/line-bot/test',
+    { groupId },
+  );
+  return data.data;
+}
+
+export async function getLineRecentSources(): Promise<LineRecentSource[]> {
+  const { data } = await apiClient.get<ApiResponse<LineRecentSource[]>>(
+    '/modules/originals/settings/line-bot/recent-sources',
+  );
   return data.data;
 }
 

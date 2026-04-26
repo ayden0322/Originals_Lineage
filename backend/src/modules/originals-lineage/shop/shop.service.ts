@@ -661,6 +661,12 @@ export class ShopService {
       `Order ${payload.orderId} 發貨最終失敗（已重試 ${RETRY_DELAYS_MS.length} 次）`,
       lastError,
     );
+
+    // 通知用事件：listener 自行載入完整訂單資料
+    this.eventEmitter.emit('order.delivery_failed', {
+      orderId: order.id,
+      moduleCode: 'originals-lineage',
+    });
   }
 
   /**
@@ -745,6 +751,12 @@ export class ShopService {
     await this.orderRepo.save(order);
 
     this.logger.log(`Order ${order.id} delivered (${deliveredEntries.length} entries)`);
+
+    // 通知用事件：listener 自行載入完整訂單資料
+    this.eventEmitter.emit('order.delivered', {
+      orderId: order.id,
+      moduleCode: 'originals-lineage',
+    });
   }
 
   // ─── Order Query Methods ────────────────────────────────────────────

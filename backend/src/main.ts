@@ -7,7 +7,7 @@ import { SlowRequestInterceptor } from './common/interceptors/slow-request.inter
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Global prefix
   app.setGlobalPrefix('api');

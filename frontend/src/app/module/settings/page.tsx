@@ -15,24 +15,50 @@ import {
   Checkbox,
   Radio,
   Select,
+  Switch,
+  Alert,
+  Popover,
+  List,
+  Empty,
+  Typography,
 } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   DatabaseOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  SendOutlined,
+  ReloadOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
-import { getSettings, updateLineBotSettings, updateGameDbSettings, testGameDbConnection, updateGameTableMapping, fetchTableColumns } from '@/lib/api/settings';
+import {
+  getSettings,
+  updateLineBotSettings,
+  testLineBotPush,
+  getLineRecentSources,
+  updateGameDbSettings,
+  testGameDbConnection,
+  updateGameTableMapping,
+  fetchTableColumns,
+} from '@/lib/api/settings';
 import type {
   LineBotSettingsDto,
+  LineRecentSource,
   GameDbSettingsDto,
   GameTableMappingDto,
   PasswordEncryption,
 } from '@/lib/types';
 
+const WEBHOOK_PATH = '/line/webhook/originals-lineage';
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [lineBotSubmitting, setLineBotSubmitting] = useState(false);
   const [lineBotForm] = Form.useForm<LineBotSettingsDto>();
+  const [recentSources, setRecentSources] = useState<LineRecentSource[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [testingGroupId, setTestingGroupId] = useState<string | null>(null);
 
   // Game DB state
   const [gameDbForm] = Form.useForm<GameDbSettingsDto>();
@@ -59,6 +85,9 @@ export default function SettingsPage() {
         channelId: (lineBot.channelId as string) || '',
         channelSecret: (lineBot.channelSecret as string) || '',
         channelAccessToken: (lineBot.channelAccessToken as string) || '',
+        rechargeNotifyEnabled: Boolean(lineBot.rechargeNotifyEnabled),
+        notifyGroups:
+          (lineBot.notifyGroups as LineBotSettingsDto['notifyGroups']) || [],
       });
 
       const gameDb = settings.gameDb as Record<string, unknown>;
@@ -114,8 +143,17 @@ export default function SettingsPage() {
   const handleLineBotSave = async () => {
     try {
       const values = await lineBotForm.validateFields();
+      // 補預設：每個群組若沒勾事件，預設訂閱 'recharge'
+      const dto: LineBotSettingsDto = {
+        ...values,
+        notifyGroups: (values.notifyGroups || []).map((g) => ({
+          groupId: g.groupId.trim(),
+          name: (g.name || '').trim(),
+          events: g.events && g.events.length ? g.events : ['recharge'],
+        })),
+      };
       setLineBotSubmitting(true);
-      await updateLineBotSettings(values);
+      await updateLineBotSettings(dto);
       message.success('LINE Bot 設定儲存成功');
     } catch {
       message.error('LINE Bot 設定儲存失敗');
@@ -123,6 +161,52 @@ export default function SettingsPage() {
       setLineBotSubmitting(false);
     }
   };
+
+  const handleTestPush = async (groupId: string) => {
+    if (!groupId) {
+      message.warning('請先填入 Group ID');
+      return;
+    }
+    setTestingGroupId(groupId);
+    try {
+      const result = await testLineBotPush(groupId);
+      if (result.success) {
+        message.success('測試訊息已送出，請至 LINE 群組確認');
+      } else {
+        message.error(`測試失敗：${result.message}`);
+      }
+    } catch {
+      message.error('測試失敗（請先儲存 Channel Access Token）');
+    } finally {
+      setTestingGroupId(null);
+    }
+  };
+
+  const handleRefreshRecent = async () => {
+    setRecentLoading(true);
+    try {
+      const list = await getLineRecentSources();
+      setRecentSources(list);
+    } catch {
+      message.error('讀取最近事件失敗');
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success(`已複製${label}`);
+    } catch {
+      message.error('複製失敗');
+    }
+  };
+
+  const webhookUrl = (() => {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+    return `${base}${WEBHOOK_PATH}`;
+  })();
 
   const handleGameDbSave = async () => {
     try {
@@ -219,6 +303,27 @@ export default function SettingsPage() {
       <Spin spinning={loading}>
         {/* ─── LINE Bot 設定 ──────────────────────────── */}
         <Card title="LINE Bot 設定">
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Webhook URL（請貼到 LINE Developers Console）"
+            description={
+              <Space>
+                <Typography.Text code copyable={false} style={{ fontSize: 13 }}>
+                  {webhookUrl}
+                </Typography.Text>
+                <Button
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopy(webhookUrl, 'Webhook URL')}
+                >
+                  複製
+                </Button>
+              </Space>
+            }
+          />
+
           <Form form={lineBotForm} layout="vertical">
             <Form.Item name="channelId" label="Channel ID">
               <Input />
@@ -229,7 +334,171 @@ export default function SettingsPage() {
             <Form.Item name="channelAccessToken" label="Channel Access Token">
               <Input.Password />
             </Form.Item>
-            <Form.Item>
+
+            <Divider orientation="left" plain>
+              儲值通知
+            </Divider>
+
+            <Form.Item
+              name="rechargeNotifyEnabled"
+              label="啟用儲值通知（玩家儲值發貨完成 / 失敗時推訊息到指定群組）"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+
+            <Form.Item label="通知群組">
+              <Space style={{ marginBottom: 8 }}>
+                <Popover
+                  trigger="click"
+                  title={
+                    <Space>
+                      <span>最近收到的群組事件</span>
+                      <Button
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        loading={recentLoading}
+                        onClick={handleRefreshRecent}
+                      >
+                        重新整理
+                      </Button>
+                    </Space>
+                  }
+                  content={
+                    <div style={{ width: 360, maxHeight: 300, overflow: 'auto' }}>
+                      {recentSources.length === 0 ? (
+                        <Empty
+                          description="尚無事件。請把 Bot 加入群組後再點「重新整理」"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        />
+                      ) : (
+                        <List
+                          size="small"
+                          dataSource={recentSources}
+                          renderItem={(s) => {
+                            const id = s.groupId || s.roomId || s.userId || '';
+                            return (
+                              <List.Item
+                                actions={[
+                                  <Button
+                                    key="copy"
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy(id, 'ID')}
+                                  >
+                                    複製 ID
+                                  </Button>,
+                                ]}
+                              >
+                                <Space direction="vertical" size={0}>
+                                  <span>
+                                    <Tag color={s.type === 'group' ? 'blue' : 'default'}>
+                                      {s.type}
+                                    </Tag>
+                                    <Tag>{s.eventType}</Tag>
+                                  </span>
+                                  <Typography.Text code style={{ fontSize: 11 }}>
+                                    {id}
+                                  </Typography.Text>
+                                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                    {new Date(s.receivedAt).toLocaleString()}
+                                  </Typography.Text>
+                                </Space>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      )}
+                    </div>
+                  }
+                  onOpenChange={(open) => {
+                    if (open) handleRefreshRecent();
+                  }}
+                >
+                  <Button size="small" icon={<ReloadOutlined />}>
+                    從最近事件挑選 Group ID
+                  </Button>
+                </Popover>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Bot 加入群組後，這裡會自動收到 join / message 事件
+                </Typography.Text>
+              </Space>
+
+              <Form.List name="notifyGroups">
+                {(fields, { add, remove }) => (
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {fields.map(({ key, name, ...rest }) => (
+                      <Space
+                        key={key}
+                        align="baseline"
+                        style={{ display: 'flex', flexWrap: 'wrap' }}
+                      >
+                        <Form.Item
+                          {...rest}
+                          name={[name, 'groupId']}
+                          rules={[{ required: true, message: '請填入 Group ID' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Input placeholder="Group ID（C 開頭）" style={{ width: 280 }} />
+                        </Form.Item>
+                        <Form.Item
+                          {...rest}
+                          name={[name, 'name']}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Input placeholder="顯示名稱（管理群、客服群…）" style={{ width: 200 }} />
+                        </Form.Item>
+                        <Form.Item
+                          {...rest}
+                          name={[name, 'events']}
+                          initialValue={['recharge']}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select
+                            mode="multiple"
+                            style={{ width: 160 }}
+                            options={[{ label: '儲值通知', value: 'recharge' }]}
+                          />
+                        </Form.Item>
+                        <Button
+                          icon={<SendOutlined />}
+                          loading={
+                            testingGroupId ===
+                            lineBotForm.getFieldValue(['notifyGroups', name, 'groupId'])
+                          }
+                          onClick={() => {
+                            const gid = lineBotForm.getFieldValue([
+                              'notifyGroups',
+                              name,
+                              'groupId',
+                            ]) as string | undefined;
+                            handleTestPush(gid || '');
+                          }}
+                        >
+                          測試
+                        </Button>
+                        <Button
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(name)}
+                        >
+                          移除
+                        </Button>
+                      </Space>
+                    ))}
+                    <Button
+                      type="dashed"
+                      icon={<PlusOutlined />}
+                      onClick={() => add({ events: ['recharge'] })}
+                    >
+                      新增群組
+                    </Button>
+                  </Space>
+                )}
+              </Form.List>
+            </Form.Item>
+
+            <Form.Item style={{ marginTop: 16 }}>
               <Button
                 type="primary"
                 loading={lineBotSubmitting}

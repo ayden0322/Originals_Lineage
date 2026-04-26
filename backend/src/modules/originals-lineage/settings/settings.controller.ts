@@ -37,6 +37,18 @@ export class SettingsController {
     return this.settingsService.updateLineBotSettings(dto);
   }
 
+  @Post('line-bot/test')
+  @RequirePermission('module.originals.settings.manage')
+  testLineBot(@Body() body: { groupId: string }) {
+    return this.settingsService.testLinePush(body.groupId);
+  }
+
+  @Get('line-bot/recent-sources')
+  @RequirePermission('module.originals.settings.manage')
+  getRecentLineSources() {
+    return this.settingsService.getRecentLineSources();
+  }
+
   @Put('line-invite')
   @RequirePermission('module.originals.settings.manage')
   updateLineInvite(@Body() dto: UpdateLineInviteSettingsDto) {
