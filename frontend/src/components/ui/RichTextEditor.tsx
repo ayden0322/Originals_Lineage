@@ -89,6 +89,7 @@ import {
   VerticalAlignMiddleOutlined,
   VerticalAlignBottomOutlined,
   AppstoreOutlined,
+  ClearOutlined,
 } from '@ant-design/icons';
 import { uploadFile } from '@/lib/api/site-manage';
 import { TabsBlock, TABS_BLOCK_NODE_NAME } from './extensions/TabsBlock';
@@ -670,6 +671,16 @@ export default function RichTextEditor({
           value={editor.getAttributes('textStyle').color}
           onChange={(hex) => editor.chain().focus().setColor(hex).run()}
         />
+        {/* 清除文字顏色：把選取段還原成「無 inline color」，繼承前後台主題 */}
+        <Tooltip title="清除文字顏色">
+          <Button
+            type="text"
+            size="small"
+            icon={<ClearOutlined />}
+            disabled={!editor.getAttributes('textStyle').color}
+            onClick={() => editor.chain().focus().unsetColor().run()}
+          />
+        </Tooltip>
 
         <Divider type="vertical" style={{ margin: '0 4px' }} />
 
