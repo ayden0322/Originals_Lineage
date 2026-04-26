@@ -59,6 +59,9 @@ export default function AnnouncementFloat() {
   // 卡片 ref：用來量高度，把高度寫到 CSS var --announcement-height，
   // 讓其他右下 FAB（例如 LineInviteFloat）可以 calc 自動往上讓位。
   const cardRef = useRef<HTMLDivElement | null>(null);
+  // Tabs 滾動容器 + 各 tab 按鈕 ref，用來在切換時把選中的 tab 滑進可視範圍
+  const tabsScrollRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -133,6 +136,12 @@ export default function AnnouncementFloat() {
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
+
+  // 切換分類時，把選中的 tab 滑進可視範圍中央，避免被左右遮罩擋住
+  useEffect(() => {
+    const btn = tabRefs.current[activeTab];
+    if (btn) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeTab, categories]);
 
   // 把卡片實際高度寫到 :root CSS var，供 LineInviteFloat 等右下 FAB 自動避讓。
   // dismissed 或還沒 visible 時清成 0。
@@ -308,49 +317,62 @@ export default function AnnouncementFloat() {
         </div>
 
         {/* Category Tabs — "最新" is always first */}
+        {/* 外層 wrapper：左右漸層遮罩，暗示可橫向滑動 */}
         <div
           style={{
-            display: 'flex',
-            gap: 0,
+            position: 'relative',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
-            overflowX: 'auto',
           }}
         >
-          {[
-            { id: LATEST_TAB, slug: LATEST_TAB, name: '最新', color: '#c4a24e' },
-            ...categories.map((c) => ({ ...c, color: c.color || '#c4a24e' })),
-          ].map((cat) => {
-            const isActive = cat.slug === activeTab;
-            const tabColor = cat.color || '#c4a24e';
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleTabChange(cat.slug)}
-                style={{
-                  flex: 'none',
-                  padding: '10px 16px',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
-                  color: isActive ? tabColor : 'rgba(255,255,255,0.45)',
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: 0.5,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.45)';
-                }}
-              >
-                {cat.name}
-              </button>
-            );
-          })}
+          <div
+            ref={tabsScrollRef}
+            className="announcement-tabs-scroll"
+            style={{
+              display: 'flex',
+              gap: 0,
+              overflowX: 'auto',
+              scrollBehavior: 'smooth',
+              maskImage: 'linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
+            }}
+          >
+            {[
+              { id: LATEST_TAB, slug: LATEST_TAB, name: '最新', color: '#c4a24e' },
+              ...categories.map((c) => ({ ...c, color: c.color || '#c4a24e' })),
+            ].map((cat) => {
+              const isActive = cat.slug === activeTab;
+              const tabColor = cat.color || '#c4a24e';
+              return (
+                <button
+                  key={cat.id}
+                  ref={(el) => { tabRefs.current[cat.slug] = el; }}
+                  onClick={() => handleTabChange(cat.slug)}
+                  style={{
+                    flex: 'none',
+                    padding: '10px 16px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
+                    color: isActive ? tabColor : 'rgba(255,255,255,0.45)',
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: 0.5,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.45)';
+                  }}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Article List */}
@@ -475,6 +497,14 @@ export default function AnnouncementFloat() {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
+        }
+        /* 隱藏分類 tabs 的水平滾動條（保留可滾動行為） */
+        .announcement-tabs-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .announcement-tabs-scroll::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
