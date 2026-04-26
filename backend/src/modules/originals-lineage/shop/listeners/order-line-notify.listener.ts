@@ -26,10 +26,10 @@ interface DeliveryEntry {
 }
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  atm: '🏦 ATM 轉帳',
-  cvs: '🏪 超商代碼繳費',
-  credit_card: '💳 信用卡',
-  all: '💳 信用卡 / ATM / 超商',
+  atm: 'ATM 轉帳',
+  cvs: '超商代碼繳費',
+  credit_card: '信用卡',
+  all: '信用卡 / ATM / 超商',
 };
 
 /**
@@ -96,17 +96,18 @@ export class OrderLineNotifyListener {
     const agentLabel = await this.agentLabel(ctx.binding?.websiteAccountId);
 
     const text =
-      `💰 儲值到帳  ${ctx.order.orderNumber}\n` +
+      `💰 儲值到帳，訂單編號：${ctx.order.orderNumber}\n` +
       `\n` +
-      `👤 玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
-      `🎁 商品：${itemSummary}\n` +
-      `💵 金額：NT$${formatNumber(ctx.order.totalAmount)}\n` +
-      `${paymentMethodLabel}\n` +
+      `玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
+      `商品：${itemSummary}\n` +
+      `金額：NT$${formatNumber(ctx.order.totalAmount)}\n` +
+      `付款方式：${paymentMethodLabel}\n` +
       `✅ 已自動發貨\n` +
-      (agentLabel ? `🤝 推薦人：${agentLabel}\n` : '') +
+      (agentLabel ? `推薦人：${agentLabel}\n` : '') +
       `\n` +
-      `${orderCount === 1 ? '🌟 該玩家首儲' : `📈 累計第 ${orderCount} 筆`}\n` +
-      `📊 今日流水 NT$${formatNumber(todayStats.amount)}（${todayStats.count} 筆）\n` +
+      `${orderCount === 1 ? '🌟 該玩家首儲' : `累計第 ${orderCount} 筆`}\n` +
+      `\n` +
+      `今日流水 NT$${formatNumber(todayStats.amount)}（${todayStats.count} 筆）\n` +
       `\n` +
       `🕐 ${formatTime(new Date())}`;
 
@@ -134,12 +135,12 @@ export class OrderLineNotifyListener {
       (details && typeof details.attempts === 'number' && details.attempts) || 0;
 
     const text =
-      `🚨 儲值發貨異常  ${ctx.order.orderNumber}\n` +
+      `🚨 儲值發貨異常，訂單編號：${ctx.order.orderNumber}\n` +
       `\n` +
-      `👤 玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
-      `💵 金額：NT$${formatNumber(ctx.order.totalAmount)}（已收款 ✅）\n` +
+      `玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
+      `金額：NT$${formatNumber(ctx.order.totalAmount)}（已收款 ✅）\n` +
       `❌ 發貨失敗：${errorMsg}\n` +
-      (attempts ? `🔄 已重試 ${attempts} 次（共 ~3 分鐘）\n` : '') +
+      (attempts ? `已重試 ${attempts} 次（共 ~3 分鐘）\n` : '') +
       `\n` +
       `請至後台手動補發 → /admin/orders/${ctx.order.id}\n` +
       `\n` +
@@ -258,7 +259,7 @@ export class OrderLineNotifyListener {
     if (method && PAYMENT_METHOD_LABEL[method]) {
       return PAYMENT_METHOD_LABEL[method];
     }
-    return `🏦 付款方式：${providerCode ?? '未知'}`;
+    return providerCode ?? '未知';
   }
 
   private async countMemberPaidOrders(memberBindingId: string): Promise<number> {
