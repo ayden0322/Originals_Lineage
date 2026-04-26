@@ -10,6 +10,7 @@ import { SettingsModule } from './settings/settings.module';
 import { SiteManageModule } from './site-manage/site-manage.module';
 import { CommissionModule } from './commission/commission.module';
 import { ForumPushModule } from './forum-push/forum-push.module';
+import { DropQueryModule } from './drop-query/drop-query.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ForumPushModule } from './forum-push/forum-push.module';
     SiteManageModule,
     CommissionModule,
     ForumPushModule,
+    DropQueryModule,
   ],
 })
 export class OriginalsLineageModule {}

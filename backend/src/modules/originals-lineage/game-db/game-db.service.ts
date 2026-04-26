@@ -637,6 +637,16 @@ export class GameDbService implements OnModuleInit {
     return (result as { insertId: number }).insertId;
   }
 
+  /**
+   * 通用 SELECT 查詢入口（給只讀模組使用，例如掉落查詢）。
+   * 呼叫端負責 SQL 與參數綁定，這裡只確保連線狀態並轉發。
+   * 切勿用來做 INSERT / UPDATE / DELETE — 寫入請走專用方法。
+   */
+  async runQuery<T = unknown>(sql: string, params: unknown[] = []): Promise<T> {
+    const ds = this.ensureConnected();
+    return (await ds.query(sql, params)) as T;
+  }
+
   async healthCheck(): Promise<boolean> {
     try {
       const ds = this.ensureConnected();
