@@ -179,10 +179,10 @@ export default function ArticleTabsHydrator({ html, className, style }: Props) {
       const overlay = document.createElement('span');
       overlay.className = 'article-video-image-overlay';
       overlay.setAttribute('aria-hidden', 'true');
-      // 60×60 三角形播放圖示
+      // 三角形播放圖示（尺寸由 CSS 控制，定位於圖片右下）
       overlay.innerHTML =
-        '<svg viewBox="0 0 64 64" width="64" height="64" focusable="false">' +
-        '<circle cx="32" cy="32" r="28" fill="rgba(0,0,0,0.55)" stroke="rgba(255,255,255,0.95)" stroke-width="2"/>' +
+        '<svg viewBox="0 0 64 64" focusable="false">' +
+        '<circle cx="32" cy="32" r="28" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.95)" stroke-width="3"/>' +
         '<polygon points="26,20 26,44 46,32" fill="#fff"/>' +
         '</svg>';
       wrap.appendChild(overlay);

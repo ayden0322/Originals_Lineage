@@ -249,22 +249,23 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
           }
           .article-content .article-video-image-overlay {
             position: absolute;
-            inset: 0;
+            right: 6px;
+            bottom: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             pointer-events: none;
-            opacity: 0.85;
+            opacity: 0.9;
             transition: opacity 0.2s ease, transform 0.2s ease;
           }
           .article-content .article-video-image-overlay svg {
-            width: clamp(36px, 30%, 72px);
+            width: clamp(20px, 18%, 32px);
             height: auto;
-            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
           }
           .article-content .article-video-image-wrap:hover .article-video-image-overlay {
             opacity: 1;
-            transform: scale(1.08);
+            transform: scale(1.12);
           }
           /* 沿用原本 img 的對齊／浮動規則：把 wrap 的對齊跟著 img 的 data-text-align 套 */
           .article-content .article-video-image-wrap:has(> img[data-text-align="left"]) {
