@@ -11,6 +11,10 @@ import { GameDbService } from '../game-db/game-db.service';
  *
  * 道具名稱來源拆三表：etcitem / weapon / armor，item_id 互不重疊。
  * etcitem.name 含 L1J 顏色控制碼 \f.（兩字元一組），需過濾。
+ *
+ * 效能注意：npc 表約 230 萬筆。MySQL 對 `npcid IN (UNION subquery)` 不一定會
+ * 做 semi-join 優化，可能退化成相關子查詢逐列重算 UNION，造成 timeout。
+ * 因此 active 怪物清單一律以 derived table（INNER JOIN）方式提供。
  */
 @Injectable()
 export class DropQueryService {
@@ -23,10 +27,15 @@ export class DropQueryService {
     return name.replace(/\\f./g, '');
   }
 
-  /** 「目前有開放」的 mob id 集合（spawnlist 或 spawnlist_boss 至少一筆 count>0）。 */
-  private readonly activeMobsCte = `(
+  /** 「目前有開放」的 mob id 清單（spawnlist 或 spawnlist_boss 至少一筆 count>0）。 */
+  private readonly activeMobsDerived = `(
     SELECT DISTINCT npc_templateid AS npcid FROM spawnlist      WHERE count > 0
     UNION
+    SELECT DISTINCT npc_templateid AS npcid FROM spawnlist_boss WHERE count > 0
+  )`;
+
+  /** Boss 中目前有開放的 mob id 清單（用來判斷 isBoss 標籤）。 */
+  private readonly activeBossDerived = `(
     SELECT DISTINCT npc_templateid AS npcid FROM spawnlist_boss WHERE count > 0
   )`;
 
@@ -42,9 +51,8 @@ export class DropQueryService {
   // ─── 道具搜尋 ────────────────────────────────────────────
 
   /**
-   * 搜尋「在 droplist 中至少出現過一次」且名稱含關鍵字的道具。
-   * 為避免列出根本不會掉的道具（武器/防具/etcitem 還包含商城品、合成材料等大量無用 ID），
-   * 一律以 droplist 為過濾條件。
+   * 搜尋「目前有開放怪物會掉」且名稱含關鍵字的道具。
+   * 條件：itemId 出現在 droplist 且該筆 droplist 的 mobId 是目前開放怪物。
    */
   async searchItems(
     keyword: string,
@@ -60,7 +68,11 @@ export class DropQueryService {
 
     const baseFrom = `
       FROM ${this.allItemsUnion} i
-      INNER JOIN (SELECT DISTINCT itemId FROM droplist) d ON d.itemId = i.itemId
+      INNER JOIN (
+        SELECT DISTINCT d.itemId
+        FROM droplist d
+        INNER JOIN ${this.activeMobsDerived} active ON active.npcid = d.mobId
+      ) d ON d.itemId = i.itemId
     `;
     const where = kw ? 'WHERE i.rawName LIKE ?' : '';
     const params: unknown[] = kw ? [likeParam] : [];
@@ -103,25 +115,26 @@ export class DropQueryService {
     const kw = (keyword || '').trim();
     const likeParam = `%${kw}%`;
 
-    const where: string[] = [`n.npcid IN ${this.activeMobsCte}`];
-    const params: unknown[] = [];
-    if (kw) {
-      where.push('n.name LIKE ?');
-      params.push(likeParam);
-    }
-    const whereSql = `WHERE ${where.join(' AND ')}`;
+    const where = kw ? 'WHERE n.name LIKE ?' : '';
+    const params: unknown[] = kw ? [likeParam] : [];
 
+    // INNER JOIN active derived table，避免 npc(2.3M 筆) 上的 IN (UNION) 退化為相關子查詢
     const [rows, countRows] = await Promise.all([
       this.gameDb.runQuery<Array<{ npcid: number; name: string; isBoss: number | string }>>(
         `SELECT n.npcid, n.name,
-                EXISTS(SELECT 1 FROM spawnlist_boss sb WHERE sb.npc_templateid = n.npcid AND sb.count > 0) AS isBoss
+                CASE WHEN sb.npcid IS NOT NULL THEN 1 ELSE 0 END AS isBoss
          FROM npc n
-         ${whereSql}
+         INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
+         LEFT  JOIN ${this.activeBossDerived} sb     ON sb.npcid     = n.npcid
+         ${where}
          ORDER BY n.npcid ASC LIMIT ? OFFSET ?`,
         [...params, limit, offset],
       ),
       this.gameDb.runQuery<Array<{ total: number | string }>>(
-        `SELECT COUNT(*) AS total FROM npc n ${whereSql}`,
+        `SELECT COUNT(*) AS total
+         FROM npc n
+         INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
+         ${where}`,
         params,
       ),
     ]);
@@ -138,7 +151,7 @@ export class DropQueryService {
 
   // ─── 道具反查怪物 ────────────────────────────────────────
 
-  /** 給 itemId，列出所有「目前有開放」的怪物；含掉落機率與數量（依機率高到低排）。 */
+  /** 給 itemId，列出所有「目前有開放」的怪物；含掉落數量（依機率高到低排）。 */
   async getMonstersDroppingItem(itemId: number): Promise<{
     item: { itemId: number; itemName: string; itemType: 'etc' | 'weapon' | 'armor' } | null;
     monsters: Array<{
@@ -182,11 +195,12 @@ export class DropQueryService {
       }>
     >(
       `SELECT d.mobId, n.name, d.min, d.max, d.chance, d.note,
-              EXISTS(SELECT 1 FROM spawnlist_boss sb WHERE sb.npc_templateid = d.mobId AND sb.count > 0) AS isBoss
+              CASE WHEN sb.npcid IS NOT NULL THEN 1 ELSE 0 END AS isBoss
        FROM droplist d
-       INNER JOIN npc n ON n.npcid = d.mobId
+       INNER JOIN npc n                                  ON n.npcid     = d.mobId
+       INNER JOIN ${this.activeMobsDerived} active       ON active.npcid = d.mobId
+       LEFT  JOIN ${this.activeBossDerived} sb           ON sb.npcid    = d.mobId
        WHERE d.itemId = ?
-         AND d.mobId IN ${this.activeMobsCte}
        ORDER BY d.chance DESC`,
       [itemId],
     );
@@ -199,7 +213,7 @@ export class DropQueryService {
         isBoss: Number(r.isBoss) === 1,
         min: Number(r.min),
         max: Number(r.max),
-        chancePercent: Number(r.chance) / 10000, // 1,000,000 = 100% → 除 10000 取百分比
+        chancePercent: Number(r.chance) / 10000,
         note: r.note || '',
       })),
     };
@@ -224,9 +238,11 @@ export class DropQueryService {
       Array<{ npcid: number; name: string; isBoss: number | string }>
     >(
       `SELECT n.npcid, n.name,
-              EXISTS(SELECT 1 FROM spawnlist_boss sb WHERE sb.npc_templateid = n.npcid AND sb.count > 0) AS isBoss
+              CASE WHEN sb.npcid IS NOT NULL THEN 1 ELSE 0 END AS isBoss
        FROM npc n
-       WHERE n.npcid = ? AND n.npcid IN ${this.activeMobsCte}
+       INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
+       LEFT  JOIN ${this.activeBossDerived} sb     ON sb.npcid     = n.npcid
+       WHERE n.npcid = ?
        LIMIT 1`,
       [npcid],
     );

@@ -123,7 +123,6 @@ function ItemSearchPanel() {
   };
 
   const columns: ColumnsType<ItemSummary> = [
-    { title: '道具編號', dataIndex: 'itemId', width: 110 },
     {
       title: '道具名稱',
       dataIndex: 'itemName',
