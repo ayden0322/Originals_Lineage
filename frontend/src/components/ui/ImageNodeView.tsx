@@ -31,6 +31,20 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
       .run();
   }, [editor, getPos, node.nodeSize]);
 
+  // 點圖片強制 NodeSelection
+  // 表格 cell 內的圖片，prosemirror-tables 會把點擊解讀成 cell 的文字游標定位，
+  // 導致圖片無法被選取（沒辦法叫出 resize handle / toolbar）。
+  // 這裡攔下 click，明確呼叫 setNodeSelection 把選取放到圖片本身。
+  const handleSelectImage = useCallback(
+    (e: React.MouseEvent) => {
+      const pos = getPos();
+      if (pos === undefined) return;
+      e.stopPropagation();
+      editor.chain().setNodeSelection(pos).run();
+    },
+    [editor, getPos],
+  );
+
   // 拖曳調整大小
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent, corner: string) => {
@@ -143,6 +157,8 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
           alt={node.attrs.alt || ''}
           style={imgStyle}
           draggable={false}
+          onClick={handleSelectImage}
+          onMouseDown={handleSelectImage}
         />
 
         {/* 四角 resize handles */}
