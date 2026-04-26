@@ -427,6 +427,8 @@ export default function RichTextEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
+    // 讓游標移動／選取變更時，工具列同步重繪（字色、粗體 active、字型等狀態才會即時反映）
+    shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({
         // hardBreak 預設已啟用（Shift+Enter = <br>）

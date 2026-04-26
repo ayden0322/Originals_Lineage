@@ -185,10 +185,6 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
           .article-content table th {
             font-weight: 600;
           }
-          .article-content table td[style*="background-color"],
-          .article-content table th[style*="background-color"] {
-            background: none;
-          }
 
           /* ────── 分頁區塊（TabsBlock） ────── */
           .article-content [data-type="tabs"] {
