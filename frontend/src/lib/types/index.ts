@@ -816,6 +816,17 @@ export interface SiteSettings {
   changelogShowCover?: boolean;
   changelogShowViewCount?: boolean;
   changelogShowSearch?: boolean;
+  // Events page
+  eventsBannerUrl?: string;
+  eventsCategorySlug?: string;
+  eventsPageTitle?: string;
+  eventsPageSubtitle?: string;
+  eventsLayout?: 'magazine' | 'timeline' | 'masonry';
+  eventsPerPage?: number;
+  eventsDefaultSort?: 'newest' | 'popular' | 'pinned';
+  eventsShowCover?: boolean;
+  eventsShowViewCount?: boolean;
+  eventsShowSearch?: boolean;
   // Support page
   lineOfficialUrl?: string;
   lineOfficialCaption?: string;

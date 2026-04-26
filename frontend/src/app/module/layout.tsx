@@ -93,6 +93,7 @@ const allMenuItems: MenuItem[] = [
         ],
       },
       { key: '/module/site-manage/changelog', label: '更新頁面管理' },
+      { key: '/module/site-manage/events', label: '活動頁面管理' },
     ],
   },
   { key: '/module/media', icon: <PictureOutlined />, label: '媒體庫', permission: 'module.originals.media.view' },

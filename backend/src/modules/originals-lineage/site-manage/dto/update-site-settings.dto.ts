@@ -279,6 +279,57 @@ export class UpdateSiteSettingsDto {
   @IsBoolean()
   changelogShowSearch?: boolean;
 
+  // ─── Events Page Settings ────────────────────────────────
+  @ApiPropertyOptional({ description: '活動頁 Banner 圖片 URL' })
+  @IsOptional()
+  @IsString()
+  eventsBannerUrl?: string;
+
+  @ApiPropertyOptional({ example: 'events', description: '活動頁抓取的文章分類 slug' })
+  @IsOptional()
+  @IsString()
+  eventsCategorySlug?: string;
+
+  @ApiPropertyOptional({ example: '活動', description: '活動頁面標題' })
+  @IsOptional()
+  @IsString()
+  eventsPageTitle?: string;
+
+  @ApiPropertyOptional({ example: '參與最新活動，贏取限定獎勵', description: '活動頁副標題' })
+  @IsOptional()
+  @IsString()
+  eventsPageSubtitle?: string;
+
+  @ApiPropertyOptional({ example: 'magazine', description: '活動頁佈局模式' })
+  @IsOptional()
+  @IsString()
+  eventsLayout?: 'magazine' | 'timeline' | 'masonry';
+
+  @ApiPropertyOptional({ default: 12, description: '每頁顯示數量' })
+  @IsOptional()
+  @IsNumber()
+  eventsPerPage?: number;
+
+  @ApiPropertyOptional({ example: 'newest', description: '預設排序方式' })
+  @IsOptional()
+  @IsString()
+  eventsDefaultSort?: 'newest' | 'popular' | 'pinned';
+
+  @ApiPropertyOptional({ default: true, description: '是否顯示封面圖' })
+  @IsOptional()
+  @IsBoolean()
+  eventsShowCover?: boolean;
+
+  @ApiPropertyOptional({ default: true, description: '是否顯示瀏覽數' })
+  @IsOptional()
+  @IsBoolean()
+  eventsShowViewCount?: boolean;
+
+  @ApiPropertyOptional({ default: false, description: '是否顯示搜尋欄' })
+  @IsOptional()
+  @IsBoolean()
+  eventsShowSearch?: boolean;
+
   // ─── Support Page Settings ────────────────────────────────
   @ApiPropertyOptional({ example: 'https://line.me/R/ti/p/@xxx', description: '官方 Line 連結' })
   @IsOptional()
