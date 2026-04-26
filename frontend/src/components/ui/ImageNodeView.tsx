@@ -292,7 +292,15 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
                 if (open) setAltValue(node.attrs.alt || '');
               }}
               content={
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                  // Antd Popover 走 React Portal，但事件仍會沿 React tree 冒泡，
+                  // 觸發外層 RichTextEditor 的 onClick={editor.focus()} → 圖片取消選取
+                  // → toolbar 消失 → Popover 跟著關掉。攔下這幾個事件避免焦點被搶。
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <Input
                     size="small"
                     value={altValue}
@@ -333,7 +341,12 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
                 if (open) setVideoValue(node.attrs.videoUrl || '');
               }}
               content={
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <Input
                     size="small"
                     value={videoValue}
