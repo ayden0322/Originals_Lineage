@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, memo, useEffect, useRef, useState } from 'react';
 import { Modal } from 'antd';
 
 interface Props {
@@ -13,6 +13,32 @@ interface PanelData {
   title: string;
   html: string;
 }
+
+interface StaticHtmlProps {
+  html: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// 只有 html / className / style 變動時才重新渲染。
+// 若不隔離，父元件因 videoUrl state 變動 re-render，
+// React 會把 dangerouslySetInnerHTML 的 innerHTML 重新覆寫，
+// 導致 useEffect 後注入的 tab nav / panel / 影片 wrap 全部被清掉。
+const StaticHtml = memo(
+  forwardRef<HTMLDivElement, StaticHtmlProps>(function StaticHtml(
+    { html, className, style },
+    ref,
+  ) {
+    return (
+      <div
+        ref={ref}
+        className={className}
+        style={style}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }),
+);
 
 /**
  * 文章內容渲染器 — 把 [data-type="tabs"] 區塊接上互動切換
@@ -186,12 +212,7 @@ export default function ArticleTabsHydrator({ html, className, style }: Props) {
 
   return (
     <>
-      <div
-        ref={rootRef}
-        className={className}
-        style={style}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <StaticHtml ref={rootRef} html={html} className={className} style={style} />
       <Modal
         open={!!videoUrl}
         onCancel={() => setVideoUrl(null)}
