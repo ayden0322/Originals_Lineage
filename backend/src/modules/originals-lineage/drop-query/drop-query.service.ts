@@ -9,6 +9,11 @@ import { GameDbService } from '../game-db/game-db.service';
  *  - spawnlist (npc_templateid, count, ...)            — count=0 視為「未開放」
  *  - spawnlist_boss (npc_templateid, count, ...)       — 同上，boss 專用
  *
+ * 開放/關閉的兩層判定（每次查詢都即時從 DB 讀，調 DB 即時生效）：
+ *  1. 怪物層：spawnlist / spawnlist_boss 任一筆 count>0 視為怪物開放
+ *  2. 掉落層：droplist 該筆 max>0 視為該道具實際會掉
+ *     (min=max=0 是「掉落開關」用法 — 紀錄保留但暫停掉落，調整數值即可重新開放)
+ *
  * 道具名稱來源拆三表：etcitem / weapon / armor，item_id 互不重疊。
  * etcitem.name 含 L1J 顏色控制碼 \f.（兩字元一組），需過濾。
  *
@@ -72,6 +77,7 @@ export class DropQueryService {
         SELECT DISTINCT d.itemId
         FROM droplist d
         INNER JOIN ${this.activeMobsDerived} active ON active.npcid = d.mobId
+        WHERE d.max > 0
       ) d ON d.itemId = i.itemId
     `;
     const where = kw ? 'WHERE i.rawName LIKE ?' : '';
@@ -200,7 +206,7 @@ export class DropQueryService {
        INNER JOIN npc n                                  ON n.npcid     = d.mobId
        INNER JOIN ${this.activeMobsDerived} active       ON active.npcid = d.mobId
        LEFT  JOIN ${this.activeBossDerived} sb           ON sb.npcid    = d.mobId
-       WHERE d.itemId = ?
+       WHERE d.itemId = ? AND d.max > 0
        ORDER BY d.chance DESC`,
       [itemId],
     );
@@ -274,7 +280,7 @@ export class DropQueryService {
        LEFT JOIN etcitem e ON e.item_id = d.itemId
        LEFT JOIN weapon  w ON w.item_id = d.itemId
        LEFT JOIN armor   a ON a.item_id = d.itemId
-       WHERE d.mobId = ?
+       WHERE d.mobId = ? AND d.max > 0
        ORDER BY d.chance DESC`,
       [npcid],
     );
