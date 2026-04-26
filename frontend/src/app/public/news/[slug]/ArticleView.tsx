@@ -238,6 +238,55 @@ export default function ArticleView({ article, prevArticle, nextArticle, publish
           .article-content [data-type="tab-panel"]:not([style*="display"]) [data-type="tab-panel-fallback-title"] {
             display: block;
           }
+
+          /* ────── 影片圖片：點擊跳出 Modal 播放 mp4 ────── */
+          .article-content .article-video-image-wrap {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            line-height: 0;
+            outline: none;
+          }
+          .article-content .article-video-image-wrap:focus-visible {
+            box-shadow: 0 0 0 2px #c4a24e;
+            border-radius: 4px;
+          }
+          .article-content .article-video-image-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0.85;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+          }
+          .article-content .article-video-image-overlay svg {
+            width: clamp(36px, 30%, 72px);
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+          }
+          .article-content .article-video-image-wrap:hover .article-video-image-overlay {
+            opacity: 1;
+            transform: scale(1.08);
+          }
+          /* 沿用原本 img 的對齊／浮動規則：把 wrap 的對齊跟著 img 的 data-text-align 套 */
+          .article-content .article-video-image-wrap:has(> img[data-text-align="left"]) {
+            float: left;
+            margin: 4px 16px 8px 0;
+            max-width: 50%;
+          }
+          .article-content .article-video-image-wrap:has(> img[data-text-align="right"]) {
+            float: right;
+            margin: 4px 0 8px 16px;
+            max-width: 50%;
+          }
+          .article-content .article-video-image-wrap:has(> img[data-text-align="center"]) {
+            display: block;
+            margin: 8px auto;
+            text-align: center;
+            clear: both;
+          }
         `}</style>
 
         {(prevArticle || nextArticle) && (

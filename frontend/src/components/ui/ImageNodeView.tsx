@@ -9,6 +9,8 @@ import {
   AlignRightOutlined,
   EditOutlined,
   VerticalAlignBottomOutlined,
+  VideoCameraOutlined,
+  PlayCircleFilled,
 } from '@ant-design/icons';
 
 /**
@@ -18,6 +20,9 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
   const imgRef = useRef<HTMLImageElement>(null);
   const [altOpen, setAltOpen] = useState(false);
   const [altValue, setAltValue] = useState(node.attrs.alt || '');
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoValue, setVideoValue] = useState(node.attrs.videoUrl || '');
+  const hasVideo = !!node.attrs.videoUrl;
 
   // 在圖片後插入「分隔線」結束文繞圖（hr 自動 clear: both）
   const handleClearFloat = useCallback(() => {
@@ -111,11 +116,16 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
   // - 靠左/右浮動（isFloat）→ 由 CSS .react-renderer:has(...) 處理 float
   // - 明確 center → 區塊置中
   // - 未指定（null）→ 跟公開頁一樣，block-level 自然排版（不置中、不浮動）
-  const wrapperStyle: React.CSSProperties = isFloat
-    ? { display: 'inline-block' }
-    : align === 'center'
-      ? { textAlign: 'center', minHeight: 20 }
-      : { display: 'block', minHeight: 20 };
+  // - 選取時：position relative + 高 z-index，避免在表格 cell 內時，
+  //   浮動工具列（top:-44px）被相鄰 row 的 cell 遮住
+  const wrapperStyle: React.CSSProperties = {
+    ...(isFloat
+      ? { display: 'inline-block' }
+      : align === 'center'
+        ? { textAlign: 'center', minHeight: 20 }
+        : { display: 'block', minHeight: 20 }),
+    ...(selected ? { position: 'relative', zIndex: 100 } : {}),
+  };
 
   // 圖片容器（inline-block，只包住圖片大小）
   const containerStyle: React.CSSProperties = {
@@ -160,6 +170,27 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
           onClick={handleSelectImage}
           onMouseDown={handleSelectImage}
         />
+
+        {/* 已綁定影片 → 顯示播放圖示 overlay（編輯端視覺提示，前台一致） */}
+        {hasVideo && (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+              color: '#fff',
+              textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+              fontSize: 'min(48px, 40%)',
+              opacity: 0.85,
+            }}
+          >
+            <PlayCircleFilled />
+          </div>
+        )}
 
         {/* 四角 resize handles */}
         {selected &&
@@ -288,6 +319,64 @@ export function ImageNodeView({ node, updateAttributes, selected, editor, getPos
             >
               <Tooltip title="替代文字">
                 <Button size="small" type="text" icon={<EditOutlined />} />
+              </Tooltip>
+            </Popover>
+
+            <Divider type="vertical" style={{ margin: '0 2px' }} />
+
+            {/* 綁定 mp4 影片：前台點擊圖片時跳出 Modal 播放 */}
+            <Popover
+              trigger="click"
+              open={videoOpen}
+              onOpenChange={(open) => {
+                setVideoOpen(open);
+                if (open) setVideoValue(node.attrs.videoUrl || '');
+              }}
+              content={
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Input
+                    size="small"
+                    value={videoValue}
+                    onChange={(e) => setVideoValue(e.target.value)}
+                    placeholder="mp4 影片網址"
+                    style={{ width: 240 }}
+                    onPressEnter={() => {
+                      updateAttributes({ videoUrl: videoValue.trim() || null });
+                      setVideoOpen(false);
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    type="primary"
+                    onClick={() => {
+                      updateAttributes({ videoUrl: videoValue.trim() || null });
+                      setVideoOpen(false);
+                    }}
+                  >
+                    確定
+                  </Button>
+                  {hasVideo && (
+                    <Button
+                      size="small"
+                      danger
+                      onClick={() => {
+                        updateAttributes({ videoUrl: null });
+                        setVideoValue('');
+                        setVideoOpen(false);
+                      }}
+                    >
+                      清除
+                    </Button>
+                  )}
+                </div>
+              }
+            >
+              <Tooltip title={hasVideo ? '已綁定影片（點擊編輯）' : '綁定影片'}>
+                <Button
+                  size="small"
+                  type={hasVideo ? 'primary' : 'text'}
+                  icon={<VideoCameraOutlined />}
+                />
               </Tooltip>
             </Popover>
           </div>

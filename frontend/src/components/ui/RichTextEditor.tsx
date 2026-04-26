@@ -182,6 +182,15 @@ const AlignableImage = ImageExt.extend({
           return { width: attributes.width, style: `width: ${attributes.width}px` };
         },
       },
+      // 綁定影片：前台點擊圖片時跳出 Modal 播放這支 mp4
+      videoUrl: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-video-url') || null,
+        renderHTML: (attributes) => {
+          if (!attributes.videoUrl) return {};
+          return { 'data-video-url': attributes.videoUrl };
+        },
+      },
     };
   },
   addNodeView() {
@@ -1072,7 +1081,8 @@ export default function RichTextEditor({
           border-collapse: collapse;
           width: 100%;
           margin: 1em 0;
-          overflow: hidden;
+          /* 不設 overflow:hidden — 否則 cell 內圖片的浮動工具列（top:-44px）
+             一旦超出表格邊界就會被切掉 */
         }
         .tiptap table td,
         .tiptap table th {

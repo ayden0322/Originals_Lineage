@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Modal } from 'antd';
 
 interface Props {
   html: string;
@@ -26,6 +27,7 @@ interface PanelData {
  */
 export default function ArticleTabsHydrator({ html, className, style }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -129,17 +131,87 @@ export default function ArticleTabsHydrator({ html, className, style }: Props) {
       });
     });
 
+    // ──── 影片圖片：把 img[data-video-url] 包成可點擊的 <span>，加上播放圖示 overlay
+    // 點擊 → 開 Modal 播放 mp4
+    const videoImgs = root.querySelectorAll<HTMLImageElement>('img[data-video-url]');
+    videoImgs.forEach((img) => {
+      const url = img.getAttribute('data-video-url');
+      if (!url) return;
+      // 已被包過就跳過（HMR / re-hydrate）
+      if (img.parentElement?.classList.contains('article-video-image-wrap')) return;
+
+      const wrap = document.createElement('span');
+      wrap.className = 'article-video-image-wrap';
+      wrap.setAttribute('role', 'button');
+      wrap.tabIndex = 0;
+      wrap.setAttribute('aria-label', '播放影片');
+
+      // 把圖片從 cell 中拿出來，包進 wrap，再放回原位
+      img.parentNode?.insertBefore(wrap, img);
+      wrap.appendChild(img);
+
+      const overlay = document.createElement('span');
+      overlay.className = 'article-video-image-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      // 60×60 三角形播放圖示
+      overlay.innerHTML =
+        '<svg viewBox="0 0 64 64" width="64" height="64" focusable="false">' +
+        '<circle cx="32" cy="32" r="28" fill="rgba(0,0,0,0.55)" stroke="rgba(255,255,255,0.95)" stroke-width="2"/>' +
+        '<polygon points="26,20 26,44 46,32" fill="#fff"/>' +
+        '</svg>';
+      wrap.appendChild(overlay);
+
+      const open = (e: Event) => {
+        e.preventDefault();
+        setVideoUrl(url);
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setVideoUrl(url);
+        }
+      };
+      wrap.addEventListener('click', open);
+      wrap.addEventListener('keydown', onKey);
+      cleanups.push(() => {
+        wrap.removeEventListener('click', open);
+        wrap.removeEventListener('keydown', onKey);
+      });
+    });
+
     return () => {
       cleanups.forEach((fn) => fn());
     };
   }, [html]);
 
   return (
-    <div
-      ref={rootRef}
-      className={className}
-      style={style}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div
+        ref={rootRef}
+        className={className}
+        style={style}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      <Modal
+        open={!!videoUrl}
+        onCancel={() => setVideoUrl(null)}
+        footer={null}
+        width={960}
+        centered
+        destroyOnHidden
+        styles={{ body: { padding: 0, background: '#000' } }}
+      >
+        {videoUrl && (
+          <video
+            key={videoUrl}
+            src={videoUrl}
+            controls
+            autoPlay
+            playsInline
+            style={{ width: '100%', display: 'block', maxHeight: '80vh', background: '#000' }}
+          />
+        )}
+      </Modal>
+    </>
   );
 }
