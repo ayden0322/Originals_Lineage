@@ -258,8 +258,8 @@ export default function AnnouncementFloat() {
         right: `calc(max(16px, env(safe-area-inset-right, 0px)) - ${position.x}px)`,
         bottom: `calc(max(16px, env(safe-area-inset-bottom, 0px)) - ${position.y}px)`,
         zIndex: 1050,
-        width: 'min(380px, calc(100vw - 32px))',
-        maxWidth: '380px',
+        width: 'min(520px, calc(100vw - 32px))',
+        maxWidth: '520px',
         opacity: isDragging ? 0.7 : 1,
         transition: 'opacity 0.2s ease',
         animation: hasEntrance ? 'floatIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
@@ -317,62 +317,54 @@ export default function AnnouncementFloat() {
         </div>
 
         {/* Category Tabs — "最新" is always first */}
-        {/* 外層 wrapper：左右漸層遮罩，暗示可橫向滑動 */}
+        {/* 卡片寬度足以容納所有分類，仍保留 overflow-x:auto 作為意外溢位的 fallback */}
         <div
+          ref={tabsScrollRef}
+          className="announcement-tabs-scroll"
           style={{
-            position: 'relative',
+            display: 'flex',
+            gap: 0,
             borderBottom: '1px solid rgba(255,255,255,0.06)',
+            overflowX: 'auto',
+            scrollBehavior: 'smooth',
           }}
         >
-          <div
-            ref={tabsScrollRef}
-            className="announcement-tabs-scroll"
-            style={{
-              display: 'flex',
-              gap: 0,
-              overflowX: 'auto',
-              scrollBehavior: 'smooth',
-              maskImage: 'linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)',
-            }}
-          >
-            {[
-              { id: LATEST_TAB, slug: LATEST_TAB, name: '最新', color: '#c4a24e' },
-              ...categories.map((c) => ({ ...c, color: c.color || '#c4a24e' })),
-            ].map((cat) => {
-              const isActive = cat.slug === activeTab;
-              const tabColor = cat.color || '#c4a24e';
-              return (
-                <button
-                  key={cat.id}
-                  ref={(el) => { tabRefs.current[cat.slug] = el; }}
-                  onClick={() => handleTabChange(cat.slug)}
-                  style={{
-                    flex: 'none',
-                    padding: '10px 16px',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
-                    color: isActive ? tabColor : 'rgba(255,255,255,0.45)',
-                    fontSize: 13,
-                    fontWeight: isActive ? 600 : 400,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap',
-                    letterSpacing: 0.5,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.45)';
-                  }}
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
-          </div>
+          {[
+            { id: LATEST_TAB, slug: LATEST_TAB, name: '最新', color: '#c4a24e' },
+            ...categories.map((c) => ({ ...c, color: c.color || '#c4a24e' })),
+          ].map((cat) => {
+            const isActive = cat.slug === activeTab;
+            const tabColor = cat.color || '#c4a24e';
+            return (
+              <button
+                key={cat.id}
+                ref={(el) => { tabRefs.current[cat.slug] = el; }}
+                onClick={() => handleTabChange(cat.slug)}
+                style={{
+                  flex: 'none',
+                  padding: '10px 16px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: isActive ? `2px solid ${tabColor}` : '2px solid transparent',
+                  color: isActive ? tabColor : 'rgba(255,255,255,0.45)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: 0.5,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.color = 'rgba(255,255,255,0.45)';
+                }}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
 
         {/* Article List */}
