@@ -44,6 +44,11 @@ export class DropQueryService {
     SELECT DISTINCT npc_templateid AS npcid FROM spawnlist_boss WHERE count > 0
   )`;
 
+  /** 至少有一筆有效掉落（max>0）的怪物清單 — 用來過濾「點進去什麼都沒有」的陰影/變體 NPC。 */
+  private readonly mobsWithDropsDerived = `(
+    SELECT DISTINCT mobId AS npcid FROM droplist WHERE max > 0
+  )`;
+
   /** 三張道具表 UNION（itemId / rawName / itemType） */
   private readonly allItemsUnion = `(
     SELECT e.item_id AS itemId, e.name AS rawName, 'etc'    AS itemType FROM etcitem e
@@ -125,13 +130,15 @@ export class DropQueryService {
     const params: unknown[] = kw ? [likeParam] : [];
 
     // INNER JOIN active derived table，避免 npc(2.3M 筆) 上的 IN (UNION) 退化為相關子查詢
+    // 同時 INNER JOIN mobsWithDrops，過濾掉「spawn 開放但完全沒掉落」的陰影 / 變體 NPC
     const [rows, countRows] = await Promise.all([
       this.gameDb.runQuery<Array<{ npcid: number; name: string; isBoss: number | string }>>(
         `SELECT n.npcid, n.name,
                 CASE WHEN sb.npcid IS NOT NULL THEN 1 ELSE 0 END AS isBoss
          FROM npc n
-         INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
-         LEFT  JOIN ${this.activeBossDerived} sb     ON sb.npcid     = n.npcid
+         INNER JOIN ${this.activeMobsDerived}    active ON active.npcid = n.npcid
+         INNER JOIN ${this.mobsWithDropsDerived} mwd    ON mwd.npcid    = n.npcid
+         LEFT  JOIN ${this.activeBossDerived}    sb     ON sb.npcid     = n.npcid
          ${where}
          ORDER BY n.npcid ASC LIMIT ? OFFSET ?`,
         [...params, limit, offset],
@@ -139,7 +146,8 @@ export class DropQueryService {
       this.gameDb.runQuery<Array<{ total: number | string }>>(
         `SELECT COUNT(*) AS total
          FROM npc n
-         INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
+         INNER JOIN ${this.activeMobsDerived}    active ON active.npcid = n.npcid
+         INNER JOIN ${this.mobsWithDropsDerived} mwd    ON mwd.npcid    = n.npcid
          ${where}`,
         params,
       ),
@@ -246,15 +254,16 @@ export class DropQueryService {
       `SELECT n.npcid, n.name,
               CASE WHEN sb.npcid IS NOT NULL THEN 1 ELSE 0 END AS isBoss
        FROM npc n
-       INNER JOIN ${this.activeMobsDerived} active ON active.npcid = n.npcid
-       LEFT  JOIN ${this.activeBossDerived} sb     ON sb.npcid     = n.npcid
+       INNER JOIN ${this.activeMobsDerived}    active ON active.npcid = n.npcid
+       INNER JOIN ${this.mobsWithDropsDerived} mwd    ON mwd.npcid    = n.npcid
+       LEFT  JOIN ${this.activeBossDerived}    sb     ON sb.npcid     = n.npcid
        WHERE n.npcid = ?
        LIMIT 1`,
       [npcid],
     );
 
     if (guard.length === 0) {
-      throw new NotFoundException('查無此怪物或目前未開放');
+      throw new NotFoundException('查無此怪物、目前未開放、或無有效掉落');
     }
 
     const dropRows = await this.gameDb.runQuery<
