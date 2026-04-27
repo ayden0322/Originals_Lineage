@@ -99,11 +99,28 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor - handle 401 auto-refresh
+// Response interceptor - handle 401 auto-refresh / 429 rate limit
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // 429 限流：顯示後端給的友善訊息，告訴使用者要等多久；不自動重試
+    if (error.response?.status === 429) {
+      const data = error.response.data as {
+        message?: string;
+        retryAfter?: number;
+      };
+      const tip = data?.message || '操作過於頻繁，請稍後再試';
+      if (typeof window !== 'undefined') {
+        // 動態 import 避免 SSR 階段載入 antd
+        import('antd').then(({ message }) => {
+          const seconds = Number(data?.retryAfter) || 60;
+          message.warning({ content: tip, duration: Math.min(seconds, 8) });
+        });
+      }
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       const role = detectRoleFromPath();
