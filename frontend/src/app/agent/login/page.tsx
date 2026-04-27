@@ -21,7 +21,12 @@ export default function AgentLoginPage() {
       message.success(`歡迎，${res.agent.code} ${res.agent.name}`);
       router.push('/agent/dashboard');
     } catch (e) {
-      const msg = (e as { response?: { data?: { message?: string } } }).response?.data?.message;
+      const err = e as { response?: { status?: number; data?: { message?: string } } };
+      if (err?.response?.status === 429) {
+        // 429 已由 axios interceptor 顯示限流訊息，跳過避免重複 toast
+        return;
+      }
+      const msg = err.response?.data?.message;
       message.error(msg || '登入失敗');
     } finally {
       setSubmitting(false);
