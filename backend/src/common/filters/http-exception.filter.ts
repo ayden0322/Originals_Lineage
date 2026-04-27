@@ -32,11 +32,27 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
+    // 429 throttler：替換成易懂訊息 + 帶上 retryAfter，讓前端可顯示倒數
+    let retryAfter: number | undefined;
+    if (status === HttpStatus.TOO_MANY_REQUESTS) {
+      const retryHeader = response.getHeader('Retry-After');
+      retryAfter = retryHeader ? Number(retryHeader) : 60;
+      const url = request?.url || '';
+      if (url.includes('/auth/login') || url.includes('/auth/module-login')) {
+        message = `登入嘗試次數過多，請於 ${retryAfter} 秒後再試。若忘記密碼請聯絡管理員。`;
+      } else if (url.includes('/auth/register')) {
+        message = `註冊嘗試過於頻繁，請於 ${retryAfter} 秒後再試。`;
+      } else {
+        message = `操作過於頻繁，請於 ${retryAfter} 秒後再試。`;
+      }
+    }
+
     response.status(status).json({
       success: false,
       data: null,
       message,
       statusCode: status,
+      ...(retryAfter !== undefined ? { retryAfter } : {}),
       timestamp: new Date().toISOString(),
     });
   }

@@ -18,8 +18,12 @@ export default function PlatformAdminLoginPage() {
       await login(values.email, values.password);
       message.success('登入成功');
       router.push('/platform/dashboard');
-    } catch {
-      message.error('帳號或密碼錯誤');
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status !== 429) {
+        // 429 已由 axios interceptor 顯示限流訊息，這裡跳過避免重複 toast
+        message.error('帳號或密碼錯誤');
+      }
     } finally {
       setLoading(false);
     }

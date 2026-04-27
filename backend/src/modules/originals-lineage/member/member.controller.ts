@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { JwtAuthGuard } from '../../../core/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../../common/guards/permission.guard';
@@ -113,11 +114,13 @@ export class MemberPublicController {
 
   // ─── Auth (no guard) ──────────────────────────────────────────
 
+  @Throttle({ default: { limit: 3, ttl: 600_000 } })
   @Post('auth/register')
   register(@Body() dto: CreateWebsiteUserDto) {
     return this.memberService.register(dto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('auth/login')
   login(@Body() body: { gameAccountName: string; password: string }) {
     return this.memberService.loginPlayer(body.gameAccountName, body.password);
