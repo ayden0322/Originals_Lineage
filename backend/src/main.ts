@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -8,7 +9,13 @@ import { SlowRequestInterceptor } from './common/interceptors/slow-request.inter
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
+
+  // 信任 Zeabur 反向代理的 X-Forwarded-For，讓 throttler / 日誌讀到真實 client IP
+  // 數字 1 表示信任最近一層 proxy（Zeabur）；之後上 Cloudflare 改成 2
+  app.set('trust proxy', 1);
 
   // Security headers（HSTS / X-Content-Type-Options / Referrer-Policy 等）
   // 後端只回 JSON，CSP 由前端 next.config 設定

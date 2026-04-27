@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './core/auth/auth.module';
 import { AccountModule } from './core/account/account.module';
 import { PermissionModule } from './core/permission/permission.module';
@@ -50,6 +52,9 @@ import { DbPoolMonitorService } from './common/services/db-pool-monitor.service'
     // Event emitter (全域事件系統)
     EventEmitterModule.forRoot(),
 
+    // Rate limiting：全域預設 100 req/min/IP，登入/註冊端點用 @Throttle 收緊
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+
     // Core modules
     AuthModule,
     AccountModule,
@@ -63,6 +68,9 @@ import { DbPoolMonitorService } from './common/services/db-pool-monitor.service'
     OriginalsLineageModule,
   ],
   controllers: [HealthController],
-  providers: [DbPoolMonitorService],
+  providers: [
+    DbPoolMonitorService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

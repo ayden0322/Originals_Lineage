@@ -13,6 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AgentJwtGuard } from './guards/agent-jwt.guard';
 import { AgentAuthService } from './services/agent-auth.service';
@@ -52,6 +53,7 @@ export class AgentSelfController {
 
   // ──────────── 公開：登入 ────────────
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('auth/login')
   login(@Body() dto: AgentLoginDto) {
     return this.auth.login(dto.loginAccount, dto.password);
