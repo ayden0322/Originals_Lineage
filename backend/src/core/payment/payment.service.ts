@@ -169,11 +169,47 @@ export class PaymentService {
       throw new BadRequestException('Gateway configuration not found');
     }
 
-    // 呼叫 Adapter 驗證
+    // 呼叫 Adapter 驗證簽章 + 解析結果
     const verification = await provider.verifyCallback(body, headers, {
       ...gateway.credentials,
       isSandbox: gateway.isSandbox,
     });
+
+    // ─── 冪等性檢查 ─────────────────────────────────────
+    // 金流商遇到網路超時會重送 webhook。若 tx 已是 paid，直接回成功避免重複發貨。
+    // 訂單發貨層另有 atomic UPDATE 守門（shop.service handlePaymentPaid），
+    // 但這裡先擋下來可以避免無謂的事件發送與日誌噪音。
+    if (tx.status === 'paid' && verification.status === 'paid') {
+      this.logger.log(
+        `Idempotent callback: tx=${tx.id} already paid, skipping re-process`,
+      );
+      return { success: true, message: '1|OK' };
+    }
+
+    // ─── 金額驗證（防止 callback 偽造 / 篡改）────────────
+    // 比對金流商回報金額與訂單原始金額。即使簽章通過，若金額不符也拒絕。
+    // 漏洞情境：攻擊者攔截或重放 callback 並修改金額，或設定錯誤的金流通道把小額單導到大額付款頁。
+    if (verification.status === 'paid') {
+      const txAmount = Number(tx.amount);
+      const callbackAmount = Number(verification.amount);
+      if (Math.abs(txAmount - callbackAmount) > 0.01) {
+        this.logger.error(
+          `[SECURITY] Payment amount mismatch: tx=${tx.id}, ` +
+            `expected=${txAmount}, received=${callbackAmount}, ` +
+            `orderId=${tx.orderId}, provider=${providerCode}, ` +
+            `providerTransactionId=${tx.providerTransactionId}`,
+        );
+        tx.status = 'failed';
+        tx.callbackData = {
+          ...verification.rawData,
+          _security_alert: 'amount_mismatch',
+          _expected_amount: txAmount,
+          _received_amount: callbackAmount,
+        };
+        await this.txRepo.save(tx);
+        throw new BadRequestException('Payment amount mismatch');
+      }
+    }
 
     // 更新交易狀態
     tx.status = verification.status;
