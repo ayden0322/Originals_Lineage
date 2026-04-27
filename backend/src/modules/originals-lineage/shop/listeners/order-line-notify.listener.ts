@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Product } from '../entities/product.entity';
 import { MemberBinding } from '../../member/entities/member-binding.entity';
 import { PaymentService } from '../../../../core/payment/payment.service';
 import { LineService } from '../../../../core/line/line.service';
+import { GameDbService } from '../../game-db/game-db.service';
 import { Agent } from '../../commission/entities/agent.entity';
 import { PlayerAttribution } from '../../commission/entities/player-attribution.entity';
 
@@ -57,6 +58,7 @@ export class OrderLineNotifyListener {
     private readonly agentRepo: Repository<Agent>,
     private readonly paymentService: PaymentService,
     private readonly lineService: LineService,
+    private readonly gameDbService: GameDbService,
   ) {}
 
   @OnEvent('order.delivered', { async: true, promisify: true })
@@ -99,6 +101,7 @@ export class OrderLineNotifyListener {
       `💰 儲值到帳，訂單編號：${ctx.order.orderNumber}\n` +
       `\n` +
       `玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
+      `血盟：${ctx.clanName ?? '無血盟'}\n` +
       `商品：${itemSummary}\n` +
       `金額：NT$${formatNumber(ctx.order.totalAmount)}\n` +
       `付款方式：${paymentMethodLabel}\n` +
@@ -138,6 +141,7 @@ export class OrderLineNotifyListener {
       `🚨 儲值發貨異常，訂單編號：${ctx.order.orderNumber}\n` +
       `\n` +
       `玩家：${ctx.binding?.gameAccountName ?? '(未綁定)'}\n` +
+      `血盟：${ctx.clanName ?? '無血盟'}\n` +
       `金額：NT$${formatNumber(ctx.order.totalAmount)}（已收款 ✅）\n` +
       `❌ 發貨失敗：${errorMsg}\n` +
       (attempts ? `已重試 ${attempts} 次（共 ~3 分鐘）\n` : '') +
@@ -193,6 +197,19 @@ export class OrderLineNotifyListener {
         | undefined
     ) || [];
 
+    // 血盟 snapshot：從遊戲庫即時查；查不到 / 未連線都回 null（不阻斷通知）
+    let clanName: string | null = null;
+    if (binding?.gameAccountName) {
+      try {
+        const map = await this.gameDbService.findCharacterClanByAccounts([
+          binding.gameAccountName,
+        ]);
+        clanName = map.get(binding.gameAccountName)?.clanName ?? null;
+      } catch (err) {
+        this.logger.warn(`查血盟失敗：${(err as Error).message}`);
+      }
+    }
+
     return {
       order,
       binding,
@@ -201,6 +218,7 @@ export class OrderLineNotifyListener {
       deliveryEntries,
       paymentMethod: tx?.paymentMethod ?? null,
       providerCode: tx?.providerName ?? null,
+      clanName,
     };
   }
 
